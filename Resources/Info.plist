@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>ar</string>
+    <key>CFBundleDisplayName</key>
+    <string>WhatsX</string>
+    <key>CFBundleName</key>
+    <string>WhatsX</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
+    <!-- Permissions used by the app -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>يُستخدم الميكروفون للمكالمات الصوتية وتسجيل الرسائل الصوتية.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>تُستخدم الكاميرا لالتقاط صورة الملف الشخصي والوسائط.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>يُستخدم للوصول إلى الصور لإرسالها أو تعيين صورة الملف الشخصي.</string>
+</dict>
+</plist>

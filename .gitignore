@@ -1,0 +1,44 @@
+# Xcode / Swift
+.DS_Store
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+.build/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# XcodeGen generates WhatsX.xcodeproj from project.yml — do not commit the generated project.
+WhatsX.xcodeproj/
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+Packages/
+
+# CocoaPods / Carthage (unused, kept for safety)
+Pods/
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Secrets — never commit signing assets or API keys
+*.p12
+*.mobileprovision
+*.cer
+GoogleService-Info.plist
+Secrets.xcconfig
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon

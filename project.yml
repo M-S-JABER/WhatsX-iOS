@@ -1,0 +1,28 @@
+# XcodeGen spec. On a Mac: `brew install xcodegen` then `xcodegen generate`
+# creates WhatsX.xcodeproj from this spec + the Sources/ tree.
+name: WhatsX
+options:
+  bundleIdPrefix: net.alnokhba.whatsx
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""          # set your Apple Developer Team ID
+targets:
+  WhatsX:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: 1
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
