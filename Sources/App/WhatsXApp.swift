@@ -1,33 +1,14 @@
 import SwiftUI
 
+// NOTE: This @main entry is for building the app directly with Xcode/XcodeGen
+// on a Mac. It is EXCLUDED from the Swift Package (see Package.swift) because a
+// library cannot declare an entry point. On iPad (Swift Playgrounds) the shell
+// app provides its own @main and just renders `WhatsXRoot()` from the package.
 @main
 struct WhatsXApp: App {
-    @StateObject private var session = Session.shared
-
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(session)
-                .environment(\.layoutDirection, .rightToLeft)   // Arabic-first, RTL
-                .tint(Theme.primary)
-                .task { await session.bootstrap() }
-        }
-    }
-}
-
-struct RootView: View {
-    @EnvironmentObject var session: Session
-
-    var body: some View {
-        ZStack {
-            Theme.background.ignoresSafeArea()
-            if session.isBootstrapping {
-                ProgressView().tint(Theme.primary)
-            } else if session.isAuthenticated {
-                MainTabView()
-            } else {
-                LoginView()
-            }
+            WhatsXRoot()
         }
     }
 }
