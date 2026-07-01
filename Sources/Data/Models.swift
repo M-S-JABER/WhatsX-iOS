@@ -167,15 +167,36 @@ struct VoiceCall: Codable, Identifiable, Equatable {
     var startedAt: String? = nil
     var durationSeconds: Int = 0
     var instance: VoiceInstance? = nil
+    var recording: String? = nil
+    var recordingUrl: String? = nil
+    var initiatedByName: String? = nil
 
     var title: String { displayName ?? phone ?? peer ?? "—" }
     var isInbound: Bool { direction == "inbound" }
     var isMissed: Bool { outcome == "missed" || status == "missed" || status == "rejected" }
+    /// Path to the stored recording, if any (served by /api/voice/recordings/:name).
+    var recordingPath: String? {
+        if let r = recording, !r.isEmpty { return r }
+        if let r = recordingUrl, !r.isEmpty { return r }
+        return nil
+    }
 }
 
 struct VoiceCallsResponse: Codable {
     var total: Int = 0
     var items: [VoiceCall] = []
+}
+
+// GET /api/voice/calls/filters -> { accounts:[{id,name,displayPhoneNumber}], agents:[username] }
+struct CallFilterAccount: Codable, Identifiable {
+    var id: String = ""
+    var name: String? = nil
+    var displayPhoneNumber: String? = nil
+    var label: String { name ?? displayPhoneNumber ?? id }
+}
+struct VoiceCallFilters: Codable {
+    var accounts: [CallFilterAccount] = []
+    var agents: [String] = []
 }
 
 // MARK: - Statistics

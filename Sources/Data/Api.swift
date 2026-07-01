@@ -171,10 +171,16 @@ final class Api {
     }
 
     // MARK: - Voice calls
-    func voiceCalls(limit: Int = 200, search: String? = nil, direction: String? = nil, status: String? = nil) async throws -> VoiceCallsResponse {
+    func voiceCalls(limit: Int = 200, search: String? = nil, direction: String? = nil, status: String? = nil,
+                    instanceId: String? = nil, agent: String? = nil, hasRecording: Bool? = nil) async throws -> VoiceCallsResponse {
         try await request("api/voice/calls", query: [
             "limit": String(limit), "search": search, "direction": direction, "status": status,
+            "instanceId": instanceId, "agent": agent,
+            "hasRecording": hasRecording.map { $0 ? "true" : "false" },
         ])
+    }
+    func voiceCallFilters() async throws -> VoiceCallFilters {
+        try await request("api/voice/calls/filters")
     }
 
     // MARK: - Statistics
