@@ -358,6 +358,59 @@ struct StatCustomer: Codable, Identifiable {
 }
 struct StatCustomersResponse: Codable { var items: [StatCustomer] = [] }
 
+// MARK: - Customer report (GET /api/statistics/customer-report?conversationId=&range=)
+
+struct CustomerReportConversation: Codable {
+    var id: String = ""
+    var phone: String? = nil
+    var displayName: String? = nil
+    var instanceName: String? = nil
+    var createdAt: String? = nil
+    var title: String { (displayName?.isEmpty == false ? displayName! : (phone ?? "—")) }
+}
+struct CustomerReportTotals: Codable {
+    var messages: Int = 0
+    var incoming: Int = 0
+    var outgoing: Int = 0
+    var firstAt: String? = nil
+    var lastAt: String? = nil
+}
+struct CustomerReportAgent: Codable, Identifiable {
+    var userId: String? = nil
+    var username: String = "—"
+    var sent: Int = 0
+    var replies: Int = 0
+    var lastAt: String? = nil
+    var id: String { userId ?? username }
+}
+struct CustomerReportResponseStats: Codable {
+    var avgSeconds: Int? = nil
+    var minSeconds: Int? = nil
+    var maxSeconds: Int? = nil
+    var count: Int = 0
+}
+struct CustomerReportTimelineItem: Codable, Identifiable {
+    var id: String = ""
+    var direction: String? = nil
+    var body: String? = nil
+    var status: String? = nil
+    var sentByUsername: String? = nil
+    var createdAt: String? = nil
+    var isOutbound: Bool { direction == "outbound" }
+}
+struct CustomerReport: Codable {
+    var conversation: CustomerReportConversation? = nil
+    var totals: CustomerReportTotals? = nil
+    var statusBreakdown: [String: Int]? = nil
+    var agents: [CustomerReportAgent] = []
+    var responseStats: CustomerReportResponseStats? = nil
+    var timeline: [CustomerReportTimelineItem] = []
+}
+
+// MARK: - Change password (POST /api/user/password)
+
+struct ChangePasswordRequest: Codable { var currentPassword: String; var newPassword: String }
+
 // MARK: - Ready-message CRUD
 
 struct CreateReadyMessageRequest: Codable { var name: String; var body: String; var isActive: Bool = true }

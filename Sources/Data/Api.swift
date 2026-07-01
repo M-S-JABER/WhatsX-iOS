@@ -259,6 +259,16 @@ final class Api {
     func statisticsCustomers(search: String? = nil) async throws -> StatCustomersResponse {
         try await request("api/statistics/customers", query: ["search": search])
     }
+    func customerReport(conversationId: String, range: String? = nil) async throws -> CustomerReport {
+        try await request("api/statistics/customer-report", query: ["conversationId": conversationId, "range": range])
+    }
+
+    // MARK: - Account security
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        let _: EmptyResponse = try await request(
+            "api/user/password", method: "POST",
+            body: ChangePasswordRequest(currentPassword: currentPassword, newPassword: newPassword))
+    }
 
     // MARK: - Ready-message CRUD
     func createReadyMessage(name: String, body: String, isActive: Bool) async throws {

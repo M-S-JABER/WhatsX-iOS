@@ -16,7 +16,12 @@ struct CustomerReportsView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(customers) { c in row(c) }
+                            ForEach(customers) { c in
+                                NavigationLink {
+                                    CustomerReportDetailView(conversationId: c.conversationId, title: c.title)
+                                } label: { row(c) }
+                                .buttonStyle(.plain)
+                            }
                         }
                         .padding(16)
                         .padding(.bottom, 84)

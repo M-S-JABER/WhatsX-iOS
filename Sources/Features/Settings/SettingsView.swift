@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject var session: Session
     @State private var loggingOut = false
     @State private var editOpen = false
+    @State private var passwordOpen = false
     @State private var photoItem: PhotosPickerItem?
     @State private var uploading = false
 
@@ -43,12 +44,19 @@ struct SettingsView: View {
                         }.buttonStyle(.plain)
                     }
 
+                    section("الأمان")
+                    group {
+                        Button { passwordOpen = true } label: {
+                            SettingRow(icon: .lock, title: "تغيير كلمة المرور", trailingChevron: true)
+                        }.buttonStyle(.plain)
+                    }
+
                     section("عام")
                     group {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.0 · أسوار المدن")
+                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.0.1 · أسوار المدن")
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
@@ -59,6 +67,7 @@ struct SettingsView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
         .sheet(isPresented: $editOpen) { EditProfileSheet() }
+        .sheet(isPresented: $passwordOpen) { ChangePasswordSheet() }
         .onChange(of: photoItem) { item in
             guard let item else { return }
             Task { await uploadAvatar(item) }
@@ -201,5 +210,55 @@ struct EditProfileSheet: View {
         }
         saving = false
         dismiss()
+    }
+}
+
+struct ChangePasswordSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var current = ""
+    @State private var newPass = ""
+    @State private var confirm = ""
+    @State private var saving = false
+    @State private var error: String?
+    @State private var done = false
+
+    private var valid: Bool { !current.isEmpty && newPass.count >= 6 && newPass == confirm }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField("كلمة المرور الحالية", text: $current)
+                    SecureField("كلمة المرور الجديدة", text: $newPass)
+                    SecureField("تأكيد كلمة المرور الجديدة", text: $confirm)
+                } footer: {
+                    Text("٦ أحرف على الأقل، ويجب أن يتطابق الحقلان.")
+                }
+                if let error { Text(error).foregroundStyle(Theme.danger) }
+                if done { Text("تم تغيير كلمة المرور بنجاح").foregroundStyle(Theme.success) }
+            }
+            .navigationTitle("تغيير كلمة المرور")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("حفظ") { Task { await save() } }.disabled(saving || !valid)
+                }
+                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func save() async {
+        saving = true; error = nil
+        do {
+            try await Api.shared.changePassword(currentPassword: current, newPassword: newPass)
+            done = true
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            dismiss()
+        } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        saving = false
     }
 }
