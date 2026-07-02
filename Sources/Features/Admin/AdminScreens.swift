@@ -171,22 +171,26 @@ struct RolesView: View {
             } else {
                 List {
                     ForEach(roles) { role in
-                        HStack(spacing: 12) {
-                            Image(icon: .shield).foregroundStyle(Theme.onSurface)
-                                .frame(width: 40, height: 40)
-                                .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(role.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                Text("\(role.permissions.count) صلاحية").font(.caption).foregroundStyle(Theme.onMuted)
+                        NavigationLink {
+                            RolePermissionsView(role: role) { await load() }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(icon: .shield).foregroundStyle(Theme.onSurface)
+                                    .frame(width: 40, height: 40)
+                                    .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(role.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                                    Text("\(role.permissions.count) صلاحية").font(.caption).foregroundStyle(Theme.onMuted)
+                                }
+                                Spacer()
+                                if role.isSystem {
+                                    Text("نظام").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onMuted)
+                                        .padding(.horizontal, 8).padding(.vertical, 2)
+                                        .background(Theme.surface2, in: Capsule())
+                                }
                             }
-                            Spacer()
-                            if role.isSystem {
-                                Text("نظام").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onMuted)
-                                    .padding(.horizontal, 8).padding(.vertical, 2)
-                                    .background(Theme.surface2, in: Capsule())
-                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
                         .listRowBackground(Theme.background)
                         .swipeActions(edge: .trailing) {
                             if !role.isSystem {
@@ -254,6 +258,103 @@ struct CreateRoleSheet: View {
         do {
             _ = try await Api.shared.createRole(name: name, description: desc.isEmpty ? nil : desc)
             await onCreated()
+            dismiss()
+        } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        saving = false
+    }
+}
+
+// MARK: - Role permission editor
+
+struct RolePermissionsView: View {
+    let role: Role
+    let onSaved: () async -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var catalog: [PermissionCatalogItem] = []
+    @State private var selected: Set<String> = []
+    @State private var loading = true
+    @State private var saving = false
+    @State private var error: String?
+
+    private var groups: [(String, [PermissionCatalogItem])] {
+        let dict = Dictionary(grouping: catalog) { $0.groupTitle }
+        return dict.keys.sorted().map { ($0, dict[$0] ?? []) }
+    }
+
+    var body: some View {
+        Group {
+            if loading {
+                ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if catalog.isEmpty {
+                Text("لا صلاحيات متاحة").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    Section {
+                        Text("\(selected.count) صلاحية مُفعّلة").font(.caption).foregroundStyle(Theme.onMuted)
+                    }
+                    ForEach(groups, id: \.0) { group, items in
+                        Section(group) {
+                            ForEach(items) { p in
+                                Button { toggle(p.id) } label: {
+                                    HStack(spacing: 12) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack(spacing: 6) {
+                                                Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
+                                                if p.isCritical == true {
+                                                    Text("حسّاس").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                                                        .padding(.horizontal, 5).padding(.vertical, 1)
+                                                        .background(Theme.dangerBg, in: Capsule())
+                                                }
+                                            }
+                                            if let d = p.description, !d.isEmpty {
+                                                Text(d).font(.caption2).foregroundStyle(Theme.onMuted)
+                                            }
+                                        }
+                                        Spacer()
+                                        Image(systemName: selected.contains(p.id) ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(selected.contains(p.id) ? Theme.primary : Theme.onFaint)
+                                    }
+                                }.buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    if let error {
+                        Section { Text(error).foregroundStyle(Theme.danger) }
+                    }
+                }
+                .listStyle(.insetGrouped).scrollContentBackground(.hidden)
+            }
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle(role.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("حفظ") { Task { await save() } }.disabled(saving || loading)
+            }
+        }
+        .task { await load() }
+    }
+
+    private func toggle(_ id: String) {
+        if selected.contains(id) { selected.remove(id) } else { selected.insert(id) }
+    }
+
+    private func load() async {
+        selected = Set(role.permissions)
+        do { catalog = try await Api.shared.permissionsCatalog() } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func save() async {
+        saving = true; error = nil
+        do {
+            try await Api.shared.updateRole(role.id, permissions: Array(selected))
+            await onSaved()
             dismiss()
         } catch {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription

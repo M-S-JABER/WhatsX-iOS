@@ -272,6 +272,26 @@ struct Role: Codable, Identifiable {
 }
 struct RolesResponse: Codable { var items: [Role] = [] }
 
+struct UpdateRoleRequest: Codable {
+    var name: String? = nil
+    var description: String? = nil
+    var permissions: [String]? = nil
+}
+
+// GET /api/permissions/catalog -> { items:[{id,label,group,groupLabel,action,description,isCritical}] }
+struct PermissionCatalogItem: Codable, Identifiable {
+    var id: String = ""
+    var label: String? = nil
+    var group: String? = nil
+    var groupLabel: String? = nil
+    var action: String? = nil
+    var description: String? = nil
+    var isCritical: Bool? = nil
+    var title: String { label ?? id }
+    var groupTitle: String { groupLabel ?? group ?? "أخرى" }
+}
+struct PermissionCatalogResponse: Codable { var items: [PermissionCatalogItem] = [] }
+
 // MARK: - Templates & ready messages
 
 struct ReadyMessage: Codable, Identifiable {

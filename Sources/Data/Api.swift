@@ -280,8 +280,17 @@ final class Api {
     func createRole(name: String, description: String?) async throws -> Role {
         try await request("api/roles", method: "POST", body: CreateRoleRequest(name: name, description: description))
     }
+    func updateRole(_ id: String, name: String? = nil, description: String? = nil, permissions: [String]? = nil) async throws {
+        let _: EmptyResponse = try await request(
+            "api/roles/\(id)", method: "PATCH",
+            body: UpdateRoleRequest(name: name, description: description, permissions: permissions))
+    }
     func deleteRole(_ id: String) async throws {
         let _: EmptyResponse = try await request("api/roles/\(id)", method: "DELETE")
+    }
+    func permissionsCatalog() async throws -> [PermissionCatalogItem] {
+        let resp: PermissionCatalogResponse = try await request("api/permissions/catalog")
+        return resp.items
     }
 
     // MARK: - Customer reports
