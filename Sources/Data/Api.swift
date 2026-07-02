@@ -201,6 +201,29 @@ final class Api {
     func whatsappAccounts() async throws -> WhatsAppAccountsResponse {
         try await request("api/integrations/whatsapp-accounts")
     }
+    func createWhatsappAccount(_ body: CreateWhatsappAccountRequest) async throws -> WhatsAppAccount? {
+        let resp: WhatsAppAccountResponse = try await request("api/integrations/whatsapp-accounts", method: "POST", body: body)
+        return resp.account
+    }
+    func updateWhatsappAccount(_ id: String, _ body: UpdateWhatsappAccountRequest) async throws -> WhatsAppAccount? {
+        let resp: WhatsAppAccountResponse = try await request("api/integrations/whatsapp-accounts/\(id)", method: "PATCH", body: body)
+        return resp.account
+    }
+    func deleteWhatsappAccount(_ id: String) async throws {
+        let _: EmptyResponse = try await request("api/integrations/whatsapp-accounts/\(id)", method: "DELETE")
+    }
+    /// Request a registration code by SMS or VOICE for a WhatsApp number.
+    func requestWhatsappCode(_ id: String, method: String, language: String = "en_US") async throws {
+        let _: EmptyResponse = try await request(
+            "api/integrations/whatsapp-accounts/\(id)/request-code", method: "POST",
+            body: RequestCodeRequest(codeMethod: method, language: language))
+    }
+    /// Complete registration with the 6-digit PIN.
+    func registerWhatsappNumber(_ id: String, pin: String) async throws {
+        let _: EmptyResponse = try await request(
+            "api/integrations/whatsapp-accounts/\(id)/register", method: "POST",
+            body: RegisterNumberRequest(pin: pin))
+    }
 
     // MARK: - Profile
     func updateProfile(displayName: String?, email: String?) async throws -> AuthUser {

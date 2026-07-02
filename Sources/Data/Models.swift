@@ -351,13 +351,38 @@ struct WhatsAppAccount: Codable, Identifiable {
     var id: String = ""
     var displayName: String = ""
     var phoneNumber: String? = nil
+    var phoneNumberId: String? = nil
+    var wabaId: String? = nil
     var businessName: String? = nil
     var status: String? = nil       // live Meta connection status
     var health: String? = nil       // healthy | failed | needs_configuration | ...
+    var tokenStatus: String? = nil  // configured | missing
     var isActive: Bool = true
     var isDefault: Bool = false
 }
 struct WhatsAppAccountsResponse: Codable { var items: [WhatsAppAccount] = [] }
+struct WhatsAppAccountResponse: Codable { var account: WhatsAppAccount? = nil }
+
+// WhatsApp account CRUD + registration request bodies.
+struct CreateWhatsappAccountRequest: Codable {
+    var name: String
+    var phoneNumberId: String
+    var accessToken: String
+    var displayPhoneNumber: String? = nil
+    var wabaId: String? = nil
+    var isActive: Bool = true
+    var isDefault: Bool = false
+}
+struct UpdateWhatsappAccountRequest: Codable {
+    var name: String? = nil
+    var displayPhoneNumber: String? = nil
+    var wabaId: String? = nil
+    var accessToken: String? = nil
+    var isActive: Bool? = nil
+    var isDefault: Bool? = nil
+}
+struct RequestCodeRequest: Codable { var codeMethod: String; var language: String = "en_US" }
+struct RegisterNumberRequest: Codable { var pin: String }
 
 // MARK: - Action request bodies
 
