@@ -63,18 +63,35 @@ final class VoiceRecorder: NSObject, ObservableObject {
 @MainActor
 final class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
+    @Published var calls: [VoiceCall] = []
     @Published var loading = false
     @Published var input = ""
     @Published var sending = false
     @Published var attachError: String?
+    @Published var replyTarget: Message? = nil
     let conversation: Conversation
 
     init(conversation: Conversation) { self.conversation = conversation }
+
+    /// Messages merged chronologically with the conversation's call events
+    /// (web parity: call bubbles inline in the thread).
+    var timeline: [ChatEntry] {
+        guard !calls.isEmpty else { return messages.map { ChatEntry.message($0) } }
+        let entries: [(entry: ChatEntry, date: Date, order: Int)] =
+            messages.enumerated().map { (i, m) in (ChatEntry.message(m), parseISODate(m.createdAt) ?? .distantPast, i) }
+            + calls.enumerated().map { (i, c) in (ChatEntry.call(c), parseISODate(c.startedAt) ?? .distantPast, i) }
+        return entries.sorted { a, b in
+            if a.date != b.date { return a.date < b.date }
+            return a.order < b.order
+        }.map { $0.entry }
+    }
 
     func load() async {
         loading = messages.isEmpty
         do { messages = try await Api.shared.messages(conversationId: conversation.id).items }
         catch { }
+        // Requires calls.view — silently absent for roles without it.
+        calls = (try? await Api.shared.conversationCalls(conversationId: conversation.id).items) ?? []
         loading = false
     }
 
@@ -84,7 +101,9 @@ final class ChatViewModel: ObservableObject {
         sending = true
         input = ""
         do {
-            try await Api.shared.sendMessage(conversationId: conversation.id, body: text)
+            try await Api.shared.sendMessage(conversationId: conversation.id, body: text,
+                                             replyToMessageId: replyTarget?.id)
+            replyTarget = nil
             await load()
         } catch { input = text }
         sending = false
@@ -95,7 +114,9 @@ final class ChatViewModel: ObservableObject {
         sending = true; attachError = nil
         do {
             let up = try await Api.shared.uploadMedia(data: data, filename: filename, mimeType: mimeType)
-            try await Api.shared.sendMedia(conversationId: conversation.id, mediaUrl: up.url, caption: caption)
+            try await Api.shared.sendMedia(conversationId: conversation.id, mediaUrl: up.url, caption: caption,
+                                           replyToMessageId: replyTarget?.id)
+            replyTarget = nil
             await load()
         } catch { attachError = (error as? ApiError)?.message ?? error.localizedDescription }
         sending = false
@@ -134,6 +155,18 @@ final class ChatViewModel: ObservableObject {
     }
 }
 
+/// One row of the chat timeline: a message bubble or an inline call event.
+enum ChatEntry: Identifiable, Equatable {
+    case message(Message)
+    case call(VoiceCall)
+    var id: String {
+        switch self {
+        case .message(let m): return "m-\(m.id)"
+        case .call(let c): return "c-\(c.id)"
+        }
+    }
+}
+
 struct ChatView: View {
     @StateObject private var vm: ChatViewModel
     @StateObject private var recorder = VoiceRecorder()
@@ -144,21 +177,53 @@ struct ChatView: View {
     @State private var showDocImporter = false
     @State private var showReady = false
     @State private var showTemplates = false
+    @State private var showInfo = false
+    @State private var showChatSearch = false
+    @State private var chatQuery = ""
+    @State private var matchIndex = 0
     @State private var photoItem: PhotosPickerItem?
 
     init(conversation: Conversation) {
         _vm = StateObject(wrappedValue: ChatViewModel(conversation: conversation))
     }
 
+    /// Ids of messages matching the in-chat search, in timeline order.
+    private var searchMatches: [String] {
+        let q = chatQuery.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return [] }
+        return vm.messages.filter { $0.body?.localizedCaseInsensitiveContains(q) == true }.map { $0.id }
+    }
+
+    private var highlightedMessageId: String? {
+        let matches = searchMatches
+        guard !matches.isEmpty else { return nil }
+        return matches[min(matchIndex, matches.count - 1)]
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            messages
-            composer
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                topBar
+                if showChatSearch { chatSearchBar(proxy) }
+                messages
+                if let target = vm.replyTarget { replyBar(target) }
+                composer
+            }
+            .onChange(of: vm.messages.count) { _ in
+                if let last = vm.messages.last {
+                    withAnimation { proxy.scrollTo("m-\(last.id)", anchor: .bottom) }
+                }
+            }
         }
         .background(chatBackground)
         .navigationBarHidden(true)
         .task { await vm.load() }
+        .onReceive(Realtime.shared.events) { event in
+            guard RealtimeEvent.chatEvents.contains(event.name),
+                  event.conversationId == nil || event.conversationId == vm.conversation.id
+            else { return }
+            Task { await vm.load() }
+        }
         .confirmationDialog("إرفاق", isPresented: $showAttachMenu, titleVisibility: .visible) {
             Button("صورة") { showPhotoPicker = true }
             Button("مستند") { showDocImporter = true }
@@ -187,6 +252,9 @@ struct ChatView: View {
             }
         }
         .sheet(isPresented: $showReady) { ReadyPickerSheet { vm.insertReady($0) } }
+        .sheet(isPresented: $showInfo) {
+            ConversationInfoView(conversation: vm.conversation, messages: vm.messages)
+        }
         .sheet(isPresented: $showTemplates) {
             TemplatePickerSheet { name, lang, params in await vm.sendTemplate(name: name, language: lang, params: params) }
         }
@@ -206,8 +274,16 @@ struct ChatView: View {
                 }
             }
             Spacer()
-            Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary)
-            Image(icon: .more).font(.system(size: 20)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
+            Button { withAnimation { showChatSearch.toggle() } } label: {
+                Image(icon: .search).font(.system(size: 18))
+                    .foregroundStyle(showChatSearch ? Theme.primary : Theme.onMuted)
+            }
+            .buttonStyle(.plain)
+            Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary).padding(.leading, 8)
+            Button { showInfo = true } label: {
+                Image(icon: .more).font(.system(size: 20)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Theme.surface)
@@ -215,20 +291,95 @@ struct ChatView: View {
     }
 
     private var messages: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(vm.messages) { msg in
-                        MessageBubble(msg: msg, onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil)
-                            .id(msg.id)
+        ScrollView {
+            LazyVStack(spacing: 4) {
+                ForEach(vm.timeline) { entry in
+                    switch entry {
+                    case .message(let msg):
+                        MessageBubble(msg: msg,
+                                      onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil,
+                                      highlighted: highlightedMessageId == msg.id)
+                            .contextMenu {
+                                Button { vm.replyTarget = msg } label: {
+                                    Label("رد", systemImage: "arrowshape.turn.up.left")
+                                }
+                                if let body = msg.body, !body.isEmpty {
+                                    Button { UIPasteboard.general.string = body } label: {
+                                        Label("نسخ", systemImage: "doc.on.doc")
+                                    }
+                                }
+                            }
+                            .id(entry.id)
+                    case .call(let call):
+                        CallEventRow(call: call)
+                            .id(entry.id)
                     }
                 }
-                .padding(.horizontal, 12).padding(.vertical, 12)
             }
-            .onChange(of: vm.messages.count) { _ in
-                if let last = vm.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+            .padding(.horizontal, 12).padding(.vertical, 12)
+        }
+    }
+
+    private func chatSearchBar(_ proxy: ScrollViewProxy) -> some View {
+        HStack(spacing: 10) {
+            Image(icon: .search).font(.system(size: 14)).foregroundStyle(Theme.onMuted)
+            TextField("ابحث في الرسائل", text: $chatQuery)
+                .font(.system(size: 14)).foregroundStyle(Theme.onSurface)
+            if !searchMatches.isEmpty {
+                Text("\(min(matchIndex, searchMatches.count - 1) + 1)/\(searchMatches.count)")
+                    .font(.caption).foregroundStyle(Theme.onMuted)
+            }
+            Button { stepMatch(-1, proxy) } label: {
+                Image(systemName: "chevron.up").font(.system(size: 13, weight: .semibold))
+            }
+            .disabled(searchMatches.isEmpty)
+            Button { stepMatch(1, proxy) } label: {
+                Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
+            }
+            .disabled(searchMatches.isEmpty)
+            Button {
+                showChatSearch = false
+                chatQuery = ""
+                matchIndex = 0
+            } label: {
+                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.onMuted)
             }
         }
+        .padding(.horizontal, 14).frame(height: 42)
+        .background(Theme.surface)
+        .overlay(Rectangle().fill(Theme.outline).frame(height: 1), alignment: .bottom)
+        .onChange(of: chatQuery) { _ in
+            matchIndex = 0
+            if let id = highlightedMessageId {
+                withAnimation { proxy.scrollTo("m-\(id)", anchor: .center) }
+            }
+        }
+    }
+
+    private func stepMatch(_ delta: Int, _ proxy: ScrollViewProxy) {
+        let matches = searchMatches
+        guard !matches.isEmpty else { return }
+        matchIndex = (min(matchIndex, matches.count - 1) + delta + matches.count) % matches.count
+        withAnimation { proxy.scrollTo("m-\(matches[matchIndex])", anchor: .center) }
+    }
+
+    private func replyBar(_ target: Message) -> some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 2).fill(Theme.primary).frame(width: 3, height: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(target.isOutbound ? "أنت" : vm.conversation.title)
+                    .font(.caption.bold()).foregroundStyle(Theme.primary)
+                Text(target.body?.isEmpty == false ? target.body! : "وسائط")
+                    .font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+            }
+            Spacer()
+            Button { vm.replyTarget = nil } label: {
+                Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(Theme.onMuted)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 6)
+        .background(Theme.surface1)
+        .overlay(Rectangle().fill(Theme.outline).frame(height: 1), alignment: .top)
     }
 
     @ViewBuilder
@@ -314,13 +465,18 @@ struct ChatView: View {
 struct MessageBubble: View {
     let msg: Message
     var onRetry: (() -> Void)? = nil
+    var highlighted: Bool = false
     private var outbound: Bool { msg.isOutbound }
     private var failed: Bool { msg.status == "failed" }
+    private var fg: Color { outbound ? Theme.bubbleOutFg : Theme.bubbleInFg }
 
     var body: some View {
         HStack {
             if outbound { Spacer(minLength: 40) }
             VStack(alignment: .leading, spacing: 3) {
+                if let reply = msg.replyTo {
+                    quoteView(reply)
+                }
                 if let media = msg.media, let url = Api.mediaURL(media.url) {
                     mediaView(media, url)
                 }
@@ -351,9 +507,26 @@ struct MessageBubble: View {
             .padding(.horizontal, 11).padding(.vertical, 7)
             .background(outbound ? Theme.bubbleOut : Theme.bubbleIn,
                         in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.primary, lineWidth: highlighted ? 2 : 0))
             .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
             .frame(maxWidth: 300, alignment: outbound ? .trailing : .leading)
             if !outbound { Spacer(minLength: 40) }
+        }
+    }
+
+    /// Quoted-reply preview rendered above the message content.
+    private func quoteView(_ reply: ReplySummary) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(reply.direction == "outbound" ? "أنت" : (reply.senderLabel?.isEmpty == false ? reply.senderLabel! : "رد على"))
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.primary)
+            Text(reply.content?.isEmpty == false ? reply.content! : "وسائط")
+                .font(.system(size: 12)).foregroundStyle(fg.opacity(0.75)).lineLimit(2)
+        }
+        .padding(.leading, 9).padding(.trailing, 8).padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(fg.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2).fill(Theme.primary).frame(width: 3)
         }
     }
 
@@ -382,6 +555,47 @@ struct MessageBubble: View {
     }
     private func isAudio(_ m: MessageMedia) -> Bool {
         m.mediaType == "audio" || (m.mimeType?.hasPrefix("audio/") ?? false)
+    }
+}
+
+// MARK: - Inline call event
+
+/// A centered call-event chip in the chat timeline (web parity: call bubbles
+/// merged chronologically between messages).
+struct CallEventRow: View {
+    let call: VoiceCall
+    private var inbound: Bool { call.direction == "inbound" }
+    private var missed: Bool {
+        let s = (call.outcome ?? call.status ?? "").lowercased()
+        return s.contains("missed") || s.contains("no_answer") || s.contains("failed") || s.contains("rejected")
+    }
+
+    var body: some View {
+        HStack {
+            Spacer(minLength: 30)
+            HStack(spacing: 8) {
+                Image(systemName: inbound ? "phone.arrow.down.left" : "phone.arrow.up.right")
+                    .font(.system(size: 13))
+                    .foregroundStyle(missed ? Theme.danger : Theme.success)
+                Text(label).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.onMuted)
+                Text(clockTime(call.startedAt)).font(.system(size: 11)).foregroundStyle(Theme.onFaint)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .glassCapsule()
+            Spacer(minLength: 30)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var label: String {
+        var parts: [String] = [inbound ? "مكالمة واردة" : "مكالمة صادرة"]
+        if missed {
+            parts.append("لم يُرَدّ عليها")
+        } else if call.durationSeconds > 0 {
+            let s = call.durationSeconds
+            parts.append(String(format: "%02d:%02d", s / 60, s % 60))
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -515,11 +729,14 @@ struct TemplatePickerSheet: View {
     }
 }
 
-func clockTime(_ iso: String?) -> String {
-    guard let iso else { return "" }
+func parseISODate(_ iso: String?) -> Date? {
+    guard let iso else { return nil }
     let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    let date = parser.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
-    guard let date else { return "" }
+    return parser.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+}
+
+func clockTime(_ iso: String?) -> String {
+    guard let date = parseISODate(iso) else { return "" }
     let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
 }
 
