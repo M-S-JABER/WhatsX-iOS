@@ -1,9 +1,12 @@
 import SwiftUI
 
 enum IntegTab: String, CaseIterable {
-    case overview, external, logs
+    case overview, external, flow, logs
     var title: String {
-        switch self { case .overview: return "نظرة عامة"; case .external: return "الأنظمة"; case .logs: return "السجلّ" }
+        switch self {
+        case .overview: return "نظرة عامة"; case .external: return "الأنظمة"
+        case .flow: return "التدفّق"; case .logs: return "السجلّ"
+        }
     }
 }
 
@@ -12,11 +15,17 @@ final class IntegrationsViewModel: ObservableObject {
     @Published var overview: IntegrationsOverview?
     @Published var integrations: [PublicIntegration] = []
     @Published var logs: [IntegrationLog] = []
+    @Published var flow: [MessageFlowEvent] = []
     @Published var loading = false
 
     func loadOverview() async { do { overview = try await Api.shared.integrationsOverview() } catch {} }
     func loadIntegrations() async { do { integrations = try await Api.shared.integrations().items } catch {} }
     func loadLogs() async { do { logs = try await Api.shared.integrationLogs().items } catch {} }
+    func loadFlow() async { do { flow = try await Api.shared.messageFlow().items } catch {} }
+    func retry(_ id: String) async {
+        _ = try? await Api.shared.retryMessageFlow(id)
+        await loadFlow()
+    }
 
     func test(_ id: String) async { try? await Api.shared.integrationTest(id) }
     func toggle(_ item: PublicIntegration) async {
@@ -57,6 +66,7 @@ struct IntegrationsView: View {
                     switch tab {
                     case .overview: overviewTab
                     case .external: externalTab
+                    case .flow: flowTab
                     case .logs: logsTab
                     }
                 }
@@ -92,6 +102,7 @@ struct IntegrationsView: View {
         switch tab {
         case .overview: await vm.loadOverview()
         case .external: await vm.loadIntegrations()
+        case .flow: await vm.loadFlow()
         case .logs: await vm.loadLogs()
         }
     }
@@ -216,6 +227,70 @@ struct IntegrationsView: View {
         .foregroundStyle(color)
         .padding(.horizontal, 9).padding(.vertical, 3)
         .background(color.opacity(0.14), in: Capsule())
+    }
+
+    // MARK: Message flow
+    @ViewBuilder private var flowTab: some View {
+        if vm.flow.isEmpty {
+            Text("لا أحداث تدفّق").foregroundStyle(Theme.onMuted).padding(.top, 40)
+        } else {
+            ForEach(vm.flow) { e in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(icon: e.direction == "inbound" ? .callIn : .callOut).font(.system(size: 14))
+                            .foregroundStyle(e.direction == "inbound" ? Theme.success : Theme.info)
+                        Text(e.eventType ?? "حدث").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                        Spacer()
+                        flowStatusChip(e.status)
+                    }
+                    if let s = e.source, let d = e.destination, !(s.isEmpty && d.isEmpty) {
+                        Text("\(s) ← \(d)").font(.caption2).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    }
+                    HStack(spacing: 10) {
+                        if let c = e.responseCode { Text("HTTP \(c)").font(.caption2).foregroundStyle(Theme.onFaint) }
+                        if let l = e.latencyMs { Text("\(l)ms").font(.caption2).foregroundStyle(Theme.onFaint) }
+                        Spacer()
+                        Text(shortTime(e.timestamp)).font(.caption2).foregroundStyle(Theme.onFaint)
+                    }
+                    if let err = e.errorMessage, !err.isEmpty {
+                        Text(err).font(.caption).foregroundStyle(Theme.danger).lineLimit(2)
+                    }
+                    if e.isRetryable {
+                        HStack {
+                            Spacer()
+                            Button { Task { await vm.retry(e.id) } } label: {
+                                HStack(spacing: 5) {
+                                    Image(icon: .refresh).font(.system(size: 12))
+                                    Text("إعادة المحاولة").font(.footnote.weight(.semibold))
+                                }
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(Theme.primaryContainer, in: Capsule())
+                                .foregroundStyle(Theme.primary)
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(15).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
+                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.outline, lineWidth: 1))
+            }
+        }
+    }
+
+    private func flowStatusChip(_ status: String?) -> some View {
+        let s = (status ?? "").lowercased()
+        let (label, color): (String, Color) = {
+            switch s {
+            case "delivered", "sent", "success", "ok": return (status ?? "", Theme.success)
+            case "failed", "error": return (status ?? "", Theme.danger)
+            case "retry", "scheduled", "pending": return (status ?? "", Theme.warning)
+            default: return (status ?? "—", Theme.info)
+            }
+        }()
+        return Text(label.isEmpty ? "—" : label)
+            .font(.caption2.weight(.semibold)).foregroundStyle(color)
+            .padding(.horizontal, 9).padding(.vertical, 3)
+            .background(color.opacity(0.14), in: Capsule())
     }
 
     // MARK: Logs

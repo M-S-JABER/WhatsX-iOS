@@ -386,6 +386,25 @@ struct IntegrationLog: Codable, Identifiable {
 }
 struct IntegrationLogsResponse: Codable { var items: [IntegrationLog] = [] }
 
+// GET /api/integrations/message-flow -> { items:[event] }. Only scalar fields decoded
+// (Codable ignores the variant-typed payloadSummary/requestPayload/headers/retryHistory).
+struct MessageFlowEvent: Codable, Identifiable {
+    var id: String = ""
+    var timestamp: String? = nil
+    var direction: String? = nil       // inbound | outbound
+    var source: String? = nil
+    var destination: String? = nil
+    var eventType: String? = nil
+    var status: String? = nil
+    var responseCode: Int? = nil
+    var latencyMs: Int? = nil
+    var errorMessage: String? = nil
+    var retryable: Bool? = nil
+    var isRetryable: Bool { retryable ?? false }
+}
+struct MessageFlowResponse: Codable { var items: [MessageFlowEvent] = [] }
+struct RetryResult: Codable { var ok: Bool = false; var retried: Bool = false; var status: String? = nil; var message: String? = nil }
+
 // MARK: - WhatsApp accounts (health)
 
 struct WhatsAppAccount: Codable, Identifiable {

@@ -207,6 +207,13 @@ final class Api {
     func integrationLogs(severity: String? = nil) async throws -> IntegrationLogsResponse {
         try await request("api/integrations/logs", query: ["severity": severity])
     }
+    func messageFlow() async throws -> MessageFlowResponse {
+        try await request("api/integrations/message-flow")
+    }
+    @discardableResult
+    func retryMessageFlow(_ id: String) async throws -> RetryResult {
+        try await request("api/integrations/message-flow/\(id)/retry", method: "POST")
+    }
     func whatsappAccounts() async throws -> WhatsAppAccountsResponse {
         try await request("api/integrations/whatsapp-accounts")
     }
