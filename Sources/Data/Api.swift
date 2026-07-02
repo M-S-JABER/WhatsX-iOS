@@ -125,10 +125,11 @@ final class Api {
     func messages(conversationId: String, page: Int = 1) async throws -> MessagesResponse {
         try await request("api/conversations/\(conversationId)/messages", query: ["page": String(page)])
     }
-    func sendMessage(conversationId: String, body: String) async throws {
+    func sendMessage(conversationId: String, body: String, replyToMessageId: String? = nil) async throws {
         let _: EmptyResponse = try await request(
             "api/message/send", method: "POST",
-            body: SendMessageRequest(conversationId: conversationId, body: body))
+            body: SendMessageRequest(conversationId: conversationId, body: body,
+                                     replyToMessageId: replyToMessageId))
     }
     /// Upload a file to /api/upload (multipart field "file"); returns the signed media path in `url`.
     func uploadMedia(data: Data, filename: String, mimeType: String) async throws -> MediaUploadResponse {
@@ -150,11 +151,12 @@ final class Api {
         return try decoder.decode(MediaUploadResponse.self, from: respData)
     }
     /// Send a previously-uploaded media URL as a message (optionally with a caption).
-    func sendMedia(conversationId: String, mediaUrl: String, caption: String?) async throws {
+    func sendMedia(conversationId: String, mediaUrl: String, caption: String?, replyToMessageId: String? = nil) async throws {
         let _: EmptyResponse = try await request(
             "api/message/send", method: "POST",
             body: SendMediaRequest(conversationId: conversationId, media_url: mediaUrl,
-                                   body: (caption?.isEmpty == false) ? caption : nil))
+                                   body: (caption?.isEmpty == false) ? caption : nil,
+                                   replyToMessageId: replyToMessageId))
     }
     /// Send an approved Meta template with optional body parameters.
     func sendTemplate(conversationId: String, name: String, language: String?, params: [String]) async throws {
@@ -171,6 +173,10 @@ final class Api {
     }
 
     // MARK: - Voice calls
+    /// Call history scoped to one conversation (inline call events in the chat timeline).
+    func conversationCalls(conversationId: String, limit: Int = 100) async throws -> VoiceCallsResponse {
+        try await request("api/conversations/\(conversationId)/calls", query: ["limit": String(limit)])
+    }
     func voiceCalls(limit: Int = 200, search: String? = nil, direction: String? = nil, status: String? = nil,
                     instanceId: String? = nil, agent: String? = nil, hasRecording: Bool? = nil) async throws -> VoiceCallsResponse {
         try await request("api/voice/calls", query: [
@@ -239,6 +245,12 @@ final class Api {
         let _: EmptyResponse = try await request(
             "api/integrations/whatsapp-accounts/\(id)/register", method: "POST",
             body: RegisterNumberRequest(pin: pin))
+    }
+
+    // MARK: - Presence
+    /// Heartbeat that stamps the user's last-active time (web parity: use-activity-ping).
+    func activityPing() async throws {
+        let _: EmptyResponse = try await request("api/activity/ping", method: "POST")
     }
 
     // MARK: - Profile

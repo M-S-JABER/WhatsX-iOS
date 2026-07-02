@@ -31,6 +31,7 @@ final class Realtime: ObservableObject {
 
     private var task: URLSessionWebSocketTask?
     private var pingTimer: Timer?
+    private var activityTimer: Timer?
     private var reconnectAttempt = 0
     private var wantsConnection = false
 
@@ -54,6 +55,7 @@ final class Realtime: ObservableObject {
         wantsConnection = true
         reconnectAttempt = 0
         openIfNeeded()
+        startActivityHeartbeat()
     }
 
     /// Tear down the connection. Call on logout.
@@ -61,9 +63,20 @@ final class Realtime: ObservableObject {
         wantsConnection = false
         pingTimer?.invalidate()
         pingTimer = nil
+        activityTimer?.invalidate()
+        activityTimer = nil
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
         isConnected = false
+    }
+
+    /// Presence heartbeat — stamps last-active on the server every minute.
+    private func startActivityHeartbeat() {
+        activityTimer?.invalidate()
+        Task { try? await Api.shared.activityPing() }
+        activityTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            Task { try? await Api.shared.activityPing() }
+        }
     }
 
     private func wsURL() -> URL? {

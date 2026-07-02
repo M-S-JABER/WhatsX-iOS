@@ -14,6 +14,8 @@ final class InboxViewModel: ObservableObject {
     @Published var error: String?
     @Published var segment: InboxSegment = .active
     @Published var query = ""
+    @Published var instances: [Instance] = []
+    @Published var selectedInstanceIds: Set<String> = []
 
     var showArchived: Bool { segment == .archived }
 
@@ -37,11 +39,27 @@ final class InboxViewModel: ObservableObject {
         if crosses { Task { await load() } }
     }
 
+    /// Load the WhatsApp accounts once for the filter chips (multi-account inboxes).
+    func loadInstances() async {
+        instances = (try? await Api.shared.instances())?.items ?? []
+    }
+
+    func toggleInstance(_ id: String?) {
+        if let id {
+            if selectedInstanceIds.contains(id) { selectedInstanceIds.remove(id) }
+            else { selectedInstanceIds.insert(id) }
+        } else {
+            selectedInstanceIds.removeAll()
+        }
+        Task { await load() }
+    }
+
     func load() async {
         loading = items.isEmpty
         error = nil
+        let filter = selectedInstanceIds.isEmpty ? nil : selectedInstanceIds.sorted().joined(separator: ",")
         do {
-            async let convTask = Api.shared.conversations(archived: showArchived)
+            async let convTask = Api.shared.conversations(archived: showArchived, instanceIds: filter)
             async let pinsTask = Api.shared.pinnedConversationIds()
             let resp = try await convTask
             let pins = Set((try? await pinsTask) ?? [])
@@ -77,13 +95,17 @@ struct InboxView: View {
                 header
                 searchField
                 segments
+                if vm.instances.count > 1 { accountChips }
                 content
             }
             .background(Theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
-        .task { await vm.load() }
+        .task {
+            await vm.loadInstances()
+            await vm.load()
+        }
         .onReceive(Realtime.shared.events) { event in
             guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
             Task { await vm.load() }
@@ -134,6 +156,34 @@ struct InboxView: View {
         .padding(4)
         .background(Theme.surface2, in: Capsule())
         .padding(.horizontal, 12).padding(.vertical, 6)
+    }
+
+    /// Multi-account filter (web parity: instance filter on Home) — shown only
+    /// when the user can see more than one WhatsApp account.
+    private var accountChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                chip("كل الحسابات", active: vm.selectedInstanceIds.isEmpty) { vm.toggleInstance(nil) }
+                ForEach(vm.instances) { inst in
+                    chip(inst.label, active: vm.selectedInstanceIds.contains(inst.id)) {
+                        vm.toggleInstance(inst.id)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+        .padding(.bottom, 6)
+    }
+
+    private func chip(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(active ? Theme.onPrimary : Theme.onMuted)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(active ? Theme.primary : Theme.surface2, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private var content: some View {

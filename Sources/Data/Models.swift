@@ -45,9 +45,34 @@ struct InstancesResponse: Codable {
 
 // MARK: - Conversations
 
+// Conversation metadata is a free-form JSON blob on the server, so every
+// field decodes leniently — a malformed value must never sink the whole
+// conversations list.
 struct ConvMetadata: Codable, Hashable {
     var lastMessage: String? = nil
     var unreadCount: Int? = nil
+    var status: String? = nil
+    var about: String? = nil
+    var website: String? = nil
+    var lastSeenAt: String? = nil
+    var labels: [String]? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case lastMessage, unreadCount, status, about, website, lastSeenAt, labels
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lastMessage = (try? c.decodeIfPresent(String.self, forKey: .lastMessage)) ?? nil
+        unreadCount = (try? c.decodeIfPresent(Int.self, forKey: .unreadCount)) ?? nil
+        status = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? nil
+        about = (try? c.decodeIfPresent(String.self, forKey: .about)) ?? nil
+        website = (try? c.decodeIfPresent(String.self, forKey: .website)) ?? nil
+        lastSeenAt = (try? c.decodeIfPresent(String.self, forKey: .lastSeenAt)) ?? nil
+        labels = (try? c.decodeIfPresent([String].self, forKey: .labels)) ?? nil
+    }
 }
 
 struct Conversation: Codable, Identifiable, Hashable {
@@ -80,6 +105,15 @@ struct MessageMedia: Codable, Equatable {
     var mimeType: String? = nil
 }
 
+// Quoted-reply summary attached to a message (server: ReplySummary).
+struct ReplySummary: Codable, Equatable {
+    var id: String? = nil
+    var content: String? = nil
+    var direction: String? = nil
+    var senderLabel: String? = nil
+    var createdAt: String? = nil
+}
+
 struct Message: Codable, Identifiable, Equatable {
     var id: String = ""
     var conversationId: String? = nil
@@ -89,6 +123,7 @@ struct Message: Codable, Identifiable, Equatable {
     var createdAt: String? = nil
     var media: MessageMedia? = nil
     var senderLabel: String? = nil
+    var replyTo: ReplySummary? = nil
 
     var isOutbound: Bool { direction == "outbound" }
 }
@@ -101,6 +136,7 @@ struct MessagesResponse: Codable {
 struct SendMessageRequest: Codable {
     var conversationId: String
     var body: String
+    var replyToMessageId: String? = nil
 }
 
 // Media upload response from POST /api/upload (signed path in `url`).
@@ -116,6 +152,7 @@ struct SendMediaRequest: Codable {
     var conversationId: String
     var media_url: String
     var body: String? = nil
+    var replyToMessageId: String? = nil
 }
 
 // Template send: `template` accepts {name, language}; params fill the body variables.
