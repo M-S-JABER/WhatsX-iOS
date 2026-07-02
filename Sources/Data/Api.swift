@@ -184,8 +184,8 @@ final class Api {
     }
 
     // MARK: - Statistics
-    func statistics(range: String? = nil) async throws -> StatsResponse {
-        try await request("api/statistics", query: ["range": range])
+    func statistics(range: String? = nil, instanceId: String? = nil) async throws -> StatsResponse {
+        try await request("api/statistics", query: ["range": range, "instanceId": instanceId])
     }
 
     // MARK: - Admin & integrations

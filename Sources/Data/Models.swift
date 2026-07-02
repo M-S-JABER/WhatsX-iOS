@@ -237,11 +237,26 @@ struct Delivery: Codable, Equatable {
     var failed: Int = 0
 }
 
+struct UserStat: Codable, Identifiable, Equatable {
+    var id: String = ""
+    var username: String = ""
+    var role: String? = nil
+    var messagesSent: Int = 0
+    var repliesSent: Int = 0
+    var conversationsCreated: Int = 0
+    var avgResponseSeconds: Double? = nil
+    var responseCount: Int = 0
+    var engagementRate: Double = 0
+    var activityScore: Int = 0
+    var lastActiveAt: String? = nil
+}
+
 struct StatsResponse: Codable, Equatable {
     var totals: StatTotals? = nil
     var series: [SeriesPoint] = []
     var instanceBreakdown: [StatInstance] = []
     var delivery: Delivery? = nil
+    var userStats: [UserStat] = []
 }
 
 // MARK: - Users & roles
