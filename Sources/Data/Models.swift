@@ -327,6 +327,18 @@ struct Template: Codable {
 }
 struct TemplatesResponse: Codable { var items: [Template] = [] }
 
+// Admin template CRUD (POST /api/admin/templates, /sync).
+struct CreateTemplateRequest: Codable {
+    var name: String
+    var language: String
+    var category: String? = nil
+    var components: [TemplateComponent]
+    var submitToMeta: Bool = false
+    var instanceId: String? = nil
+}
+struct SyncTemplatesResponse: Codable { var syncedCount: Int = 0; var lastSyncedAt: String? = nil }
+struct InstanceIdBody: Codable { var instanceId: String? = nil }
+
 // MARK: - Integrations
 
 struct LinkedAccount: Codable { var id: String = ""; var name: String = ""; var phoneNumber: String? = nil }

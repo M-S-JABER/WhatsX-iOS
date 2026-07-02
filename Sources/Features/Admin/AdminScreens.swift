@@ -493,9 +493,13 @@ struct UserPermissionsView: View {
 struct TemplatesView: View {
     @State private var templates: [Template] = []
     @State private var ready: [ReadyMessage] = []
+    @State private var accounts: [Instance] = []
     @State private var loading = true
     @State private var editorOpen = false
+    @State private var createTemplateOpen = false
     @State private var editing: ReadyMessage?
+    @State private var syncing = false
+    @State private var banner: String?
 
     var body: some View {
         ScrollView {
@@ -503,15 +507,18 @@ struct TemplatesView: View {
                 ProgressView().tint(Theme.primary).padding(.top, 40)
             } else {
                 VStack(alignment: .leading, spacing: 14) {
+                    if let banner {
+                        Text(banner).font(.caption).foregroundStyle(Theme.success)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10).background(Theme.surface2, in: RoundedRectangle(cornerRadius: 12))
+                    }
                     if !ready.isEmpty {
                         Text("الردود الجاهزة").font(.callout.bold()).foregroundStyle(Theme.onMuted)
                         ForEach(ready) { r in readyCard(r) }
                     }
                     if !templates.isEmpty {
                         Text("قوالب Meta").font(.callout.bold()).foregroundStyle(Theme.onMuted)
-                        ForEach(templates, id: \.stableId) { t in
-                            card(title: t.name, body: t.bodyText ?? "", tag: t.status ?? t.language ?? "")
-                        }
+                        ForEach(templates, id: \.stableId) { t in templateCard(t) }
                     }
                     if ready.isEmpty && templates.isEmpty {
                         Text("لا قوالب").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity).padding(.top, 40)
@@ -525,24 +532,80 @@ struct TemplatesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { editing = nil; editorOpen = true } label: { Image(systemName: "plus") }
+                Menu {
+                    Button { editing = nil; editorOpen = true } label: { Label("رد جاهز جديد", systemImage: "text.bubble") }
+                    Button { createTemplateOpen = true } label: { Label("قالب Meta جديد", systemImage: "doc.badge.plus") }
+                    Button { Task { await sync() } } label: { Label("مزامنة من Meta", systemImage: "arrow.clockwise") }
+                } label: {
+                    if syncing { ProgressView() } else { Image(systemName: "plus") }
+                }
             }
         }
         .sheet(isPresented: $editorOpen) { ReadyMessageSheet(message: editing) { await load() } }
+        .sheet(isPresented: $createTemplateOpen) { CreateTemplateSheet(accounts: accounts) { await load() } }
         .task { await load() }
     }
 
     private func load() async {
         async let r = Api.shared.readyMessages()
         async let t = Api.shared.templates()
+        async let a = Api.shared.instances()
         ready = (try? await r)?.items ?? []
         templates = (try? await t)?.items ?? []
+        accounts = (try? await a)?.items ?? []
         loading = false
+    }
+
+    private func sync() async {
+        syncing = true; banner = nil
+        do {
+            let r = try await Api.shared.syncTemplates()
+            banner = "تمت المزامنة: \(r.syncedCount) قالب من Meta."
+            await load()
+        } catch {
+            banner = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        syncing = false
     }
 
     private func delete(_ r: ReadyMessage) async {
         try? await Api.shared.deleteReadyMessage(r.id)
         await load()
+    }
+
+    private func deleteTemplate(_ t: Template) async {
+        try? await Api.shared.deleteTemplate(t.stableId)
+        await load()
+    }
+
+    private func templateCard(_ t: Template) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(t.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                Spacer()
+                let tag = t.status ?? t.language ?? ""
+                if !tag.isEmpty {
+                    Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Theme.primary)
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(Theme.primaryContainer, in: Capsule())
+                }
+            }
+            if let body = t.bodyText, !body.isEmpty {
+                Text(body).font(.footnote).foregroundStyle(Theme.onMuted).lineLimit(3)
+            }
+            HStack {
+                Spacer()
+                Button { Task { await deleteTemplate(t) } } label: {
+                    Image(icon: .trash).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.danger)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.dangerBg, in: RoundedRectangle(cornerRadius: 9))
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
     }
 
     private func readyCard(_ r: ReadyMessage) -> some View {
@@ -642,6 +705,82 @@ struct ReadyMessageSheet: View {
             } else {
                 try await Api.shared.createReadyMessage(name: name, body: text, isActive: isActive)
             }
+            await onSaved()
+            dismiss()
+        } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        saving = false
+    }
+}
+
+struct CreateTemplateSheet: View {
+    let accounts: [Instance]
+    let onSaved: () async -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var language = "ar"
+    @State private var category = "MARKETING"
+    @State private var bodyText = ""
+    @State private var submitToMeta = false
+    @State private var instanceId = ""
+    @State private var saving = false
+    @State private var error: String?
+
+    private let categories = ["MARKETING", "UTILITY", "AUTHENTICATION"]
+    private let languages = ["ar", "en_US", "en"]
+
+    private var valid: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+            && !bodyText.trimmingCharacters(in: .whitespaces).isEmpty
+            && (!submitToMeta || !instanceId.isEmpty)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("القالب") {
+                    TextField("الاسم (أحرف صغيرة و_)", text: $name)
+                        .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    Picker("اللغة", selection: $language) { ForEach(languages, id: \.self) { Text($0).tag($0) } }
+                    Picker("الفئة", selection: $category) { ForEach(categories, id: \.self) { Text($0).tag($0) } }
+                }
+                Section("نص الرسالة (BODY)") {
+                    TextField("النص", text: $bodyText, axis: .vertical).lineLimit(3...8)
+                }
+                Section {
+                    Toggle("إرسال إلى Meta للاعتماد", isOn: $submitToMeta)
+                    if submitToMeta {
+                        Picker("الحساب", selection: $instanceId) {
+                            Text("اختر حسابًا").tag("")
+                            ForEach(accounts) { a in Text(a.label).tag(a.id) }
+                        }
+                    }
+                } footer: {
+                    Text(submitToMeta ? "سيُرسَل للاعتماد لدى Meta (PENDING)." : "سيُحفَظ محليًا (LOCAL) دون إرسال إلى Meta.")
+                }
+                if let error { Text(error).foregroundStyle(Theme.danger) }
+            }
+            .navigationTitle("قالب Meta جديد")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("إنشاء") { Task { await create() } }.disabled(saving || !valid)
+                }
+                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    private func create() async {
+        saving = true; error = nil
+        let req = CreateTemplateRequest(
+            name: name, language: language, category: category,
+            components: [TemplateComponent(type: "BODY", text: bodyText)],
+            submitToMeta: submitToMeta, instanceId: submitToMeta ? instanceId : nil)
+        do {
+            try await Api.shared.createTemplate(req)
             await onSaved()
             dismiss()
         } catch {

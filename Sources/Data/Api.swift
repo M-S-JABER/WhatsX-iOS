@@ -193,6 +193,15 @@ final class Api {
     func roles() async throws -> RolesResponse { try await request("api/roles") }
     func readyMessages() async throws -> ReadyMessagesResponse { try await request("api/ready-messages") }
     func templates() async throws -> TemplatesResponse { try await request("api/templates") }
+    func createTemplate(_ body: CreateTemplateRequest) async throws {
+        let _: EmptyResponse = try await request("api/admin/templates", method: "POST", body: body)
+    }
+    func deleteTemplate(_ id: String) async throws {
+        let _: EmptyResponse = try await request("api/admin/templates/\(id)", method: "DELETE")
+    }
+    func syncTemplates(instanceId: String? = nil) async throws -> SyncTemplatesResponse {
+        try await request("api/admin/templates/sync", method: "POST", body: InstanceIdBody(instanceId: instanceId))
+    }
     func integrationsOverview() async throws -> IntegrationsOverview { try await request("api/integrations/overview") }
     func integrations() async throws -> IntegrationsListResponse { try await request("api/integrations") }
     func integrationLogs(severity: String? = nil) async throws -> IntegrationLogsResponse {
