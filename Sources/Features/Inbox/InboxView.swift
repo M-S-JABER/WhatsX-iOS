@@ -69,6 +69,7 @@ final class InboxViewModel: ObservableObject {
 
 struct InboxView: View {
     @StateObject private var vm = InboxViewModel()
+    @State private var showNew = false
 
     var body: some View {
         NavigationStack {
@@ -81,15 +82,22 @@ struct InboxView: View {
             .background(Theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
         }
+        .sheet(isPresented: $showNew) { NewConversationSheet() }
         .task { await vm.load() }
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             Text("المحادثات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
             Image(icon: .bell).font(.system(size: 20)).foregroundStyle(Theme.onMuted)
-            Image(icon: .filter).font(.system(size: 20)).foregroundStyle(Theme.onMuted).padding(.leading, 10)
+            Button { showNew = true } label: {
+                Image(systemName: "square.and.pencil").font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.primary)
+                    .frame(width: 38, height: 38)
+                    .glassCircle()
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
     }

@@ -10,7 +10,9 @@ import PackageDescription
 let package = Package(
     name: "WhatsX",
     platforms: [
-        .iOS(.v16)
+        // Liquid Glass (native) requires iOS 26. String form keeps the 5.9 tools
+        // manifest valid while targeting the iOS 26 SDK.
+        .iOS("26.0")
     ],
     products: [
         .library(name: "WhatsX", targets: ["WhatsX"])
