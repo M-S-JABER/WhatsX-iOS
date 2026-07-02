@@ -62,8 +62,7 @@ struct CustomerReportsView: View {
             countPill(c.messageCount)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 
     private func countPill(_ count: Int) -> some View {

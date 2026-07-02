@@ -81,8 +81,7 @@ struct CustomerReportDetailView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func totalsGrid(_ t: CustomerReportTotals?) -> some View {
@@ -111,8 +110,7 @@ struct CustomerReportDetailView: View {
             Text("عدد الردود المحسوبة: \(rs.count)").font(.caption).foregroundStyle(Theme.onFaint)
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func statusCard(_ sb: [String: Int]) -> some View {
@@ -129,8 +127,7 @@ struct CustomerReportDetailView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func agentsCard(_ agents: [CustomerReportAgent]) -> some View {
@@ -149,8 +146,7 @@ struct CustomerReportDetailView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func timelineCard(_ items: [CustomerReportTimelineItem]) -> some View {
@@ -174,8 +170,7 @@ struct CustomerReportDetailView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     // MARK: - Tiles
@@ -187,8 +182,7 @@ struct CustomerReportDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14).padding(.vertical, 14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 
     private func statTile(_ label: String, _ value: String, _ color: Color) -> some View {
@@ -209,8 +203,7 @@ struct CustomerReportDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14).padding(.vertical, 12)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 
     // MARK: - Formatting
