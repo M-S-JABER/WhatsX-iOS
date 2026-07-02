@@ -604,8 +604,7 @@ struct TemplatesView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 
     private func readyCard(_ r: ReadyMessage) -> some View {
@@ -635,8 +634,7 @@ struct TemplatesView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 
     private func card(title: String, body: String, tag: String) -> some View {
@@ -654,8 +652,7 @@ struct TemplatesView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(18)
     }
 }
 
@@ -1064,8 +1061,7 @@ struct VoiceSettingsView: View {
                     infoRow("التحويلة الافتراضية", s.ucmDefaultExtension)
                     infoRow("SIP Domain", s.whatsappSipDomain)
                 }
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+                .glassCard(22)
                 .padding(16)
             } else {
                 Text("تعذّر تحميل الإعدادات").foregroundStyle(Theme.onMuted).padding(.top, 40)

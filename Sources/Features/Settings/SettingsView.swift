@@ -106,8 +106,7 @@ struct SettingsView: View {
             Button { editOpen = true } label: { Image(icon: .edit).foregroundStyle(Theme.primary) }
         }
         .padding(16)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private var logoutButton: some View {
@@ -136,8 +135,7 @@ struct SettingsView: View {
     private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(spacing: 0) { content() }
             .padding(.vertical, 4)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-            .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+            .glassCard(22)
             .padding(.horizontal, 14)
     }
 

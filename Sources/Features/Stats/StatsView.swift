@@ -63,8 +63,7 @@ struct StatsView: View {
     private var reportsLink: some View {
         NavigationLink { CustomerReportsView() } label: {
             SettingRow(icon: .pdf, title: "تقارير العملاء", subtitle: "تقرير مفصّل لكل عميل", trailingChevron: true)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+                .glassCard(22)
         }
         .buttonStyle(.plain)
     }
@@ -127,8 +126,7 @@ struct StatsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 15)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(20)
     }
 
     // MARK: - Time series (hand-rolled bar chart)
@@ -159,8 +157,7 @@ struct StatsView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func bar(_ frac: CGFloat, _ color: Color) -> some View {
@@ -191,8 +188,7 @@ struct StatsView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     private func statusTile(_ label: String, _ value: Int, _ icon: WIcon, _ color: Color) -> some View {
@@ -227,8 +223,7 @@ struct StatsView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     // MARK: - Agent performance
@@ -255,8 +250,7 @@ struct StatsView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(22)
     }
 
     // MARK: - Formatting

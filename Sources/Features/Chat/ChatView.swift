@@ -254,8 +254,7 @@ struct ChatView: View {
                 }
             }
             .padding(.horizontal, 6).frame(minHeight: 48)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Theme.outline, lineWidth: 1))
+            .glassCard(24)
 
             Button {
                 if vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -287,8 +286,7 @@ struct ChatView: View {
                 Spacer()
             }
             .padding(.horizontal, 14).frame(height: 48)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Theme.outline, lineWidth: 1))
+            .glassCard(24)
 
             Button {
                 if let data = recorder.stop() { Task { await vm.sendVoiceNote(data) } }

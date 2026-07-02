@@ -35,11 +35,12 @@ in `Sources/Data/Api.swift`. It must be a **stable public https domain**.
 ## على الآيباد — On iPad (Swift Playgrounds)
 
 الحزمة تحتوي كامل التطبيق وتكشف واجهة جذر واحدة `WhatsXRoot()`. أنشئ تطبيقًا في Swift
-Playgrounds، أضِف هذه الحزمة كاعتمادية من رابط GitHub مربوطة بالفرع `main`، ثم:
+Playgrounds، أضِف هذه الحزمة كاعتمادية من رابط GitHub (يلتقط Playgrounds أحدث
+**وسم إصدار** تلقائيًّا — 1.1.1 أو أحدث)، ثم:
 
 The package holds the whole app and exposes a single root view `WhatsXRoot()`. In
 Swift Playgrounds, create an **App**, add this repo as a **Swift Package** dependency
-pinned to the **`main`** branch, then:
+(Playgrounds resolves the latest **release tag** automatically — 1.1.1+), then:
 
 ```swift
 import SwiftUI
@@ -87,6 +88,8 @@ Live WebRTC calling, background APNs push, and a notification center — all nee
 native libs/entitlements, best done on the Mac.
 
 ## ملاحظات — Notes
+- **Liquid Glass**: الحزمة تشترط **iOS 16** فقط كي تُحمَّل في Swift Playgrounds؛ على **iOS 26** تُعرض البطاقات والشرائح وشريط التبويبات بزجاج Liquid Glass الأصلي تلقائيًّا، وعلى الأنظمة الأقدم تعود لأسطح Luxe الكلاسيكية (انظر `Sources/Design/Glass.swift`).
+  The package only requires **iOS 16** so it loads in Swift Playgrounds; on **iOS 26** cards, chips and the tab bar render on native Liquid Glass automatically, falling back to classic Luxe surfaces on older systems (see `Sources/Design/Glass.swift`).
 - **الأيقونات**: مجموعة أندرويد الخطّية المخصّصة مُطابَقة إلى **SF Symbols** (المكافئ الطبيعي في iOS).
 - **الألوان**: تعكس ثيم Luxe Amber (Color.kt) وتتكيّف فاتح/داكن تلقائيًّا.
 - **JSON**: أسماء الحقول تتبع نماذج أندرويد؛ إن رفض الخادم حقلًا snake_case أضف `CodingKeys`.

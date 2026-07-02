@@ -137,8 +137,7 @@ struct IntegrationsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.outline, lineWidth: 1))
+        .glassCard(20)
     }
 
     private func healthTile(_ label: String, _ value: Int, _ color: Color) -> some View {
@@ -205,8 +204,7 @@ struct IntegrationsView: View {
                 }
                 .padding(15)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Theme.outline, lineWidth: 1))
+                .glassCard(22)
             }
         }
     }
@@ -271,8 +269,7 @@ struct IntegrationsView: View {
                     }
                 }
                 .padding(15).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.outline, lineWidth: 1))
+                .glassCard(20)
             }
         }
     }
@@ -313,8 +310,7 @@ struct IntegrationsView: View {
                     if idx < vm.logs.count - 1 { Rectangle().fill(Theme.outline).frame(height: 1).padding(.leading, 16) }
                 }
             }
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Theme.outline, lineWidth: 1))
+            .glassCard(24)
         }
     }
 
