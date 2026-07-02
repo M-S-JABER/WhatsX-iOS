@@ -114,7 +114,7 @@ final class Api {
     func conversations(archived: Bool, page: Int = 1, pageSize: Int = 50, instanceIds: String? = nil) async throws -> ConversationsResponse {
         try await request("api/conversations", query: [
             "archived": String(archived), "page": String(page),
-            "pageSize": String(pageSize), "instanceIds": instanceIds,
+            "page_size": String(pageSize), "instanceIds": instanceIds,
         ])
     }
     func createConversation(_ body: CreateConversationRequest) async throws -> CreateConversationResponse {

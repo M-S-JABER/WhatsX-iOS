@@ -139,7 +139,7 @@ struct PinsResponse: Codable { var pins: [PinnedConversation] = [] }
 
 struct CreateConversationRequest: Codable {
     var phone: String
-    var name: String?
+    var displayName: String?   // server reads `displayName` (POST /api/conversations)
     var instanceId: String?
 }
 
@@ -372,6 +372,7 @@ struct PublicIntegration: Codable, Identifiable {
     var health: String = ""          // healthy | warning | failed | disconnected | needs_configuration
     var baseUrl: String? = nil
     var endpoint: String? = nil
+    var authType: String? = nil      // none | bearer | api_key
     var isEnabled: Bool = true
     var lastErrorMessage: String? = nil
 }

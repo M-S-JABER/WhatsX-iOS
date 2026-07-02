@@ -376,6 +376,7 @@ struct IntegrationFormSheet: View {
                 name = it.name
                 baseUrl = it.baseUrl ?? ""
                 endpoint = it.endpoint ?? ""
+                authType = it.authType ?? "none"
                 enabled = it.isEnabled
             }
         }
