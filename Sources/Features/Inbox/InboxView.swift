@@ -84,6 +84,10 @@ struct InboxView: View {
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
         .task { await vm.load() }
+        .onReceive(Realtime.shared.events) { event in
+            guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
+            Task { await vm.load() }
+        }
     }
 
     private var header: some View {

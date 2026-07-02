@@ -159,6 +159,12 @@ struct ChatView: View {
         .background(chatBackground)
         .navigationBarHidden(true)
         .task { await vm.load() }
+        .onReceive(Realtime.shared.events) { event in
+            guard RealtimeEvent.chatEvents.contains(event.name),
+                  event.conversationId == nil || event.conversationId == vm.conversation.id
+            else { return }
+            Task { await vm.load() }
+        }
         .confirmationDialog("إرفاق", isPresented: $showAttachMenu, titleVisibility: .visible) {
             Button("صورة") { showPhotoPicker = true }
             Button("مستند") { showDocImporter = true }

@@ -16,6 +16,7 @@ final class Session: ObservableObject {
     func bootstrap() async {
         do { user = try await Api.shared.me() } catch { user = nil }
         isBootstrapping = false
+        if isAuthenticated { Realtime.shared.connect() }
     }
 
     func login(username: String, password: String) async {
@@ -23,6 +24,7 @@ final class Session: ObservableObject {
         loginError = nil
         do {
             user = try await Api.shared.login(username: username, password: password)
+            Realtime.shared.connect()
         } catch {
             loginError = (error as? ApiError)?.message ?? error.localizedDescription
         }
@@ -30,6 +32,7 @@ final class Session: ObservableObject {
     }
 
     func logout() async {
+        Realtime.shared.disconnect()
         try? await Api.shared.logout()
         user = nil
     }

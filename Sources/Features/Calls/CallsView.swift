@@ -57,6 +57,10 @@ struct CallsView: View {
             await vm.load()
             await vm.loadFilters()
         }
+        .onReceive(Realtime.shared.events) { event in
+            guard RealtimeEvent.callEvents.contains(event.name) else { return }
+            vm.reload()
+        }
     }
 
     private var header: some View {
