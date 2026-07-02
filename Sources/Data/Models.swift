@@ -292,6 +292,15 @@ struct PermissionCatalogItem: Codable, Identifiable {
 }
 struct PermissionCatalogResponse: Codable { var items: [PermissionCatalogItem] = [] }
 
+// GET /api/users/:id/permissions -> { rolePermissions:[id], overrides:[{permissionId,allowed}], effectivePermissions:[id] }
+struct UserPermissionOverride: Codable { var permissionId: String; var allowed: Bool }
+struct UserPermissions: Codable {
+    var rolePermissions: [String] = []
+    var overrides: [UserPermissionOverride] = []
+    var effectivePermissions: [String] = []
+}
+struct UpdateUserPermissionsRequest: Codable { var overrides: [UserPermissionOverride] }
+
 // MARK: - Templates & ready messages
 
 struct ReadyMessage: Codable, Identifiable {

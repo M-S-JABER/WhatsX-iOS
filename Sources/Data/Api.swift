@@ -292,6 +292,14 @@ final class Api {
         let resp: PermissionCatalogResponse = try await request("api/permissions/catalog")
         return resp.items
     }
+    func userPermissions(_ id: String) async throws -> UserPermissions {
+        try await request("api/users/\(id)/permissions")
+    }
+    func updateUserPermissions(_ id: String, overrides: [UserPermissionOverride]) async throws {
+        let _: EmptyResponse = try await request(
+            "api/users/\(id)/permissions", method: "PATCH",
+            body: UpdateUserPermissionsRequest(overrides: overrides))
+    }
 
     // MARK: - Customer reports
     func statisticsCustomers(search: String? = nil) async throws -> StatCustomersResponse {

@@ -18,13 +18,17 @@ struct UsersView: View {
             } else {
                 List {
                     ForEach(users) { u in
-                        HStack(spacing: 12) {
-                            Avatar(name: u.title, size: 44)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(u.title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                Text(u.role ?? "—").font(.caption).foregroundStyle(Theme.onMuted)
+                        NavigationLink {
+                            UserPermissionsView(userId: u.id, username: u.title)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Avatar(name: u.title, size: 44)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(u.title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                                    Text(u.role ?? "—").font(.caption).foregroundStyle(Theme.onMuted)
+                                }
+                                Spacer()
                             }
-                            Spacer()
                         }
                         .listRowBackground(Theme.background)
                         .swipeActions(edge: .trailing) {
@@ -355,6 +359,127 @@ struct RolePermissionsView: View {
         do {
             try await Api.shared.updateRole(role.id, permissions: Array(selected))
             await onSaved()
+            dismiss()
+        } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        saving = false
+    }
+}
+
+// MARK: - Per-user permission overrides
+
+struct UserPermissionsView: View {
+    let userId: String
+    let username: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var catalog: [PermissionCatalogItem] = []
+    @State private var rolePerms: Set<String> = []
+    @State private var overrides: [String: Bool] = [:]   // absent = inherit, true = allow, false = deny
+    @State private var loading = true
+    @State private var saving = false
+    @State private var error: String?
+
+    private var groups: [(String, [PermissionCatalogItem])] {
+        let dict = Dictionary(grouping: catalog) { $0.groupTitle }
+        return dict.keys.sorted().map { ($0, dict[$0] ?? []) }
+    }
+
+    private func effective(_ id: String) -> Bool {
+        if let o = overrides[id] { return o }
+        return rolePerms.contains(id)
+    }
+    private var effectiveCount: Int { catalog.filter { effective($0.id) }.count }
+
+    var body: some View {
+        Group {
+            if loading {
+                ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if catalog.isEmpty {
+                Text("لا صلاحيات متاحة").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    Section {
+                        Text("\(overrides.count) تجاوز · \(effectiveCount) صلاحية فعّالة")
+                            .font(.caption).foregroundStyle(Theme.onMuted)
+                    }
+                    ForEach(groups, id: \.0) { group, items in
+                        Section(group) {
+                            ForEach(items) { p in row(p) }
+                        }
+                    }
+                    if let error {
+                        Section { Text(error).foregroundStyle(Theme.danger) }
+                    }
+                }
+                .listStyle(.insetGrouped).scrollContentBackground(.hidden)
+            }
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle(username)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("حفظ") { Task { await save() } }.disabled(saving || loading)
+            }
+        }
+        .task { await load() }
+    }
+
+    private func row(_ p: PermissionCatalogItem) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Circle().fill(effective(p.id) ? Theme.success : Theme.onFaint).frame(width: 7, height: 7)
+                Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
+                if p.isCritical == true {
+                    Text("حسّاس").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Theme.dangerBg, in: Capsule())
+                }
+                Spacer()
+            }
+            Picker("", selection: stateBinding(p.id)) {
+                Text("وراثة").tag(0)
+                Text("سماح").tag(1)
+                Text("منع").tag(2)
+            }
+            .pickerStyle(.segmented)
+            Text(rolePerms.contains(p.id) ? "الدور: يمنحها" : "الدور: لا يمنحها")
+                .font(.caption2).foregroundStyle(Theme.onFaint)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func stateBinding(_ id: String) -> Binding<Int> {
+        Binding(
+            get: { overrides[id] == nil ? 0 : (overrides[id] == true ? 1 : 2) },
+            set: { v in
+                if v == 0 { overrides.removeValue(forKey: id) }
+                else { overrides[id] = (v == 1) }
+            }
+        )
+    }
+
+    private func load() async {
+        do {
+            async let cat = Api.shared.permissionsCatalog()
+            let perms = try await Api.shared.userPermissions(userId)
+            catalog = (try? await cat) ?? []
+            rolePerms = Set(perms.rolePermissions)
+            var map: [String: Bool] = [:]
+            for o in perms.overrides { map[o.permissionId] = o.allowed }
+            overrides = map
+        } catch {
+            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func save() async {
+        saving = true; error = nil
+        let arr = overrides.map { UserPermissionOverride(permissionId: $0.key, allowed: $0.value) }
+        do {
+            try await Api.shared.updateUserPermissions(userId, overrides: arr)
             dismiss()
         } catch {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
