@@ -129,6 +129,20 @@ final class InboxViewModel: ObservableObject {
 struct InboxView: View {
     @StateObject private var vm = InboxViewModel()
     @State private var showNew = false
+    @State private var searchOpen = false
+    @State private var searchText = ""
+    @FocusState private var searchFocused: Bool
+
+    /// Conversations after the in-place bottom search filter.
+    private var displayed: [Conversation] {
+        let q = searchText.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return vm.shown }
+        return vm.shown.filter {
+            $0.title.localizedCaseInsensitiveContains(q)
+                || ($0.phone ?? "").localizedCaseInsensitiveContains(q)
+                || $0.preview.localizedCaseInsensitiveContains(q)
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -138,9 +152,9 @@ struct InboxView: View {
             }
             .background(Theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
-            .overlay(alignment: .bottomTrailing) {
-                floatingActions
-                    .padding(.trailing, 16)
+            .overlay(alignment: .bottom) {
+                bottomBar
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 16)
             }
             // RTL: trailing = the visual top-LEFT corner.
@@ -195,8 +209,63 @@ struct InboxView: View {
         .glassCircle()
     }
 
-    /// Floating compose button (bottom corner).
-    private var floatingActions: some View {
+    /// Bottom floating row: the search circle that EXPANDS in place into a
+    /// full-width bottom search bar (same slide/expand animation style as the
+    /// chat's top search), plus the compose circle (hidden while searching).
+    private var bottomBar: some View {
+        HStack(spacing: 12) {
+            if !searchOpen { Spacer(minLength: 0) }
+            searchContainer
+            if !searchOpen { composeButton }
+        }
+    }
+
+    private var searchContainer: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.primary)
+                .frame(width: searchOpen ? 26 : Self.floatingButtonSide,
+                       height: Self.floatingButtonSide)
+            if searchOpen {
+                TextField(L("ابحث في المحادثات"), text: $searchText)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.onSurface)
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                Button { closeSearch() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.onMuted)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surface2, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 6)
+            }
+        }
+        .frame(maxWidth: searchOpen ? .infinity : Self.floatingButtonSide)
+        .frame(height: Self.floatingButtonSide)
+        .glassCapsule(interactive: true)
+        .contentShape(Capsule())
+        .onTapGesture { if !searchOpen { openSearch() } }
+    }
+
+    private func openSearch() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { searchOpen = true }
+        // Focus right after the expansion starts so the keyboard rises with it.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { searchFocused = true }
+    }
+
+    private func closeSearch() {
+        searchFocused = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            searchOpen = false
+            searchText = ""
+        }
+    }
+
+    private var composeButton: some View {
         Button { showNew = true } label: {
             Image(systemName: "square.and.pencil")
                 .font(.system(size: 21, weight: .medium))
@@ -263,19 +332,20 @@ struct InboxView: View {
         Group {
             if vm.loading && vm.items.isEmpty {
                 Spacer(); ProgressView().tint(Theme.primary); Spacer()
-            } else if vm.shown.isEmpty {
+            } else if displayed.isEmpty {
                 Spacer()
                 VStack(spacing: 12) {
-                    Image(systemName: vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right")
+                    Image(systemName: !searchText.isEmpty ? "questionmark.bubble"
+                            : (vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right"))
                         .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Theme.onFaint)
-                    Text(vm.segment == .unread ? L("لا محادثات غير مقروءة") : L("لا توجد محادثات"))
+                    Text(!searchText.isEmpty ? L("لا نتائج مطابقة") : L("لا توجد محادثات"))
                         .foregroundStyle(Theme.onMuted)
                 }
                 Spacer()
             } else {
                 List {
-                    ForEach(vm.shown) { conv in
+                    ForEach(displayed) { conv in
                         ZStack {
                             NavigationLink(value: conv) { EmptyView() }.opacity(0)
                             ConversationRow(conv: conv)
@@ -283,7 +353,8 @@ struct InboxView: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Theme.background)
                         .listRowSeparatorTint(Theme.outline)
-                        .onAppear { vm.loadMoreIfNeeded(after: conv) }
+                        .listRowSeparator(.hidden, edges: .top)
+                        .onAppear { if searchText.isEmpty { vm.loadMoreIfNeeded(after: conv) } }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
                                 Label(L("حذف"), systemImage: "trash")

@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum MainTab: Hashable { case integrations, chats, settings, search }
+enum MainTab: Hashable { case integrations, chats, settings }
 
 /// Tiny event bus between the tab bar and the inbox: re-tapping the chats
 /// tab (a second press while already on it) flips active ⇄ archive.
@@ -51,11 +51,9 @@ final class TabAvatar: ObservableObject {
 }
 
 // Bottom bar: Integrations · Chats (center, badge) · Settings (user avatar
-// as the icon) + the system search tab. On iOS 26 the search tab is the
-// separate floating glass circle whose tap morphs the bottom bar into a
-// search field over the same conversations list. The compact size class
-// keeps the bar at the BOTTOM on iPad; below iOS 26 a classic labeled bar
-// with a regular search tab is used.
+// as the icon). Search lives as a floating circle inside the inbox that
+// expands in place into a bottom search bar (custom animation). The compact
+// size class keeps the bar at the BOTTOM on iPad.
 struct MainTabView: View {
     @State private var tab: MainTab = .chats
     @State private var lastChatsTap: Date? = nil
@@ -130,9 +128,6 @@ struct MainTabView: View {
                 settingsTabIcon
                 Text(L("الإعدادات"))
             }
-            Tab(value: MainTab.search, role: .search) {
-                GlobalSearchView()
-            }
         }
     }
     #endif
@@ -152,9 +147,6 @@ struct MainTabView: View {
                     Text(L("الإعدادات"))
                 }
                 .tag(MainTab.settings)
-            GlobalSearchView()
-                .tabItem { Label(L("بحث"), systemImage: "magnifyingglass") }
-                .tag(MainTab.search)
         }
     }
 }
