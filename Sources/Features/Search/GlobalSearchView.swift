@@ -43,10 +43,28 @@ struct GlobalSearchView: View {
         .onDisappear { searchActive = false }
     }
 
-    /// iOS 17+ gets programmatic activation (auto-focus + keyboard);
-    /// iOS 16 falls back to plain searchable.
+    /// iOS 26: the field lives in the BOTTOM toolbar (placement .toolbar +
+    /// minimize behavior) so the search circle expands in place into the bar
+    /// with the X — and stays at the bottom. iOS 17 gets programmatic
+    /// activation in the default placement; iOS 16 plain searchable.
     @ViewBuilder
     private var searchableCore: some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            core.searchable(text: $query, isPresented: $searchActive,
+                            placement: .toolbar,
+                            prompt: L("ابحث بالاسم أو الرقم أو الرسالة"))
+                .searchToolbarBehavior(.minimize)
+        } else {
+            preIOS26Core
+        }
+        #else
+        preIOS26Core
+        #endif
+    }
+
+    @ViewBuilder
+    private var preIOS26Core: some View {
         if #available(iOS 17.0, *) {
             core.searchable(text: $query, isPresented: $searchActive,
                             prompt: L("ابحث بالاسم أو الرقم أو الرسالة"))
