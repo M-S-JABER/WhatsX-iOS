@@ -145,9 +145,12 @@ struct InboxView: View {
             }
             // RTL: trailing = the visual top-LEFT corner.
             .overlay(alignment: .topTrailing) {
-                archiveButton
-                    .padding(.trailing, 16)
-                    .padding(.top, 6)
+                HStack(spacing: 10) {
+                    accountsButton
+                    archiveButton
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 6)
             }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
@@ -167,7 +170,7 @@ struct InboxView: View {
                 .font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
         }
-        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 22)
     }
 
     /// Floating archive toggle (visual top-left): opens the archive; while
@@ -184,30 +187,28 @@ struct InboxView: View {
         .glassCircle()
     }
 
-    /// Floating vertical glass pill (Telegram-style): compose a new
-    /// conversation + pick the primary WhatsApp number.
+    /// Floating compose button (bottom corner).
     private var floatingActions: some View {
-        VStack(spacing: 22) {
-            Button { showNew = true } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 21, weight: .medium))
-                    .foregroundStyle(Theme.primary)
-            }
-            .buttonStyle(.plain)
+        Button { showNew = true } label: {
+            Image(systemName: "square.and.pencil")
+                .font(.system(size: 21, weight: .medium))
+                .foregroundStyle(Theme.primary)
+                .frame(width: 54, height: 54)
+        }
+        .buttonStyle(.plain)
+        .glassCircle()
+    }
 
-            // Multi-select account picker: taps toggle accounts on/off; the
-            // menu stays open while picking on iOS 16.4+.
-            Group {
-                if #available(iOS 16.4, *) {
-                    accountsMenu.menuActionDismissBehavior(.disabled)
-                } else {
-                    accountsMenu
-                }
+    /// Top account picker (next to the archive button): multi-select menu;
+    /// stays open while picking on iOS 16.4+.
+    private var accountsButton: some View {
+        Group {
+            if #available(iOS 16.4, *) {
+                accountsMenu.menuActionDismissBehavior(.disabled)
+            } else {
+                accountsMenu
             }
         }
-        .frame(width: 54)
-        .padding(.vertical, 18)
-        .glassCapsule(interactive: true)
     }
 
     private var accountsMenu: some View {
@@ -231,21 +232,23 @@ struct InboxView: View {
         } label: {
             ZStack {
                 Image(systemName: "circle.dashed")
-                    .font(.system(size: 25, weight: .regular))
+                    .font(.system(size: 21, weight: .regular))
                 Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
             }
             .foregroundStyle(Theme.primary)
+            .frame(width: 40, height: 40)
             .overlay(alignment: .topTrailing) {
                 if !vm.selectedInstanceIds.isEmpty {
                     Text("\(vm.selectedInstanceIds.count)")
                         .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.onPrimary)
                         .frame(width: 15, height: 15)
                         .background(Theme.primary, in: Circle())
-                        .offset(x: 8, y: -7)
+                        .offset(x: 3, y: -3)
                 }
             }
         }
+        .glassCircle()
     }
 
     private var content: some View {
