@@ -24,7 +24,7 @@ struct CustomerReportsView: View {
                             }
                         }
                         .padding(16)
-                        .padding(.bottom, 84)
+                        .padding(.bottom, 24)
                     }
                 }
             }

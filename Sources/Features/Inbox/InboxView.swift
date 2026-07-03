@@ -50,6 +50,12 @@ final class InboxViewModel: ObservableObject {
         instances = (try? await Api.shared.instances())?.items ?? []
     }
 
+    /// Primary-number picker (floating pill menu): show one account only, or all.
+    func selectOnly(_ id: String?) {
+        if let id { selectedInstanceIds = [id] } else { selectedInstanceIds.removeAll() }
+        Task { await load() }
+    }
+
     func toggleInstance(_ id: String?) {
         if let id {
             if selectedInstanceIds.contains(id) { selectedInstanceIds.remove(id) }
@@ -130,18 +136,23 @@ final class InboxViewModel: ObservableObject {
 struct InboxView: View {
     @StateObject private var vm = InboxViewModel()
     @State private var showNew = false
+    @State private var didHideSearch = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
-                searchField
                 segments
                 if vm.instances.count > 1 { accountChips }
                 content
             }
             .background(Theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
+            .overlay(alignment: .bottomTrailing) {
+                floatingActions
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 16)
+            }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
         .task {
@@ -158,16 +169,51 @@ struct InboxView: View {
         HStack(spacing: 10) {
             Text("المحادثات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
-            Image(icon: .bell).font(.system(size: 20)).foregroundStyle(Theme.onMuted)
-            Button { showNew = true } label: {
-                Image(systemName: "square.and.pencil").font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Theme.primary)
-                    .frame(width: 38, height: 38)
-                    .glassCircle()
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+    }
+
+    /// Floating vertical glass pill (Telegram-style): compose a new
+    /// conversation + pick the primary WhatsApp number.
+    private var floatingActions: some View {
+        VStack(spacing: 22) {
+            Button { showNew = true } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 21, weight: .medium))
+                    .foregroundStyle(Theme.primary)
+            }
+            .buttonStyle(.plain)
+
+            Menu {
+                Button { vm.selectOnly(nil) } label: {
+                    if vm.selectedInstanceIds.isEmpty {
+                        Label("كل الحسابات", systemImage: "checkmark")
+                    } else {
+                        Text("كل الحسابات")
+                    }
+                }
+                ForEach(vm.instances) { inst in
+                    Button { vm.selectOnly(inst.id) } label: {
+                        if vm.selectedInstanceIds == [inst.id] {
+                            Label(inst.label, systemImage: "checkmark")
+                        } else {
+                            Text(inst.label)
+                        }
+                    }
+                }
+            } label: {
+                ZStack {
+                    Image(systemName: "circle.dashed")
+                        .font(.system(size: 25, weight: .regular))
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(Theme.primary)
+            }
+        }
+        .frame(width: 54)
+        .padding(.vertical, 18)
+        .glassCapsule(interactive: true)
     }
 
     private var searchField: some View {
@@ -243,7 +289,13 @@ struct InboxView: View {
                 }
                 Spacer()
             } else {
+                ScrollViewReader { proxy in
                 List {
+                    // Hidden above the fold — pull down to reveal (Telegram-style).
+                    searchField
+                        .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 8, trailing: 12))
+                        .listRowBackground(Theme.background)
+                        .listRowSeparator(.hidden)
                     ForEach(vm.shown) { conv in
                         ZStack {
                             NavigationLink(value: conv) { EmptyView() }.opacity(0)
@@ -285,7 +337,14 @@ struct InboxView: View {
                     ChatView(conversation: conv)
                 }
                 .refreshable { await vm.load() }
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 84) }
+                .onAppear {
+                    // Start scrolled past the search row so it only appears
+                    // when the user pulls the list down.
+                    guard !didHideSearch, let first = vm.shown.first else { return }
+                    proxy.scrollTo(first.id, anchor: .top)
+                    didHideSearch = true
+                }
+                }
             }
         }
     }

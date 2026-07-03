@@ -70,7 +70,7 @@ struct IntegrationsView: View {
                     case .logs: logsTab
                     }
                 }
-                .padding(14).padding(.bottom, 84)
+                .padding(14).padding(.bottom, 24)
             }
         }
         .background(Theme.background.ignoresSafeArea())

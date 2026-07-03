@@ -43,7 +43,7 @@ struct StatsView: View {
                     reportsLink
                 }
                 .padding(16)
-                .padding(.bottom, 84)
+                .padding(.bottom, 24)
             }
         }
         .background(Theme.background.ignoresSafeArea())
