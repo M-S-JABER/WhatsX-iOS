@@ -51,6 +51,8 @@ struct IntegrationsView: View {
     @State private var tab: IntegTab = .overview
     @State private var editing: PublicIntegration?
     @State private var showForm = false
+    @State private var openConversation: Conversation?
+    @State private var notice: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -89,6 +91,12 @@ struct IntegrationsView: View {
         .sheet(isPresented: $showForm) {
             IntegrationFormSheet(integration: editing) { await vm.loadIntegrations() }
         }
+        .sheet(item: $openConversation) { conv in
+            ChatView(conversation: conv)
+        }
+        .alert("التكاملات", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("حسنًا", role: .cancel) {}
+        } message: { Text(notice ?? "") }
     }
 
     private var tabbar: some View {
@@ -179,10 +187,66 @@ struct IntegrationsView: View {
                 }
                 Text(monitorTime(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
             }
+
+            // Row actions (web parity: open chat · request call · open link).
+            HStack(spacing: 8) {
+                if let convId = m.conversationId, !convId.isEmpty {
+                    Button { openChat(convId) } label: {
+                        actionPill("فتح المحادثة", "bubble.left.and.bubble.right")
+                    }
+                    .buttonStyle(.plain)
+                }
+                if let instId = m.instance?.id, !instId.isEmpty,
+                   let phone = m.phone, !phone.isEmpty {
+                    Button { requestCall(instanceId: instId, phone: phone) } label: {
+                        actionPill("طلب اتصال", "phone.badge.plus")
+                    }
+                    .buttonStyle(.plain)
+                }
+                if let link = m.resolvedUrl, let url = URL(string: link) {
+                    Link(destination: url) {
+                        actionPill("فتح الرابط", "arrow.up.right.square")
+                    }
+                }
+                Spacer()
+            }
+            .padding(.top, 2)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(16)
+    }
+
+    private func actionPill(_ title: String, _ icon: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 11))
+            Text(title).font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(Theme.primary)
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Theme.primarySoft, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.primaryContainer, lineWidth: 1))
+    }
+
+    private func openChat(_ conversationId: String) {
+        Task {
+            if let conv = try? await Api.shared.conversation(conversationId) {
+                openConversation = conv
+            } else {
+                notice = "تعذّر فتح المحادثة"
+            }
+        }
+    }
+
+    private func requestCall(instanceId: String, phone: String) {
+        Task {
+            do {
+                try await Api.shared.requestCallPermission(to: phone.filter { $0.isNumber }, instanceId: instanceId)
+                notice = "أُرسل طلب إذن الاتصال إلى العميل ✓"
+            } catch {
+                notice = (error as? ApiError)?.message ?? error.localizedDescription
+            }
+        }
     }
 
     private func monitorStatusBadge(_ status: String?) -> some View {

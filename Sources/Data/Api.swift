@@ -120,6 +120,10 @@ final class Api {
     func createConversation(_ body: CreateConversationRequest) async throws -> CreateConversationResponse {
         try await request("api/conversations", method: "POST", body: body)
     }
+    /// Fetch a single conversation (e.g. to open a chat from the integrations monitor).
+    func conversation(_ id: String) async throws -> Conversation {
+        try await request("api/conversations/\(id)")
+    }
 
     // MARK: - Messages
     func messages(conversationId: String, page: Int = 1) async throws -> MessagesResponse {
