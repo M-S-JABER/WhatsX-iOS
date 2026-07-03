@@ -221,6 +221,12 @@ final class Api {
         try await request("api/admin/templates/sync", method: "POST", body: InstanceIdBody(instanceId: instanceId))
     }
     func integrationsOverview() async throws -> IntegrationsOverview { try await request("api/integrations/overview") }
+    /// Template messages pushed by external systems (integration monitor).
+    func integrationMonitorMessages(search: String? = nil, instanceId: String? = nil, limit: Int = 100) async throws -> IntegrationMonitorResponse {
+        try await request("api/admin/integrations/messages", query: [
+            "limit": String(limit), "search": search, "instanceId": instanceId,
+        ])
+    }
     func integrations() async throws -> IntegrationsListResponse { try await request("api/integrations") }
     func integrationLogs(severity: String? = nil) async throws -> IntegrationLogsResponse {
         try await request("api/integrations/logs", query: ["severity": severity])

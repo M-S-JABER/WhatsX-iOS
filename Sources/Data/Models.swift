@@ -420,6 +420,36 @@ struct IntegrationsOverview: Codable {
     var summary: IntegrationsSummary? = nil
     var health: IntegrationsHealth? = nil
 }
+
+// GET /api/admin/integrations/messages — template messages pushed by
+// external systems through the integration API (snake_case payload).
+struct IntegrationMonitorItem: Codable, Identifiable {
+    var id: String = ""
+    var requestId: String? = nil
+    var conversationId: String? = nil
+    var phone: String? = nil
+    var name: String? = nil
+    var instance: Instance? = nil
+    var templateName: String? = nil
+    var templateLanguage: String? = nil
+    var status: String? = nil
+    var resolvedUrl: String? = nil
+    var createdAt: String? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case id, phone, name, instance, status
+        case requestId = "request_id"
+        case conversationId = "conversation_id"
+        case templateName = "template_name"
+        case templateLanguage = "template_language"
+        case resolvedUrl = "resolved_url"
+        case createdAt = "created_at"
+    }
+}
+
+struct IntegrationMonitorResponse: Codable {
+    var items: [IntegrationMonitorItem] = []
+}
 struct PublicIntegration: Codable, Identifiable {
     var id: String = ""
     var name: String = ""
