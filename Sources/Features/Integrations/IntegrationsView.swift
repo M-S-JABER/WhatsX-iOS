@@ -1,11 +1,12 @@
 import SwiftUI
 
 enum IntegTab: String, CaseIterable {
-    case overview, external, flow, logs
+    case overview, external, flow, webhook, logs
     var title: String {
         switch self {
         case .overview: return L("نظرة عامة"); case .external: return L("الأنظمة")
-        case .flow: return L("التدفّق"); case .logs: return L("السجلّ")
+        case .flow: return L("التدفّق"); case .webhook: return "Webhook"
+        case .logs: return L("السجلّ")
         }
     }
 }
@@ -17,7 +18,33 @@ final class IntegrationsViewModel: ObservableObject {
     @Published var integrations: [PublicIntegration] = []
     @Published var logs: [IntegrationLog] = []
     @Published var flow: [MessageFlowEvent] = []
+    @Published var webhook: WebhookCenter?
+    @Published var webhookPath = ""
+    @Published var webhookToken = ""
     @Published var loading = false
+
+    func loadWebhook() async {
+        webhook = try? await Api.shared.webhookCenter()
+        if let config = try? await Api.shared.webhookConfig() {
+            webhookPath = config.path ?? webhook?.metaWebhookPath ?? ""
+            webhookToken = config.verifyToken ?? ""
+        } else {
+            webhookPath = webhook?.metaWebhookPath ?? ""
+        }
+    }
+
+    /// Returns nil on success, or the error message.
+    func saveWebhook() async -> String? {
+        do {
+            _ = try await Api.shared.updateWebhookConfig(
+                path: webhookPath,
+                verifyToken: webhookToken.isEmpty ? nil : webhookToken)
+            await loadWebhook()
+            return nil
+        } catch {
+            return (error as? ApiError)?.message ?? error.localizedDescription
+        }
+    }
 
     func loadOverview() async {
         do { overview = try await Api.shared.integrationsOverview() } catch {}
@@ -76,6 +103,7 @@ struct IntegrationsView: View {
                     case .overview: overviewTab
                     case .external: externalTab
                     case .flow: flowTab
+                    case .webhook: webhookTab
                     case .logs: logsTab
                     }
                 }
@@ -122,7 +150,80 @@ struct IntegrationsView: View {
         case .overview: await vm.loadOverview()
         case .external: await vm.loadIntegrations()
         case .flow: await vm.loadFlow()
+        case .webhook: await vm.loadWebhook()
         case .logs: await vm.loadLogs()
+        }
+    }
+
+    // MARK: Webhook (web parity: the webhook configuration tab)
+    @ViewBuilder private var webhookTab: some View {
+        if let hook = vm.webhook {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
+                metric(L("الحالة"),
+                       hook.verificationStatus == "configured" ? L("مُهيّأ") : L("يحتاج تهيئة"),
+                       hook.verificationStatus == "configured" ? Theme.success : Theme.warning)
+                metric(L("إخفاقات"), "\(hook.failedWebhookCount ?? 0)",
+                       (hook.failedWebhookCount ?? 0) > 0 ? Theme.danger : Theme.onSurface)
+            }
+            if let last = hook.lastReceivedWebhook {
+                Text(L("آخر استقبال") + ": " + monitorTime(last))
+                    .font(.wx(12)).foregroundStyle(Theme.onMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let shared = hook.sharedWebhookUrl {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("رابط الويب هوك المشترك")).font(.wx(12, .semibold)).foregroundStyle(Theme.onMuted)
+                    HStack(spacing: 8) {
+                        Text(shared).font(.wx(11.5)).foregroundStyle(Theme.onSurface)
+                            .lineLimit(2)
+                            .environment(\.layoutDirection, .leftToRight)
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = shared
+                            notice = L("نُسخ الرابط ✓")
+                        } label: {
+                            Image(icon: .copy).font(.wx(15)).foregroundStyle(Theme.primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassCard(16)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(L("تهيئة")).font(.wx(12, .semibold)).foregroundStyle(Theme.onMuted)
+                TextField(L("مسار الويب هوك"), text: $vm.webhookPath)
+                    .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
+                    .padding(10)
+                    .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 10))
+                TextField("Verify Token", text: $vm.webhookToken)
+                    .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
+                    .padding(10)
+                    .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 10))
+                Button {
+                    Task {
+                        let failure = await vm.saveWebhook()
+                        notice = failure ?? L("حُفظت إعدادات الويب هوك ✓")
+                    }
+                } label: {
+                    Text(L("حفظ")).font(.wx(14, .semibold))
+                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .background(Theme.primary, in: RoundedRectangle(cornerRadius: 12))
+                        .foregroundStyle(Theme.onPrimary)
+                }
+                .buttonStyle(.plain)
+                .disabled(vm.webhookPath.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCard(16)
+        } else {
+            ProgressView().tint(Theme.primary).padding(.top, 40)
         }
     }
 

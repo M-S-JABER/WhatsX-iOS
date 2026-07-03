@@ -598,6 +598,7 @@ struct WhatsAppAccount: Codable, Identifiable {
     var tokenStatus: String? = nil  // configured | missing
     var isActive: Bool = true
     var isDefault: Bool = false
+    var webhookBehavior: String? = nil  // auto | accept | reject (call-permission requests)
 }
 struct WhatsAppAccountsResponse: Codable { var items: [WhatsAppAccount] = [] }
 struct WhatsAppAccountResponse: Codable { var account: WhatsAppAccount? = nil }
@@ -619,6 +620,29 @@ struct UpdateWhatsappAccountRequest: Codable {
     var accessToken: String? = nil
     var isActive: Bool? = nil
     var isDefault: Bool? = nil
+    var webhookBehavior: String? = nil
+}
+
+// MARK: - Webhook center (GET /api/integrations/webhooks + admin config)
+
+struct WebhookCenter: Codable {
+    var sharedWebhookUrl: String? = nil
+    var metaWebhookPath: String? = nil
+    var metaVerifyToken: String? = nil
+    var verificationStatus: String? = nil     // configured | needs_configuration
+    var lastReceivedWebhook: String? = nil
+    var failedWebhookCount: Int? = nil
+    var retryCount: Int? = nil
+}
+
+struct WebhookConfig: Codable {
+    var path: String? = nil
+    var verifyToken: String? = nil
+}
+struct WebhookConfigResponse: Codable { var config: WebhookConfig? = nil }
+struct UpdateWebhookConfigRequest: Codable {
+    var path: String
+    var verifyToken: String? = nil
 }
 struct RequestCodeRequest: Codable { var codeMethod: String; var language: String = "en_US" }
 struct RegisterNumberRequest: Codable { var pin: String }
