@@ -8,12 +8,14 @@ enum MainTab: Hashable { case chats, calls, reports, integrations, settings }
 // `.tint` carries the amber brand accent on the selected tab.
 struct MainTabView: View {
     @State private var tab: MainTab = .chats
+    @StateObject private var unread = UnreadCenter.shared
 
     var body: some View {
         TabView(selection: $tab) {
             InboxView()
                 .tabItem { Label("المحادثات", systemImage: "bubble.left.and.bubble.right") }
                 .tag(MainTab.chats)
+                .badge(unread.total)
             CallsView()
                 .tabItem { Label("المكالمات", systemImage: "phone") }
                 .tag(MainTab.calls)
