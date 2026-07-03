@@ -23,12 +23,12 @@ struct LoginView: View {
     private var hero: some View {
         VStack(spacing: 10) {
             Text("W")
-                .font(.system(size: 40, weight: .black, design: .rounded))
+                .font(.wx(40, .bold))
                 .foregroundStyle(.white)
                 .frame(width: 74, height: 74)
                 .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 22))
-            Text("WhatsX").font(.system(size: 30, weight: .bold)).foregroundStyle(.white)
-            Text(L("منصّة إدارة محادثات واتساب")).font(.subheadline).foregroundStyle(.white.opacity(0.9))
+            Text("WhatsX").font(.wx(30, .bold)).foregroundStyle(.white)
+            Text(L("منصّة إدارة محادثات واتساب")).font(.wx(15)).foregroundStyle(.white.opacity(0.9))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80).padding(.bottom, 40)
@@ -38,7 +38,7 @@ struct LoginView: View {
 
     private var form: some View {
         VStack(spacing: 14) {
-            Text(L("مرحبًا بعودتك")).font(.title3.bold()).foregroundStyle(Theme.onSurface)
+            Text(L("مرحبًا بعودتك")).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             field(icon: .user, placeholder: L("اسم المستخدم")) {
@@ -58,7 +58,7 @@ struct LoginView: View {
             }
 
             if let err = session.loginError {
-                Text(err).font(.footnote).foregroundStyle(Theme.danger)
+                Text(err).font(.wx(13)).foregroundStyle(Theme.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -68,7 +68,7 @@ struct LoginView: View {
             } label: {
                 HStack {
                     if session.isLoggingIn { ProgressView().tint(Theme.onPrimary) }
-                    else { Text(L("تسجيل الدخول")).font(.headline) }
+                    else { Text(L("تسجيل الدخول")).font(.wx(17, .semibold)) }
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
                 .background(Theme.primary, in: RoundedRectangle(cornerRadius: 16))
@@ -85,7 +85,7 @@ struct LoginView: View {
                 .padding(.top, 8)
             } label: {
                 Label(L("إعدادات الخادم"), systemImage: WIcon.settings.symbol())
-                    .font(.subheadline).foregroundStyle(Theme.onMuted)
+                    .font(.wx(15)).foregroundStyle(Theme.onMuted)
             }
             .tint(Theme.onMuted)
         }

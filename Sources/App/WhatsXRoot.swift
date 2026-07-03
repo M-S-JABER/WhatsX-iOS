@@ -8,7 +8,10 @@ import SwiftUI
 public struct WhatsXRoot: View {
     @StateObject private var session = Session.shared
 
-    public init() {}
+    public init() {
+        // Register the bundled web-parity typeface before any text renders.
+        WXFont.registerIfNeeded()
+    }
 
     public var body: some View {
         RootView()

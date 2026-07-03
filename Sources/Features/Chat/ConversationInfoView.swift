@@ -54,9 +54,9 @@ struct ConversationInfoView: View {
         VStack(spacing: 10) {
             Avatar(name: conversation.title, size: 76)
                 .padding(.top, 14)
-            Text(conversation.title).font(.title3.bold()).foregroundStyle(Theme.onSurface)
+            Text(conversation.title).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
             if let phone = conversation.phone, !phone.isEmpty {
-                Text(phone).font(.subheadline).foregroundStyle(Theme.onMuted)
+                Text(phone).font(.wx(15)).foregroundStyle(Theme.onMuted)
                     .environment(\.layoutDirection, .leftToRight)
             }
 
@@ -75,14 +75,14 @@ struct ConversationInfoView: View {
                 }
                 if let site = conversation.metadata?.website, !site.isEmpty {
                     HStack {
-                        Text(L("الموقع")).font(.system(size: 13)).foregroundStyle(Theme.onMuted)
+                        Text(L("الموقع")).font(.wx(13)).foregroundStyle(Theme.onMuted)
                         Spacer()
                         if let url = URL(string: site) {
                             Link(site, destination: url)
-                                .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.primary)
+                                .font(.wx(13, .medium)).foregroundStyle(Theme.primary)
                                 .lineLimit(1)
                         } else {
-                            Text(site).font(.system(size: 13)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                            Text(site).font(.wx(13)).foregroundStyle(Theme.onSurface).lineLimit(1)
                         }
                     }
                     .padding(.horizontal, 14).padding(.vertical, 11)
@@ -93,7 +93,7 @@ struct ConversationInfoView: View {
 
             if let labels = conversation.metadata?.labels, !labels.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(L("التصنيفات")).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.onMuted)
+                    Text(L("التصنيفات")).font(.wx(13, .semibold)).foregroundStyle(Theme.onMuted)
                     FlowChips(labels: labels)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -105,9 +105,9 @@ struct ConversationInfoView: View {
 
     private func infoRow(_ title: String, _ value: String) -> some View {
         HStack(alignment: .top) {
-            Text(title).font(.system(size: 13)).foregroundStyle(Theme.onMuted)
+            Text(title).font(.wx(13)).foregroundStyle(Theme.onMuted)
             Spacer()
-            Text(value).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.onSurface)
+            Text(value).font(.wx(13, .medium)).foregroundStyle(Theme.onSurface)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
@@ -193,9 +193,9 @@ struct ConversationInfoView: View {
                                     Image(icon: .doc).foregroundStyle(Theme.primary)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(m.media?.mimeType ?? L("مستند"))
-                                            .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.onSurface)
+                                            .font(.wx(13, .medium)).foregroundStyle(Theme.onSurface)
                                             .lineLimit(1)
-                                        Text(clockTime(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
+                                        Text(clockTime(m.createdAt)).font(.wx(11)).foregroundStyle(Theme.onFaint)
                                     }
                                     Spacer()
                                     Image(icon: .download).foregroundStyle(Theme.onMuted)
@@ -220,9 +220,9 @@ struct ConversationInfoView: View {
                     ForEach(sharedLinks, id: \.absoluteString) { url in
                         Link(destination: url) {
                             HStack(spacing: 10) {
-                                Image(systemName: "link").font(.system(size: 15)).foregroundStyle(Theme.primary)
+                                Image(systemName: "link").font(.wx(15)).foregroundStyle(Theme.primary)
                                 Text(url.absoluteString)
-                                    .font(.system(size: 13)).foregroundStyle(Theme.onSurface)
+                                    .font(.wx(13)).foregroundStyle(Theme.onSurface)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.leading)
                                     .environment(\.layoutDirection, .leftToRight)
@@ -239,7 +239,7 @@ struct ConversationInfoView: View {
     }
 
     private func emptyState(_ text: String) -> some View {
-        Text(text).font(.subheadline).foregroundStyle(Theme.onMuted)
+        Text(text).font(.wx(15)).foregroundStyle(Theme.onMuted)
             .frame(maxWidth: .infinity).padding(.vertical, 50)
     }
 }
@@ -253,7 +253,7 @@ private struct FlowChips: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 6, alignment: .leading)], alignment: .leading, spacing: 6) {
             ForEach(labels, id: \.self) { label in
                 Text(label)
-                    .font(.caption)
+                    .font(.wx(12))
                     .foregroundStyle(Theme.primary)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Theme.primarySoft, in: Capsule())

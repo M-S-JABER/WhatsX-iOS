@@ -20,10 +20,10 @@ struct Avatar: View {
                 AsyncImage(url: imageURL) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
-                    Text(initials).font(.system(size: size * 0.38, weight: .semibold)).foregroundStyle(.white)
+                    Text(initials).font(.wx(size * 0.38, .semibold)).foregroundStyle(.white)
                 }
             } else {
-                Text(initials).font(.system(size: size * 0.38, weight: .semibold)).foregroundStyle(.white)
+                Text(initials).font(.wx(size * 0.38, .semibold)).foregroundStyle(.white)
             }
         }
         .frame(width: size, height: size)

@@ -57,13 +57,13 @@ struct IntegrationsView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(L("التكاملات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("التكاملات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 if tab == .external {
-                    Image(icon: .add).font(.system(size: 20)).foregroundStyle(Theme.primary)
+                    Image(icon: .add).font(.wx(20)).foregroundStyle(Theme.primary)
                         .onTapGesture { editing = nil; showForm = true }
                 }
-                Image(icon: .refresh).font(.system(size: 20)).foregroundStyle(Theme.onMuted)
+                Image(icon: .refresh).font(.wx(20)).foregroundStyle(Theme.onMuted)
                     .onTapGesture { Task { await reload() } }
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
@@ -105,7 +105,7 @@ struct IntegrationsView: View {
                 let active = tab == t
                 Button { tab = t; Task { await reload() } } label: {
                     VStack(spacing: 6) {
-                        Text(t.title).font(.system(size: 14, weight: .semibold))
+                        Text(t.title).font(.wx(14, .semibold))
                             .foregroundStyle(active ? Theme.onSurface : Theme.onMuted)
                         Rectangle().fill(active ? Theme.primary : .clear).frame(height: 2)
                     }
@@ -137,7 +137,7 @@ struct IntegrationsView: View {
             }
         }
         if let h = vm.overview?.health {
-            Text(L("صحّة الأرقام")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("صحّة الأرقام")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
                 healthTile(L("سليمة"), h.healthy, Theme.success)
@@ -150,11 +150,11 @@ struct IntegrationsView: View {
 
         // Template sends pushed by external systems (web parity: the
         // integration monitor list on the Overview tab).
-        Text(L("قوالب النظام الخارجي")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+        Text(L("قوالب النظام الخارجي")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
         if vm.monitor.isEmpty {
             Text(L("لا رسائل من الأنظمة الخارجية بعد"))
-                .font(.subheadline).foregroundStyle(Theme.onMuted)
+                .font(.wx(15)).foregroundStyle(Theme.onMuted)
                 .frame(maxWidth: .infinity).padding(.vertical, 18)
                 .glassCard(16)
         } else {
@@ -166,26 +166,26 @@ struct IntegrationsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(m.name?.isEmpty == false ? m.name! : (m.phone ?? "—"))
-                    .font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                    .font(.wx(14.5, .semibold)).foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                 Spacer()
                 monitorStatusBadge(m.status)
             }
             HStack(spacing: 6) {
-                Image(icon: .template).font(.system(size: 12)).foregroundStyle(Theme.primary)
+                Image(icon: .template).font(.wx(12)).foregroundStyle(Theme.primary)
                 Text([m.templateName, m.templateLanguage].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    .font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(1)
             }
             HStack {
                 if let phone = m.phone, m.name?.isEmpty == false {
-                    Text(phone).font(.caption2).foregroundStyle(Theme.onFaint)
+                    Text(phone).font(.wx(11)).foregroundStyle(Theme.onFaint)
                         .environment(\.layoutDirection, .leftToRight)
                 }
                 Spacer()
                 if let acct = m.instance?.label {
-                    Text(acct).font(.caption2).foregroundStyle(Theme.onFaint).lineLimit(1)
+                    Text(acct).font(.wx(11)).foregroundStyle(Theme.onFaint).lineLimit(1)
                 }
-                Text(monitorTime(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
+                Text(monitorTime(m.createdAt)).font(.wx(11)).foregroundStyle(Theme.onFaint)
             }
 
             // Row actions (web parity: open chat · request call · open link).
@@ -219,8 +219,8 @@ struct IntegrationsView: View {
 
     private func actionPill(_ title: String, _ icon: String) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 11))
-            Text(title).font(.caption2.weight(.semibold))
+            Image(systemName: icon).font(.wx(11))
+            Text(title).font(.wx(11, .semibold))
         }
         .foregroundStyle(Theme.primary)
         .padding(.horizontal, 10).padding(.vertical, 6)
@@ -256,7 +256,7 @@ struct IntegrationsView: View {
             : s.contains("deliver") || s.contains("sent") || s.contains("accept") ? Theme.success
             : Theme.warning
         return Text(status ?? "—")
-            .font(.caption2.weight(.semibold)).foregroundStyle(color)
+            .font(.wx(11, .semibold)).foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(color.opacity(0.13), in: Capsule())
     }
@@ -269,8 +269,8 @@ struct IntegrationsView: View {
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption).foregroundStyle(Theme.onMuted)
-            Text(value).font(.system(size: 26, weight: .bold)).foregroundStyle(color)
+            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
+            Text(value).font(.wx(26, .bold)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -280,9 +280,9 @@ struct IntegrationsView: View {
     private func healthTile(_ label: String, _ value: Int, _ color: Color) -> some View {
         HStack {
             Circle().fill(color).frame(width: 9, height: 9)
-            Text(label).font(.subheadline).foregroundStyle(Theme.onMuted)
+            Text(label).font(.wx(15)).foregroundStyle(Theme.onMuted)
             Spacer()
-            Text("\(value)").font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.onSurface)
+            Text("\(value)").font(.wx(18, .bold)).foregroundStyle(Theme.onSurface)
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
         .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 14))
@@ -301,38 +301,38 @@ struct IntegrationsView: View {
                             .frame(width: 40, height: 40)
                             .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(item.name).font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                            if let url = item.endpoint ?? item.baseUrl { Text(url).font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1) }
+                            Text(item.name).font(.wx(14.5, .semibold)).foregroundStyle(Theme.onSurface)
+                            if let url = item.endpoint ?? item.baseUrl { Text(url).font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(1) }
                         }
                         Spacer()
                         healthChip(item.health)
                     }
                     if let err = item.lastErrorMessage, !err.isEmpty {
-                        Text(err).font(.caption).foregroundStyle(Theme.danger).lineLimit(2)
+                        Text(err).font(.wx(12)).foregroundStyle(Theme.danger).lineLimit(2)
                     }
                     HStack(spacing: 7) {
-                        Text(item.isEnabled ? L("مُفعّل") : L("مُعطّل")).font(.caption).foregroundStyle(Theme.onMuted)
+                        Text(item.isEnabled ? L("مُفعّل") : L("مُعطّل")).font(.wx(12)).foregroundStyle(Theme.onMuted)
                         Spacer()
                         Button { editing = item; showForm = true } label: {
-                            Image(icon: .edit).font(.system(size: 15))
+                            Image(icon: .edit).font(.wx(15))
                                 .frame(width: 36, height: 36)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.onSurface)
                         }.buttonStyle(.plain)
                         Button { Task { await vm.delete(item.id) } } label: {
-                            Image(icon: .trash).font(.system(size: 15))
+                            Image(icon: .trash).font(.wx(15))
                                 .frame(width: 36, height: 36)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.danger)
                         }.buttonStyle(.plain)
                         Button { Task { await vm.test(item.id) } } label: {
-                            Text(L("اختبار")).font(.footnote.weight(.semibold))
+                            Text(L("اختبار")).font(.wx(13, .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
                                 .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 12))
                                 .foregroundStyle(Theme.onSurface)
                         }.buttonStyle(.plain)
                         Button { Task { await vm.toggle(item) } } label: {
-                            Text(item.isEnabled ? L("تعطيل") : L("تفعيل")).font(.footnote.weight(.semibold))
+                            Text(item.isEnabled ? L("تعطيل") : L("تفعيل")).font(.wx(13, .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.onSurface)
@@ -357,7 +357,7 @@ struct IntegrationsView: View {
         }()
         return HStack(spacing: 5) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).font(.caption2.weight(.semibold))
+            Text(label).font(.wx(11, .semibold))
         }
         .foregroundStyle(color)
         .padding(.horizontal, 9).padding(.vertical, 3)
@@ -372,31 +372,31 @@ struct IntegrationsView: View {
             ForEach(vm.flow) { e in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
-                        Image(icon: e.direction == "inbound" ? .callIn : .callOut).font(.system(size: 14))
+                        Image(icon: e.direction == "inbound" ? .callIn : .callOut).font(.wx(14))
                             .foregroundStyle(e.direction == "inbound" ? Theme.success : Theme.info)
-                        Text(e.eventType ?? L("حدث")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                        Text(e.eventType ?? L("حدث")).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
                         Spacer()
                         flowStatusChip(e.status)
                     }
                     if let s = e.source, let d = e.destination, !(s.isEmpty && d.isEmpty) {
-                        Text("\(s) ← \(d)").font(.caption2).foregroundStyle(Theme.onMuted).lineLimit(1)
+                        Text("\(s) ← \(d)").font(.wx(11)).foregroundStyle(Theme.onMuted).lineLimit(1)
                     }
                     HStack(spacing: 10) {
-                        if let c = e.responseCode { Text("HTTP \(c)").font(.caption2).foregroundStyle(Theme.onFaint) }
-                        if let l = e.latencyMs { Text("\(l)ms").font(.caption2).foregroundStyle(Theme.onFaint) }
+                        if let c = e.responseCode { Text("HTTP \(c)").font(.wx(11)).foregroundStyle(Theme.onFaint) }
+                        if let l = e.latencyMs { Text("\(l)ms").font(.wx(11)).foregroundStyle(Theme.onFaint) }
                         Spacer()
-                        Text(shortTime(e.timestamp)).font(.caption2).foregroundStyle(Theme.onFaint)
+                        Text(shortTime(e.timestamp)).font(.wx(11)).foregroundStyle(Theme.onFaint)
                     }
                     if let err = e.errorMessage, !err.isEmpty {
-                        Text(err).font(.caption).foregroundStyle(Theme.danger).lineLimit(2)
+                        Text(err).font(.wx(12)).foregroundStyle(Theme.danger).lineLimit(2)
                     }
                     if e.isRetryable {
                         HStack {
                             Spacer()
                             Button { Task { await vm.retry(e.id) } } label: {
                                 HStack(spacing: 5) {
-                                    Image(icon: .refresh).font(.system(size: 12))
-                                    Text(L("إعادة المحاولة")).font(.footnote.weight(.semibold))
+                                    Image(icon: .refresh).font(.wx(12))
+                                    Text(L("إعادة المحاولة")).font(.wx(13, .semibold))
                                 }
                                 .padding(.horizontal, 12).padding(.vertical, 8)
                                 .background(Theme.primaryContainer, in: Capsule())
@@ -422,7 +422,7 @@ struct IntegrationsView: View {
             }
         }()
         return Text(label.isEmpty ? "—" : label)
-            .font(.caption2.weight(.semibold)).foregroundStyle(color)
+            .font(.wx(11, .semibold)).foregroundStyle(color)
             .padding(.horizontal, 9).padding(.vertical, 3)
             .background(color.opacity(0.14), in: Capsule())
     }
@@ -437,11 +437,11 @@ struct IntegrationsView: View {
                     HStack(alignment: .top, spacing: 12) {
                         Circle().fill(sevColor(log.severity)).frame(width: 9, height: 9).padding(.top, 4)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(log.component).font(.system(size: 13, weight: .semibold)).monospaced().foregroundStyle(Theme.onSurface)
-                            Text(log.summary).font(.caption).foregroundStyle(Theme.onMuted)
+                            Text(log.component).font(.wx(13, .semibold)).monospaced().foregroundStyle(Theme.onSurface)
+                            Text(log.summary).font(.wx(12)).foregroundStyle(Theme.onMuted)
                         }
                         Spacer()
-                        Text(shortTime(log.timestamp)).font(.caption2).foregroundStyle(Theme.onFaint)
+                        Text(shortTime(log.timestamp)).font(.wx(11)).foregroundStyle(Theme.onFaint)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 13)
                     if idx < vm.logs.count - 1 { Rectangle().fill(Theme.outline).frame(height: 1).padding(.leading, 16) }

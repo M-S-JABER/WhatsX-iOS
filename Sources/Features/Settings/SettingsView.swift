@@ -15,7 +15,7 @@ struct SettingsView: View {
         NavigationStack {
         VStack(spacing: 0) {
             HStack {
-                Text(L("الإعدادات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("الإعدادات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
                 Spacer()
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
@@ -52,10 +52,10 @@ struct SettingsView: View {
                             SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Color(uiColor: .systemPurple))
+                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Color(rgb: 0x89639C))
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Color(uiColor: .systemGreen))
+                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Color(rgb: 0x4D8970))
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
                             SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
@@ -74,7 +74,7 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: L("الإصدار"), subtitle: "v1.9.0 · " + L("أسوار المدن"))
+                        SettingRow(icon: .info, title: L("الإصدار"), subtitle: "v1.10.0 · " + L("أسوار المدن"))
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
@@ -110,12 +110,12 @@ struct SettingsView: View {
                     .overlay { if uploading { Circle().fill(.black.opacity(0.3)); ProgressView().tint(.white) } }
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(session.user?.title ?? "—").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.onSurface)
+                Text(session.user?.title ?? "—").font(.wx(17, .bold)).foregroundStyle(Theme.onSurface)
                 if let email = session.user?.email, !email.isEmpty {
-                    Text(email).font(.caption).foregroundStyle(Theme.onMuted).monospaced()
+                    Text(email).font(.wx(12)).foregroundStyle(Theme.onMuted).monospaced()
                 }
                 if let role = session.user?.role, !role.isEmpty {
-                    Text(role).font(.caption.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text(role).font(.wx(12, .semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 10).padding(.vertical, 3)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
@@ -135,8 +135,8 @@ struct SettingsView: View {
             HStack(spacing: 8) {
                 if loggingOut { ProgressView().tint(Theme.danger) }
                 else {
-                    Image(icon: .logout).font(.system(size: 18))
-                    Text(L("تسجيل الخروج")).font(.headline)
+                    Image(icon: .logout).font(.wx(18))
+                    Text(L("تسجيل الخروج")).font(.wx(17, .semibold))
                 }
             }
             .frame(maxWidth: .infinity).padding(.vertical, 14)
@@ -146,7 +146,7 @@ struct SettingsView: View {
     }
 
     private func section(_ text: String) -> some View {
-        Text(text).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+        Text(text).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 8)
     }
 
@@ -173,13 +173,13 @@ struct SettingRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(icon: icon).font(.system(size: 17, weight: .medium))
+            Image(icon: icon).font(.wx(17, .medium))
                 .foregroundStyle(tint == nil ? Theme.onSurface : .white)
                 .frame(width: 38, height: 38)
                 .background(tint ?? Theme.surface2, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                if let subtitle { Text(subtitle).font(.caption).foregroundStyle(Theme.onMuted) }
+                Text(title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
+                if let subtitle { Text(subtitle).font(.wx(12)).foregroundStyle(Theme.onMuted) }
             }
             Spacer()
             if trailingChevron { Image(icon: .chevLeft).foregroundStyle(Theme.onFaint) }

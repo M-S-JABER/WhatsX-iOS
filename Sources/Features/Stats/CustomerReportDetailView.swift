@@ -57,7 +57,7 @@ struct CustomerReportDetailView: View {
                 ForEach(ranges, id: \.1) { key, label in
                     let active = range == key
                     Button { apply(key) } label: {
-                        Text(label).font(.subheadline.weight(.semibold))
+                        Text(label).font(.wx(15, .semibold))
                             .foregroundStyle(active ? Theme.background : Theme.onMuted)
                             .padding(.horizontal, 14).padding(.vertical, 7)
                             .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
@@ -71,10 +71,10 @@ struct CustomerReportDetailView: View {
         HStack(spacing: 13) {
             Avatar(name: r.conversation?.title ?? title, size: 52)
             VStack(alignment: .leading, spacing: 3) {
-                Text(r.conversation?.title ?? title).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.onSurface)
+                Text(r.conversation?.title ?? title).font(.wx(16, .bold)).foregroundStyle(Theme.onSurface)
                 let sub = [r.conversation?.phone, r.conversation?.instanceName].compactMap { $0 }.filter { !$0.isEmpty }
                 if !sub.isEmpty {
-                    Text(sub.joined(separator: " · ")).font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    Text(sub.joined(separator: " · ")).font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(1)
                 }
             }
             Spacer()
@@ -101,13 +101,13 @@ struct CustomerReportDetailView: View {
 
     private func responseCard(_ rs: CustomerReportResponseStats) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(L("زمن الاستجابة")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("زمن الاستجابة")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             HStack(spacing: 11) {
                 statTile(L("المتوسّط"), dur(rs.avgSeconds), Theme.primary)
                 statTile(L("الأسرع"), dur(rs.minSeconds), Theme.success)
                 statTile(L("الأبطأ"), dur(rs.maxSeconds), Theme.danger)
             }
-            Text(L("عدد الردود المحسوبة:") + " \(rs.count)").font(.caption).foregroundStyle(Theme.onFaint)
+            Text(L("عدد الردود المحسوبة:") + " \(rs.count)").font(.wx(12)).foregroundStyle(Theme.onFaint)
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(22)
@@ -119,7 +119,7 @@ struct CustomerReportDetailView: View {
             ("read", L("مقروءة"), Theme.info), ("failed", L("فاشلة"), Theme.danger),
         ]
         return VStack(alignment: .leading, spacing: 12) {
-            Text(L("حالات الرسائل")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("حالات الرسائل")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             HStack(spacing: 11) {
                 ForEach(order, id: \.0) { key, label, color in
                     statTile(label, "\(sb[key] ?? 0)", color)
@@ -132,14 +132,14 @@ struct CustomerReportDetailView: View {
 
     private func agentsCard(_ agents: [CustomerReportAgent]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("مساهمة الموظفين")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("مساهمة الموظفين")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             ForEach(agents) { a in
                 HStack(spacing: 12) {
                     Avatar(name: a.username, size: 34)
-                    Text(a.username).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                    Text(a.username).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
                     Spacer()
-                    Text("\(a.sent) " + L("رسالة")).font(.caption).foregroundStyle(Theme.onMuted)
-                    Text("\(a.replies) " + (L10n.isArabic ? "رد" : "replies")).font(.caption.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text("\(a.sent) " + L("رسالة")).font(.wx(12)).foregroundStyle(Theme.onMuted)
+                    Text("\(a.replies) " + (L10n.isArabic ? "رد" : "replies")).font(.wx(12, .semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
@@ -151,17 +151,17 @@ struct CustomerReportDetailView: View {
 
     private func timelineCard(_ items: [CustomerReportTimelineItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("آخر الرسائل")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("آخر الرسائل")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             ForEach(items) { m in
                 HStack(alignment: .top, spacing: 10) {
                     Circle().fill(m.isOutbound ? Theme.info : Theme.success).frame(width: 8, height: 8).padding(.top, 5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(m.body?.isEmpty == false ? m.body! : (m.isOutbound ? L("رسالة صادرة") : L("رسالة واردة")))
-                            .font(.system(size: 13.5)).foregroundStyle(Theme.onSurface).lineLimit(2)
+                            .font(.wx(13.5)).foregroundStyle(Theme.onSurface).lineLimit(2)
                         HStack(spacing: 6) {
-                            Text(hm(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
+                            Text(hm(m.createdAt)).font(.wx(11)).foregroundStyle(Theme.onFaint)
                             if let u = m.sentByUsername, !u.isEmpty {
-                                Text("· \(u)").font(.caption2).foregroundStyle(Theme.onFaint)
+                                Text("· \(u)").font(.wx(11)).foregroundStyle(Theme.onFaint)
                             }
                         }
                     }
@@ -177,8 +177,8 @@ struct CustomerReportDetailView: View {
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption).foregroundStyle(Theme.onMuted)
-            Text(value).font(.system(size: 24, weight: .bold)).foregroundStyle(color)
+            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
+            Text(value).font(.wx(24, .bold)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14).padding(.vertical, 14)
@@ -187,8 +187,8 @@ struct CustomerReportDetailView: View {
 
     private func statTile(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption2).foregroundStyle(color)
-            Text(value).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.onSurface)
+            Text(label).font(.wx(11)).foregroundStyle(color)
+            Text(value).font(.wx(16, .bold)).foregroundStyle(Theme.onSurface)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -198,8 +198,8 @@ struct CustomerReportDetailView: View {
 
     private func infoTile(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption).foregroundStyle(Theme.onMuted)
-            Text(value).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
+            Text(value).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14).padding(.vertical, 12)

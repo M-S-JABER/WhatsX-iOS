@@ -69,26 +69,26 @@ struct IncomingCallBanner: View {
             if let call = center.incoming {
                 HStack(spacing: 12) {
                     Image(systemName: "phone.arrow.down.left")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.wx(18, .semibold))
                         .foregroundStyle(Theme.success)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(call.title)
-                            .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.onSurface)
+                            .font(.wx(15, .bold)).foregroundStyle(Theme.onSurface)
                             .lineLimit(1)
                         Text(L("مكالمة واتساب واردة — الرد متاح من الويب"))
-                            .font(.caption).foregroundStyle(Theme.onMuted)
+                            .font(.wx(12)).foregroundStyle(Theme.onMuted)
                     }
                     Spacer()
                     Button { Task { await center.reject() } } label: {
                         Image(systemName: "phone.down.fill")
-                            .font(.system(size: 16)).foregroundStyle(.white)
+                            .font(.wx(16)).foregroundStyle(.white)
                             .frame(width: 42, height: 42)
                             .background(Theme.danger, in: Circle())
                     }
                     .buttonStyle(.plain)
                     Button { center.dismiss() } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.onMuted)
+                            .font(.wx(13, .semibold)).foregroundStyle(Theme.onMuted)
                             .frame(width: 34, height: 34)
                             .background(Theme.surface2, in: Circle())
                     }

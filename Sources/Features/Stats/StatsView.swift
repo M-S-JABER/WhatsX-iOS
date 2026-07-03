@@ -69,7 +69,7 @@ struct StatsView: View {
                 ForEach(ranges, id: \.1) { key, label in
                     let active = vm.range == key
                     Button { vm.apply(key) } label: {
-                        Text(label).font(.subheadline.weight(.semibold))
+                        Text(label).font(.wx(15, .semibold))
                             .foregroundStyle(active ? Theme.background : Theme.onMuted)
                             .padding(.horizontal, 14).padding(.vertical, 7)
                             .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
@@ -93,7 +93,7 @@ struct StatsView: View {
         return Button { vm.applyInstance(id) } label: {
             HStack(spacing: 5) {
                 if let id { Circle().fill(AccountColor.color(id)).frame(width: 7, height: 7) }
-                Text(label).font(.footnote.weight(.semibold))
+                Text(label).font(.wx(13, .semibold))
             }
             .foregroundStyle(active ? Theme.onPrimary : Theme.onMuted)
             .padding(.horizontal, 12).padding(.vertical, 7)
@@ -116,8 +116,8 @@ struct StatsView: View {
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption).foregroundStyle(Theme.onMuted)
-            Text(value).font(.system(size: 28, weight: .bold)).foregroundStyle(color)
+            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
+            Text(value).font(.wx(28, .bold)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 15)
@@ -129,7 +129,7 @@ struct StatsView: View {
     private func seriesChart(_ points: [SeriesPoint]) -> some View {
         let maxV = max(points.map { max($0.incoming, $0.outgoing) }.max() ?? 1, 1)
         return VStack(alignment: .leading, spacing: 10) {
-            Text(L("النشاط عبر الزمن")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("النشاط عبر الزمن")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             HStack(spacing: 14) {
                 legend(Theme.success, L("واردة"))
                 legend(Theme.info, L("صادرة"))
@@ -143,7 +143,7 @@ struct StatsView: View {
                                 bar(CGFloat(p.outgoing) / CGFloat(maxV), Theme.info)
                             }
                             .frame(height: 92, alignment: .bottom)
-                            Text(bucketLabel(p.bucket)).font(.system(size: 8)).foregroundStyle(Theme.onFaint)
+                            Text(bucketLabel(p.bucket)).font(.wx(8)).foregroundStyle(Theme.onFaint)
                                 .frame(width: 26).lineLimit(1)
                         }
                     }
@@ -163,7 +163,7 @@ struct StatsView: View {
     private func legend(_ color: Color, _ label: String) -> some View {
         HStack(spacing: 5) {
             RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 10, height: 10)
-            Text(label).font(.caption2).foregroundStyle(Theme.onMuted)
+            Text(label).font(.wx(11)).foregroundStyle(Theme.onMuted)
         }
     }
 
@@ -171,7 +171,7 @@ struct StatsView: View {
 
     private func statusCard(_ d: Delivery) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(L("حالات الرسائل")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("حالات الرسائل")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             HStack(spacing: 11) {
                 statusTile(L("مُرسلة"), d.sent, .check, Theme.onMuted)
                 statusTile(L("مُسلّمة"), d.delivered, .checkDouble, Theme.info)
@@ -189,10 +189,10 @@ struct StatsView: View {
     private func statusTile(_ label: String, _ value: Int, _ icon: WIcon, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Image(icon: icon).font(.system(size: 13)).foregroundStyle(color)
-                Text(label).font(.caption).foregroundStyle(color)
+                Image(icon: icon).font(.wx(13)).foregroundStyle(color)
+                Text(label).font(.wx(12)).foregroundStyle(color)
             }
-            Text("\(value)").font(.system(size: 22, weight: .bold)).foregroundStyle(Theme.onSurface)
+            Text("\(value)").font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(13)
@@ -204,14 +204,14 @@ struct StatsView: View {
 
     private func instanceBreakdownCard(_ items: [StatInstance]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("حسب الحساب")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("حسب الحساب")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             ForEach(items) { inst in
                 HStack(spacing: 10) {
                     Circle().fill(AccountColor.color(inst.id)).frame(width: 10, height: 10)
-                    Text(inst.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                    Text(inst.label).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                     Spacer()
-                    Text("\(inst.totals?.messages ?? 0) " + L("رسالة")).font(.caption).foregroundStyle(Theme.onMuted)
-                    Text("\(inst.totals?.conversations ?? 0) " + L("محادثة")).font(.caption.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text("\(inst.totals?.messages ?? 0) " + L("رسالة")).font(.wx(12)).foregroundStyle(Theme.onMuted)
+                    Text("\(inst.totals?.conversations ?? 0) " + L("محادثة")).font(.wx(12, .semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
@@ -225,20 +225,20 @@ struct StatsView: View {
 
     private func userStatsCard(_ items: [UserStat]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("أداء الموظفين")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("أداء الموظفين")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             ForEach(Array(items.prefix(8))) { u in
                 HStack(spacing: 12) {
                     Avatar(name: u.username, size: 34)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(u.username).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                        Text(u.username).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
                         Text("\(u.messagesSent) " + L("رسالة") + " · \(u.conversationsCreated) " + L("محادثة"))
-                            .font(.caption2).foregroundStyle(Theme.onMuted)
+                            .font(.wx(11)).foregroundStyle(Theme.onMuted)
                     }
                     Spacer()
                     if let avg = u.avgResponseSeconds {
                         VStack(alignment: .trailing, spacing: 1) {
-                            Text(dur(Int(avg))).font(.caption.weight(.bold)).foregroundStyle(Theme.onSurface)
-                            Text(L("زمن الرد")).font(.system(size: 9)).foregroundStyle(Theme.onFaint)
+                            Text(dur(Int(avg))).font(.wx(12, .bold)).foregroundStyle(Theme.onSurface)
+                            Text(L("زمن الرد")).font(.wx(9)).foregroundStyle(Theme.onFaint)
                         }
                     }
                 }

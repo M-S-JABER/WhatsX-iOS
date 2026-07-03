@@ -22,7 +22,11 @@ let package = Package(
         .target(
             name: "WhatsX",
             path: "Sources",
-            exclude: ["App/WhatsXApp.swift"]
+            exclude: ["App/WhatsXApp.swift"],
+            resources: [
+                // IBM Plex Sans Arabic — the web client's typeface.
+                .copy("Resources/Fonts")
+            ]
         )
     ]
 )

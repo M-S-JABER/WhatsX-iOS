@@ -319,27 +319,27 @@ struct ChatView: View {
 
     private var topBar: some View {
         HStack(spacing: 6) {
-            Button { dismiss() } label: { Image(icon: .back).font(.system(size: 20)).foregroundStyle(Theme.onMuted) }
+            Button { dismiss() } label: { Image(icon: .back).font(.wx(20)).foregroundStyle(Theme.onMuted) }
             Avatar(name: vm.conversation.title, size: 40)
             VStack(alignment: .leading, spacing: 1) {
-                Text(vm.conversation.title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                Text(vm.conversation.title).font(.wx(16, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                 if let acct = vm.conversation.instance?.label {
-                    Text(acct).font(.caption2).foregroundStyle(Theme.onMuted)
+                    Text(acct).font(.wx(11)).foregroundStyle(Theme.onMuted)
                 }
             }
             Spacer()
             Button { withAnimation { showChatSearch.toggle() } } label: {
-                Image(icon: .search).font(.system(size: 18))
+                Image(icon: .search).font(.wx(18))
                     .foregroundStyle(showChatSearch ? Theme.primary : Theme.onMuted)
             }
             .buttonStyle(.plain)
             Button { showCallMenu = true } label: {
-                Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary).padding(.leading, 8)
+                Image(icon: .phoneCall).font(.wx(20)).foregroundStyle(Theme.primary).padding(.leading, 8)
             }
             .buttonStyle(.plain)
             .disabled(vm.conversation.phone?.isEmpty != false)
             Button { showInfo = true } label: {
-                Image(icon: .info).font(.system(size: 19)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
+                Image(icon: .info).font(.wx(19)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
             }
             .buttonStyle(.plain)
         }
@@ -373,7 +373,7 @@ struct ChatView: View {
                             .id(entry.id)
                     case .day(let label):
                         Text(label)
-                            .font(.system(size: 11.5, weight: .medium)).foregroundStyle(Theme.onMuted)
+                            .font(.wx(11.5, .medium)).foregroundStyle(Theme.onMuted)
                             .padding(.horizontal, 12).padding(.vertical, 5)
                             .background(Theme.surface2, in: Capsule())
                             .frame(maxWidth: .infinity)
@@ -388,19 +388,19 @@ struct ChatView: View {
 
     private func chatSearchBar(_ proxy: ScrollViewProxy) -> some View {
         HStack(spacing: 10) {
-            Image(icon: .search).font(.system(size: 14)).foregroundStyle(Theme.onMuted)
+            Image(icon: .search).font(.wx(14)).foregroundStyle(Theme.onMuted)
             TextField(L("ابحث في الرسائل"), text: $chatQuery)
-                .font(.system(size: 14)).foregroundStyle(Theme.onSurface)
+                .font(.wx(14)).foregroundStyle(Theme.onSurface)
             if !searchMatches.isEmpty {
                 Text("\(min(matchIndex, searchMatches.count - 1) + 1)/\(searchMatches.count)")
-                    .font(.caption).foregroundStyle(Theme.onMuted)
+                    .font(.wx(12)).foregroundStyle(Theme.onMuted)
             }
             Button { stepMatch(-1, proxy) } label: {
-                Image(systemName: "chevron.up").font(.system(size: 13, weight: .semibold))
+                Image(systemName: "chevron.up").font(.wx(13, .semibold))
             }
             .disabled(searchMatches.isEmpty)
             Button { stepMatch(1, proxy) } label: {
-                Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
+                Image(systemName: "chevron.down").font(.wx(13, .semibold))
             }
             .disabled(searchMatches.isEmpty)
             Button {
@@ -408,7 +408,7 @@ struct ChatView: View {
                 chatQuery = ""
                 matchIndex = 0
             } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.onMuted)
+                Image(systemName: "xmark").font(.wx(13, .semibold)).foregroundStyle(Theme.onMuted)
             }
         }
         .padding(.horizontal, 14).frame(height: 42)
@@ -434,13 +434,13 @@ struct ChatView: View {
             RoundedRectangle(cornerRadius: 2).fill(Theme.primary).frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 1) {
                 Text(target.isOutbound ? L("أنت") : vm.conversation.title)
-                    .font(.caption.bold()).foregroundStyle(Theme.primary)
+                    .font(.wx(12, .bold)).foregroundStyle(Theme.primary)
                 Text(target.body?.isEmpty == false ? target.body! : L("وسائط"))
-                    .font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    .font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(1)
             }
             Spacer()
             Button { vm.replyTarget = nil } label: {
-                Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(Theme.onMuted)
+                Image(systemName: "xmark.circle.fill").font(.wx(17)).foregroundStyle(Theme.onMuted)
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 6)
@@ -481,7 +481,7 @@ struct ChatView: View {
                 }
             } label: {
                 Image(icon: vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .mic : .send)
-                    .font(.system(size: 20)).foregroundStyle(Theme.onPrimary)
+                    .font(.wx(20)).foregroundStyle(Theme.onPrimary)
                     .frame(width: 48, height: 48)
                     .background(Theme.primary, in: Circle())
             }
@@ -494,12 +494,12 @@ struct ChatView: View {
     private var recordingBar: some View {
         HStack(spacing: 12) {
             Button { recorder.cancel() } label: {
-                Image(icon: .trash).font(.system(size: 20)).foregroundStyle(Theme.danger).frame(width: 44, height: 44)
+                Image(icon: .trash).font(.wx(20)).foregroundStyle(Theme.danger).frame(width: 44, height: 44)
             }
             HStack(spacing: 8) {
                 Circle().fill(Theme.danger).frame(width: 10, height: 10)
                 Text(L("جارٍ التسجيل") + "  \(timeStr(recorder.elapsed))")
-                    .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
+                    .font(.wx(14, .medium)).foregroundStyle(Theme.onSurface)
                 Spacer()
             }
             .padding(.horizontal, 14).frame(height: 48)
@@ -508,7 +508,7 @@ struct ChatView: View {
             Button {
                 if let data = recorder.stop() { Task { await vm.sendVoiceNote(data) } }
             } label: {
-                Image(icon: .send).font(.system(size: 20)).foregroundStyle(Theme.onPrimary)
+                Image(icon: .send).font(.wx(20)).foregroundStyle(Theme.onPrimary)
                     .frame(width: 48, height: 48).background(Theme.primary, in: Circle())
             }
         }
@@ -549,12 +549,12 @@ struct MessageBubble: View {
                 if msg.media == nil, let location = parseSharedLocation(msg.body) {
                     LocationCard(location: location, fg: fg)
                 } else if let body = msg.body, !body.isEmpty {
-                    Text(body).font(.system(size: 14.5)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                    Text(body).font(.wx(14.5)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
                 }
                 HStack(spacing: 3) {
-                    Text(clockTime(msg.createdAt)).font(.system(size: 10.5))
+                    Text(clockTime(msg.createdAt)).font(.wx(10.5))
                     if outbound {
-                        Image(icon: failed ? .alert : .checkDouble).font(.system(size: 11))
+                        Image(icon: failed ? .alert : .checkDouble).font(.wx(11))
                             .foregroundStyle(failed ? Theme.danger : (outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.6))
                     }
                 }
@@ -562,13 +562,13 @@ struct MessageBubble: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
                 if failed, let reason = msg.failureReason {
-                    Text(reason).font(.system(size: 11)).foregroundStyle(Theme.danger).lineLimit(3)
+                    Text(reason).font(.wx(11)).foregroundStyle(Theme.danger).lineLimit(3)
                 }
                 if failed, let onRetry {
                     Button(action: onRetry) {
                         HStack(spacing: 4) {
-                            Image(icon: .refresh).font(.system(size: 11))
-                            Text(L("إعادة الإرسال")).font(.system(size: 12, weight: .semibold))
+                            Image(icon: .refresh).font(.wx(11))
+                            Text(L("إعادة الإرسال")).font(.wx(12, .semibold))
                         }
                         .foregroundStyle(Theme.danger)
                     }
@@ -589,9 +589,9 @@ struct MessageBubble: View {
     private func quoteView(_ reply: ReplySummary) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(reply.direction == "outbound" ? L("أنت") : (reply.senderLabel?.isEmpty == false ? reply.senderLabel! : L("رد على")))
-                .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.primary)
+                .font(.wx(11, .semibold)).foregroundStyle(Theme.primary)
             Text(reply.content?.isEmpty == false ? reply.content! : L("وسائط"))
-                .font(.system(size: 12)).foregroundStyle(fg.opacity(0.75)).lineLimit(2)
+                .font(.wx(12)).foregroundStyle(fg.opacity(0.75)).lineLimit(2)
         }
         .padding(.leading, 9).padding(.trailing, 8).padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -612,7 +612,7 @@ struct MessageBubble: View {
         } else {
             HStack(spacing: 10) {
                 Image(icon: .doc).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
-                Text(L("مستند")).font(.footnote).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                Text(L("مستند")).font(.wx(13)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
                 Spacer()
                 Image(icon: .download).foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.7))
             }
@@ -696,13 +696,13 @@ struct LocationCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
-                        Image(icon: .place).font(.system(size: 12)).foregroundStyle(Theme.primary)
+                        Image(icon: .place).font(.wx(12)).foregroundStyle(Theme.primary)
                         Text(location.name?.isEmpty == false ? location.name! : L("موقع"))
-                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(fg)
+                            .font(.wx(13, .semibold)).foregroundStyle(fg)
                             .lineLimit(1)
                     }
                     Text(location.address ?? String(format: "%.5f, %.5f", location.lat, location.lng))
-                        .font(.system(size: 11.5)).foregroundStyle(fg.opacity(0.7)).lineLimit(2)
+                        .font(.wx(11.5)).foregroundStyle(fg.opacity(0.7)).lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
             }
@@ -728,10 +728,10 @@ struct CallEventRow: View {
             Spacer(minLength: 30)
             HStack(spacing: 8) {
                 Image(systemName: inbound ? "phone.arrow.down.left" : "phone.arrow.up.right")
-                    .font(.system(size: 13))
+                    .font(.wx(13))
                     .foregroundStyle(missed ? Theme.danger : Theme.success)
-                Text(label).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.onMuted)
-                Text(clockTime(call.startedAt)).font(.system(size: 11)).foregroundStyle(Theme.onFaint)
+                Text(label).font(.wx(12.5, .medium)).foregroundStyle(Theme.onMuted)
+                Text(clockTime(call.startedAt)).font(.wx(11)).foregroundStyle(Theme.onFaint)
             }
             .padding(.horizontal, 14).padding(.vertical, 7)
             .glassCapsule()
@@ -771,8 +771,8 @@ struct ReadyPickerSheet: View {
                     List(items) { r in
                         Button { onPick(r.body); dismiss() } label: {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(r.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                Text(r.body).font(.caption).foregroundStyle(Theme.onMuted).lineLimit(2)
+                                Text(r.name).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
+                                Text(r.body).font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(2)
                             }
                         }
                         .listRowBackground(Theme.background)
@@ -820,12 +820,12 @@ struct TemplatePickerSheet: View {
                             params = Array(repeating: "", count: max(0, t.bodyParams))
                         } label: {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(t.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                                Text(t.name).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
                                 if let preview = t.bodyText {
-                                    Text(preview).font(.caption).foregroundStyle(Theme.onMuted).lineLimit(2)
+                                    Text(preview).font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(2)
                                 }
                                 Text([t.status, t.language].compactMap { $0 }.joined(separator: " · "))
-                                    .font(.caption2).foregroundStyle(Theme.onFaint)
+                                    .font(.wx(11)).foregroundStyle(Theme.onFaint)
                             }
                         }
                         .listRowBackground(Theme.background)
@@ -861,8 +861,8 @@ struct TemplatePickerSheet: View {
     private func paramForm(_ t: Template) -> some View {
         Form {
             Section(L("القالب")) {
-                Text(t.name).font(.headline).foregroundStyle(Theme.onSurface)
-                if let preview = t.bodyText { Text(preview).font(.caption).foregroundStyle(Theme.onMuted) }
+                Text(t.name).font(.wx(17, .semibold)).foregroundStyle(Theme.onSurface)
+                if let preview = t.bodyText { Text(preview).font(.wx(12)).foregroundStyle(Theme.onMuted) }
             }
             if t.bodyParams > 0 {
                 Section(L("المتغيرات")) {

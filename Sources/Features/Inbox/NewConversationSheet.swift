@@ -11,7 +11,7 @@ struct NewConversationSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(L("محادثة جديدة")).font(.title3.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("محادثة جديدة")).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
 
                 HStack(spacing: 10) {
                     Image(icon: .call).foregroundStyle(Theme.onFaint)
@@ -23,18 +23,18 @@ struct NewConversationSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outline, lineWidth: 1))
 
                 if !instances.isEmpty {
-                    Text(L("الرقم المُرسِل")).font(.callout.weight(.semibold)).foregroundStyle(Theme.onMuted)
+                    Text(L("الرقم المُرسِل")).font(.wx(16, .semibold)).foregroundStyle(Theme.onMuted)
                     ForEach(instances) { inst in
                         accountCard(inst)
                     }
                 }
 
-                if let error { Text(error).font(.footnote).foregroundStyle(Theme.danger) }
+                if let error { Text(error).font(.wx(13)).foregroundStyle(Theme.danger) }
 
                 Button { Task { await create() } } label: {
                     HStack {
                         if creating { ProgressView().tint(Theme.onPrimary) }
-                        else { Text(L("بدء المحادثة")).font(.headline) }
+                        else { Text(L("بدء المحادثة")).font(.wx(17, .semibold)) }
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
                     .background(Theme.primary, in: RoundedRectangle(cornerRadius: 14))
@@ -57,8 +57,8 @@ struct NewConversationSheet: View {
                     .frame(width: 34, height: 34)
                     .background(AccountColor.color(inst.id), in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(inst.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                    if let phone = inst.displayPhoneNumber { Text(phone).font(.caption).foregroundStyle(Theme.onMuted) }
+                    Text(inst.label).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
+                    if let phone = inst.displayPhoneNumber { Text(phone).font(.wx(12)).foregroundStyle(Theme.onMuted) }
                 }
                 Spacer()
                 if selected { Image(icon: .check).foregroundStyle(Theme.primary) }
