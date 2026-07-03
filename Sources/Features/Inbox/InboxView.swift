@@ -184,36 +184,57 @@ struct InboxView: View {
             }
             .buttonStyle(.plain)
 
-            Menu {
-                Button { vm.selectOnly(nil) } label: {
-                    if vm.selectedInstanceIds.isEmpty {
-                        Label("كل الحسابات", systemImage: "checkmark")
-                    } else {
-                        Text("كل الحسابات")
-                    }
+            // Multi-select account picker: taps toggle accounts on/off; the
+            // menu stays open while picking on iOS 16.4+.
+            Group {
+                if #available(iOS 16.4, *) {
+                    accountsMenu.menuActionDismissBehavior(.disabled)
+                } else {
+                    accountsMenu
                 }
-                ForEach(vm.instances) { inst in
-                    Button { vm.selectOnly(inst.id) } label: {
-                        if vm.selectedInstanceIds == [inst.id] {
-                            Label(inst.label, systemImage: "checkmark")
-                        } else {
-                            Text(inst.label)
-                        }
-                    }
-                }
-            } label: {
-                ZStack {
-                    Image(systemName: "circle.dashed")
-                        .font(.system(size: 25, weight: .regular))
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                }
-                .foregroundStyle(Theme.primary)
             }
         }
         .frame(width: 54)
         .padding(.vertical, 18)
         .glassCapsule(interactive: true)
+    }
+
+    private var accountsMenu: some View {
+        Menu {
+            Button { vm.selectOnly(nil) } label: {
+                if vm.selectedInstanceIds.isEmpty {
+                    Label("كل الحسابات", systemImage: "checkmark")
+                } else {
+                    Text("كل الحسابات")
+                }
+            }
+            ForEach(vm.instances) { inst in
+                Button { vm.toggleInstance(inst.id) } label: {
+                    if vm.selectedInstanceIds.contains(inst.id) {
+                        Label(inst.label, systemImage: "checkmark")
+                    } else {
+                        Text(inst.label)
+                    }
+                }
+            }
+        } label: {
+            ZStack {
+                Image(systemName: "circle.dashed")
+                    .font(.system(size: 25, weight: .regular))
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .bold))
+            }
+            .foregroundStyle(Theme.primary)
+            .overlay(alignment: .topTrailing) {
+                if !vm.selectedInstanceIds.isEmpty {
+                    Text("\(vm.selectedInstanceIds.count)")
+                        .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.onPrimary)
+                        .frame(width: 15, height: 15)
+                        .background(Theme.primary, in: Circle())
+                        .offset(x: 8, y: -7)
+                }
+            }
+        }
     }
 
     private var searchField: some View {
