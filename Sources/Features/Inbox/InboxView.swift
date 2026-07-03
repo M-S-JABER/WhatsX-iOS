@@ -196,8 +196,13 @@ struct InboxView: View {
                 Spacer(); ProgressView().tint(Theme.primary); Spacer()
             } else if vm.shown.isEmpty {
                 Spacer()
-                Text(vm.segment == .unread ? "لا محادثات غير مقروءة" : "لا توجد محادثات")
-                    .foregroundStyle(Theme.onMuted)
+                VStack(spacing: 12) {
+                    Image(systemName: vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right")
+                        .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Theme.onFaint)
+                    Text(vm.segment == .unread ? "لا محادثات غير مقروءة" : "لا توجد محادثات")
+                        .foregroundStyle(Theme.onMuted)
+                }
                 Spacer()
             } else {
                 List(vm.shown) { conv in

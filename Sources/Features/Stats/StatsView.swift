@@ -62,7 +62,7 @@ struct StatsView: View {
 
     private var reportsLink: some View {
         NavigationLink { CustomerReportsView() } label: {
-            SettingRow(icon: .pdf, title: "تقارير العملاء", subtitle: "تقرير مفصّل لكل عميل", trailingChevron: true)
+            SettingRow(icon: .pdf, title: "تقارير العملاء", subtitle: "تقرير مفصّل لكل عميل", trailingChevron: true, tint: Theme.info)
                 .glassCard(22)
         }
         .buttonStyle(.plain)

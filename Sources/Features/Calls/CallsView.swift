@@ -119,7 +119,14 @@ struct CallsView: View {
         if vm.loading && vm.items.isEmpty {
             Spacer(); ProgressView().tint(Theme.primary); Spacer()
         } else if vm.items.isEmpty {
-            Spacer(); Text("لا مكالمات بعد").foregroundStyle(Theme.onMuted); Spacer()
+            Spacer()
+            VStack(spacing: 12) {
+                Image(systemName: "phone.and.waveform")
+                    .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Theme.onFaint)
+                Text("لا مكالمات بعد").foregroundStyle(Theme.onMuted)
+            }
+            Spacer()
         } else {
             List(vm.items) { call in
                 CallRow(call: call)
