@@ -39,10 +39,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                 && event.conversationId == activeConversationId
                 && UIApplication.shared.applicationState == .active
             guard !inThatChat else { return }
-            post(title: event.senderLabel?.isEmpty == false ? event.senderLabel! : "رسالة واردة جديدة",
-                 body: event.body?.isEmpty == false ? event.body! : "وسائط 📎")
+            post(title: event.senderLabel?.isEmpty == false ? event.senderLabel! : L("رسالة واردة جديدة"),
+                 body: event.body?.isEmpty == false ? event.body! : L("وسائط 📎"))
         case "voice_call_incoming":
-            post(title: "مكالمة واتساب واردة 📞",
+            post(title: L("مكالمة واتساب واردة 📞"),
                  body: event.displayName ?? event.phone ?? "")
         default:
             break

@@ -13,7 +13,8 @@ public struct WhatsXRoot: View {
     public var body: some View {
         RootView()
             .environmentObject(session)
-            .environment(\.layoutDirection, .rightToLeft)   // Arabic-first, RTL
+            // Follows the SYSTEM language: RTL on Arabic systems, LTR otherwise.
+            .environment(\.layoutDirection, L10n.isArabic ? .rightToLeft : .leftToRight)
             .tint(Theme.primary)
             .task { await session.bootstrap() }
     }

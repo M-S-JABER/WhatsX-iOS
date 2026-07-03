@@ -42,7 +42,7 @@ struct CallsView: View {
     @StateObject private var vm = CallsViewModel()
     @State private var showSearch = false
     @State private var filterOpen = false
-    private let chips = [("all", "الكل"), ("in", "واردة"), ("out", "صادرة"), ("missed", "فائتة")]
+    private let chips = [("all", L("الكل")), ("in", L("واردة")), ("out", L("صادرة")), ("missed", L("فائتة"))]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,7 +65,7 @@ struct CallsView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Text("المكالمات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
+            Text(L("المكالمات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
             Button { filterOpen = true } label: {
                 ZStack(alignment: .topTrailing) {
@@ -87,7 +87,7 @@ struct CallsView: View {
     private var searchField: some View {
         HStack(spacing: 10) {
             Image(icon: .search).foregroundStyle(Theme.onMuted)
-            TextField("ابحث بالاسم أو الرقم", text: $vm.search)
+            TextField(L("ابحث بالاسم أو الرقم"), text: $vm.search)
                 .foregroundStyle(Theme.onSurface)
                 .submitLabel(.search)
         }
@@ -124,7 +124,7 @@ struct CallsView: View {
                 Image(systemName: "phone.and.waveform")
                     .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
                     .foregroundStyle(Theme.onFaint)
-                Text("لا مكالمات بعد").foregroundStyle(Theme.onMuted)
+                Text(L("لا مكالمات بعد")).foregroundStyle(Theme.onMuted)
             }
             Spacer()
         } else {
@@ -185,10 +185,10 @@ struct CallRow: View {
         let dur = c.durationSeconds > 0 ? " · \(c.durationSeconds / 60):\(String(format: "%02d", c.durationSeconds % 60))" : ""
         let base: String
         switch c.status {
-        case "ended", "answered", "bridged": base = "منتهية"
-        case "missed": base = "فائتة"
-        case "rejected": base = "مرفوضة"
-        case "failed": base = "فاشلة"
+        case "ended", "answered", "bridged": base = L("منتهية")
+        case "missed": base = L("فائتة")
+        case "rejected": base = L("مرفوضة")
+        case "failed": base = L("فاشلة")
         default: base = c.status ?? ""
         }
         return base + dur
@@ -206,43 +206,43 @@ struct CallFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("حساب واتساب") {
-                    Picker("الحساب", selection: Binding(
+                Section(L("حساب واتساب")) {
+                    Picker(L("الحساب"), selection: Binding(
                         get: { vm.instanceId ?? "" },
                         set: { vm.instanceId = $0.isEmpty ? nil : $0 }
                     )) {
-                        Text("كل الحسابات").tag("")
+                        Text(L("كل الحسابات")).tag("")
                         ForEach(vm.filters.accounts) { a in Text(a.label).tag(a.id) }
                     }
                 }
-                Section("الموظّف") {
-                    Picker("الموظّف", selection: Binding(
+                Section(L("الموظّف")) {
+                    Picker(L("الموظّف"), selection: Binding(
                         get: { vm.agent ?? "" },
                         set: { vm.agent = $0.isEmpty ? nil : $0 }
                     )) {
-                        Text("كل الموظّفين").tag("")
+                        Text(L("كل الموظّفين")).tag("")
                         ForEach(vm.filters.agents, id: \.self) { a in Text(a).tag(a) }
                     }
                 }
-                Section("التسجيل") {
-                    Picker("التسجيل", selection: Binding(
+                Section(L("التسجيل")) {
+                    Picker(L("التسجيل"), selection: Binding(
                         get: { recSel },
                         set: { v in vm.hasRecording = v == "yes" ? true : (v == "no" ? false : nil) }
                     )) {
-                        Text("الكل").tag("all")
-                        Text("يحتوي تسجيلًا").tag("yes")
-                        Text("بدون تسجيل").tag("no")
+                        Text(L("الكل")).tag("all")
+                        Text(L("يحتوي تسجيلًا")).tag("yes")
+                        Text(L("بدون تسجيل")).tag("no")
                     }.pickerStyle(.segmented)
                 }
                 Section {
-                    Button("إعادة تعيين الفلاتر") { vm.resetAdvanced() }.foregroundStyle(Theme.danger)
+                    Button(L("إعادة تعيين الفلاتر")) { vm.resetAdvanced() }.foregroundStyle(Theme.danger)
                 }
             }
-            .navigationTitle("تصفية المكالمات")
+            .navigationTitle(L("تصفية المكالمات"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("تطبيق") { vm.reload(); dismiss() } }
-                ToolbarItem(placement: .cancellationAction) { Button("إغلاق") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(L("تطبيق")) { vm.reload(); dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إغلاق")) { dismiss() } }
             }
         }
         .presentationDetents([.medium, .large])

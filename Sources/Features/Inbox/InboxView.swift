@@ -3,7 +3,7 @@ import SwiftUI
 enum InboxSegment: String, CaseIterable {
     case active, unread, archived
     var title: String {
-        switch self { case .active: return "النشطة"; case .unread: return "غير المقروءة"; case .archived: return "المؤرشفة" }
+        switch self { case .active: return L("النشطة"); case .unread: return L("غير المقروءة"); case .archived: return L("المؤرشفة") }
     }
 }
 
@@ -171,7 +171,7 @@ struct InboxView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Text(vm.showArchived ? "الأرشيف" : "المحادثات")
+            Text(vm.showArchived ? L("الأرشيف") : L("المحادثات"))
                 .font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
         }
@@ -220,9 +220,9 @@ struct InboxView: View {
         Menu {
             Button { vm.selectOnly(nil) } label: {
                 if vm.selectedInstanceIds.isEmpty {
-                    Label("كل الحسابات", systemImage: "checkmark")
+                    Label(L("كل الحسابات"), systemImage: "checkmark")
                 } else {
-                    Text("كل الحسابات")
+                    Text(L("كل الحسابات"))
                 }
             }
             ForEach(vm.instances) { inst in
@@ -266,7 +266,7 @@ struct InboxView: View {
                     Image(systemName: vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right")
                         .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Theme.onFaint)
-                    Text(vm.segment == .unread ? "لا محادثات غير مقروءة" : "لا توجد محادثات")
+                    Text(vm.segment == .unread ? L("لا محادثات غير مقروءة") : L("لا توجد محادثات"))
                         .foregroundStyle(Theme.onMuted)
                 }
                 Spacer()
@@ -283,15 +283,15 @@ struct InboxView: View {
                         .onAppear { vm.loadMoreIfNeeded(after: conv) }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
-                                Label("حذف", systemImage: "trash")
+                                Label(L("حذف"), systemImage: "trash")
                             }
                             Button { Task { await vm.archive(conv) } } label: {
-                                Label(vm.showArchived ? "إلغاء الأرشفة" : "أرشفة", systemImage: "archivebox")
+                                Label(vm.showArchived ? L("إلغاء الأرشفة") : L("أرشفة"), systemImage: "archivebox")
                             }.tint(Theme.success)
                         }
                         .swipeActions(edge: .leading) {
                             Button { Task { await vm.pin(conv) } } label: {
-                                Label(conv.isPinned ? "إلغاء التثبيت" : "تثبيت", systemImage: conv.isPinned ? "pin.slash" : "pin")
+                                Label(conv.isPinned ? L("إلغاء التثبيت") : L("تثبيت"), systemImage: conv.isPinned ? "pin.slash" : "pin")
                             }.tint(Theme.primary)
                         }
                     }
@@ -362,7 +362,7 @@ func shortTime(_ iso: String?) -> String {
     if cal.isDateInToday(date) {
         let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
     }
-    if cal.isDateInYesterday(date) { return "أمس" }
+    if cal.isDateInYesterday(date) { return L("أمس") }
     let f = DateFormatter(); f.dateFormat = "dd/MM"; return f.string(from: date)
 }
 

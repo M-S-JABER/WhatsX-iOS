@@ -186,10 +186,10 @@ enum ChatEntry: Identifiable, Equatable {
 
 func dayLabel(_ date: Date) -> String {
     let cal = Calendar.current
-    if cal.isDateInToday(date) { return "اليوم" }
-    if cal.isDateInYesterday(date) { return "أمس" }
+    if cal.isDateInToday(date) { return L("اليوم") }
+    if cal.isDateInYesterday(date) { return L("أمس") }
     let f = DateFormatter()
-    f.locale = Locale(identifier: "ar")
+    f.locale = L10n.dateLocale
     f.dateFormat = "d MMMM yyyy"
     return f.string(from: date)
 }
@@ -259,30 +259,30 @@ struct ChatView: View {
             else { return }
             Task { await vm.load() }
         }
-        .confirmationDialog("الاتصال", isPresented: $showCallMenu, titleVisibility: .visible) {
-            Button("طلب إذن الاتصال عبر واتساب") {
+        .confirmationDialog(L("الاتصال"), isPresented: $showCallMenu, titleVisibility: .visible) {
+            Button(L("طلب إذن الاتصال عبر واتساب")) {
                 Task {
                     let digits = (vm.conversation.phone ?? "").filter { $0.isNumber }
                     do {
                         try await Api.shared.requestCallPermission(to: digits, instanceId: vm.conversation.instanceId)
-                        callNotice = "أُرسل طلب إذن الاتصال إلى العميل ✓"
+                        callNotice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
                     } catch {
                         callNotice = (error as? ApiError)?.message ?? error.localizedDescription
                     }
                 }
             }
-            Button("إلغاء", role: .cancel) {}
+            Button(L("إلغاء"), role: .cancel) {}
         } message: {
-            Text("المكالمات الصوتية الحية متاحة من نسخة الويب؛ من هنا يمكن إرسال طلب إذن الاتصال للعميل.")
+            Text(L("المكالمات الصوتية الحية متاحة من نسخة الويب؛ من هنا يمكن إرسال طلب إذن الاتصال للعميل."))
         }
-        .alert("الاتصال", isPresented: Binding(get: { callNotice != nil }, set: { if !$0 { callNotice = nil } })) {
-            Button("حسنًا", role: .cancel) {}
+        .alert(L("الاتصال"), isPresented: Binding(get: { callNotice != nil }, set: { if !$0 { callNotice = nil } })) {
+            Button(L("حسنًا"), role: .cancel) {}
         } message: { Text(callNotice ?? "") }
-        .confirmationDialog("إرفاق", isPresented: $showAttachMenu, titleVisibility: .visible) {
-            Button("صورة") { showPhotoPicker = true }
-            Button("مستند") { showDocImporter = true }
-            Button("قالب") { showTemplates = true }
-            Button("إلغاء", role: .cancel) {}
+        .confirmationDialog(L("إرفاق"), isPresented: $showAttachMenu, titleVisibility: .visible) {
+            Button(L("صورة")) { showPhotoPicker = true }
+            Button(L("مستند")) { showDocImporter = true }
+            Button(L("قالب")) { showTemplates = true }
+            Button(L("إلغاء"), role: .cancel) {}
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { item in
@@ -312,8 +312,8 @@ struct ChatView: View {
         .sheet(isPresented: $showTemplates) {
             TemplatePickerSheet { name, lang, params in await vm.sendTemplate(name: name, language: lang, params: params) }
         }
-        .alert("تعذّر الإرسال", isPresented: Binding(get: { vm.attachError != nil }, set: { if !$0 { vm.attachError = nil } })) {
-            Button("حسنًا", role: .cancel) {}
+        .alert(L("تعذّر الإرسال"), isPresented: Binding(get: { vm.attachError != nil }, set: { if !$0 { vm.attachError = nil } })) {
+            Button(L("حسنًا"), role: .cancel) {}
         } message: { Text(vm.attachError ?? "") }
     }
 
@@ -359,11 +359,11 @@ struct ChatView: View {
                                       highlighted: highlightedMessageId == msg.id)
                             .contextMenu {
                                 Button { vm.replyTarget = msg } label: {
-                                    Label("رد", systemImage: "arrowshape.turn.up.left")
+                                    Label(L("رد"), systemImage: "arrowshape.turn.up.left")
                                 }
                                 if let body = msg.body, !body.isEmpty {
                                     Button { UIPasteboard.general.string = body } label: {
-                                        Label("نسخ", systemImage: "doc.on.doc")
+                                        Label(L("نسخ"), systemImage: "doc.on.doc")
                                     }
                                 }
                             }
@@ -389,7 +389,7 @@ struct ChatView: View {
     private func chatSearchBar(_ proxy: ScrollViewProxy) -> some View {
         HStack(spacing: 10) {
             Image(icon: .search).font(.system(size: 14)).foregroundStyle(Theme.onMuted)
-            TextField("ابحث في الرسائل", text: $chatQuery)
+            TextField(L("ابحث في الرسائل"), text: $chatQuery)
                 .font(.system(size: 14)).foregroundStyle(Theme.onSurface)
             if !searchMatches.isEmpty {
                 Text("\(min(matchIndex, searchMatches.count - 1) + 1)/\(searchMatches.count)")
@@ -433,9 +433,9 @@ struct ChatView: View {
         HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 2).fill(Theme.primary).frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 1) {
-                Text(target.isOutbound ? "أنت" : vm.conversation.title)
+                Text(target.isOutbound ? L("أنت") : vm.conversation.title)
                     .font(.caption.bold()).foregroundStyle(Theme.primary)
-                Text(target.body?.isEmpty == false ? target.body! : "وسائط")
+                Text(target.body?.isEmpty == false ? target.body! : L("وسائط"))
                     .font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
             }
             Spacer()
@@ -461,7 +461,7 @@ struct ChatView: View {
         HStack(alignment: .bottom, spacing: 8) {
             HStack(spacing: 2) {
                 Image(icon: .emoji).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
-                TextField("اكتب رسالة…", text: $vm.input, axis: .vertical)
+                TextField(L("اكتب رسالة…"), text: $vm.input, axis: .vertical)
                     .lineLimit(1...4).foregroundStyle(Theme.onSurface)
                 Button { showReady = true } label: {
                     Image(icon: .bolt).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
@@ -498,7 +498,7 @@ struct ChatView: View {
             }
             HStack(spacing: 8) {
                 Circle().fill(Theme.danger).frame(width: 10, height: 10)
-                Text("جارٍ التسجيل  \(timeStr(recorder.elapsed))")
+                Text(L("جارٍ التسجيل") + "  \(timeStr(recorder.elapsed))")
                     .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
                 Spacer()
             }
@@ -568,7 +568,7 @@ struct MessageBubble: View {
                     Button(action: onRetry) {
                         HStack(spacing: 4) {
                             Image(icon: .refresh).font(.system(size: 11))
-                            Text("إعادة الإرسال").font(.system(size: 12, weight: .semibold))
+                            Text(L("إعادة الإرسال")).font(.system(size: 12, weight: .semibold))
                         }
                         .foregroundStyle(Theme.danger)
                     }
@@ -588,9 +588,9 @@ struct MessageBubble: View {
     /// Quoted-reply preview rendered above the message content.
     private func quoteView(_ reply: ReplySummary) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(reply.direction == "outbound" ? "أنت" : (reply.senderLabel?.isEmpty == false ? reply.senderLabel! : "رد على"))
+            Text(reply.direction == "outbound" ? L("أنت") : (reply.senderLabel?.isEmpty == false ? reply.senderLabel! : L("رد على")))
                 .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.primary)
-            Text(reply.content?.isEmpty == false ? reply.content! : "وسائط")
+            Text(reply.content?.isEmpty == false ? reply.content! : L("وسائط"))
                 .font(.system(size: 12)).foregroundStyle(fg.opacity(0.75)).lineLimit(2)
         }
         .padding(.leading, 9).padding(.trailing, 8).padding(.vertical, 5)
@@ -612,7 +612,7 @@ struct MessageBubble: View {
         } else {
             HStack(spacing: 10) {
                 Image(icon: .doc).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
-                Text("مستند").font(.footnote).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                Text(L("مستند")).font(.footnote).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
                 Spacer()
                 Image(icon: .download).foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.7))
             }
@@ -658,7 +658,7 @@ func parseSharedLocation(_ body: String?) -> SharedLocation? {
         .split(separator: "\n")
         .map { $0.trimmingCharacters(in: .whitespaces) }
         .filter { !$0.isEmpty }
-    let address = lines.dropFirst().joined(separator: "، ")
+    let address = lines.dropFirst().joined(separator: L("، "))
     return SharedLocation(lat: lat, lng: lng,
                           name: lines.first,
                           address: address.isEmpty ? nil : address,
@@ -697,7 +697,7 @@ struct LocationCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         Image(icon: .place).font(.system(size: 12)).foregroundStyle(Theme.primary)
-                        Text(location.name?.isEmpty == false ? location.name! : "موقع")
+                        Text(location.name?.isEmpty == false ? location.name! : L("موقع"))
                             .font(.system(size: 13, weight: .semibold)).foregroundStyle(fg)
                             .lineLimit(1)
                     }
@@ -741,9 +741,9 @@ struct CallEventRow: View {
     }
 
     private var label: String {
-        var parts: [String] = [inbound ? "مكالمة واردة" : "مكالمة صادرة"]
+        var parts: [String] = [inbound ? L("مكالمة واردة") : L("مكالمة صادرة")]
         if missed {
-            parts.append("لم يُرَدّ عليها")
+            parts.append(L("لم يُرَدّ عليها"))
         } else if call.durationSeconds > 0 {
             let s = call.durationSeconds
             parts.append(String(format: "%02d:%02d", s / 60, s % 60))
@@ -766,7 +766,7 @@ struct ReadyPickerSheet: View {
                 if loading {
                     ProgressView().tint(Theme.primary)
                 } else if items.isEmpty {
-                    Text("لا ردود جاهزة").foregroundStyle(Theme.onMuted)
+                    Text(L("لا ردود جاهزة")).foregroundStyle(Theme.onMuted)
                 } else {
                     List(items) { r in
                         Button { onPick(r.body); dismiss() } label: {
@@ -782,8 +782,8 @@ struct ReadyPickerSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("ردود جاهزة").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("إغلاق") { dismiss() } } }
+            .navigationTitle(L("ردود جاهزة")).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(L("إغلاق")) { dismiss() } } }
             .task {
                 items = (try? await Api.shared.readyMessages())?.items ?? []
                 loading = false
@@ -812,7 +812,7 @@ struct TemplatePickerSheet: View {
                 } else if loading {
                     ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if templates.isEmpty {
-                    Text("لا قوالب").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text(L("لا قوالب")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List(templates, id: \.stableId) { t in
                         Button {
@@ -835,16 +835,16 @@ struct TemplatePickerSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle(selected == nil ? "القوالب" : "إرسال قالب").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(selected == nil ? L("القوالب") : L("إرسال قالب")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(selected == nil ? "إغلاق" : "رجوع") {
+                    Button(selected == nil ? L("إغلاق") : L("رجوع")) {
                         if selected == nil { dismiss() } else { selected = nil }
                     }
                 }
                 if let t = selected {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("إرسال") {
+                        Button(L("إرسال")) {
                             Task { sending = true; await onSend(t.name, t.language, params); sending = false; dismiss() }
                         }.disabled(sending)
                     }
@@ -860,21 +860,21 @@ struct TemplatePickerSheet: View {
 
     private func paramForm(_ t: Template) -> some View {
         Form {
-            Section("القالب") {
+            Section(L("القالب")) {
                 Text(t.name).font(.headline).foregroundStyle(Theme.onSurface)
                 if let preview = t.bodyText { Text(preview).font(.caption).foregroundStyle(Theme.onMuted) }
             }
             if t.bodyParams > 0 {
-                Section("المتغيرات") {
+                Section(L("المتغيرات")) {
                     ForEach(0..<t.bodyParams, id: \.self) { i in
-                        TextField("المتغير \(i + 1)", text: Binding(
+                        TextField(L("المتغير") + " \(i + 1)", text: Binding(
                             get: { i < params.count ? params[i] : "" },
                             set: { v in if i < params.count { params[i] = v } }
                         ))
                     }
                 }
             } else {
-                Section { Text("لا متغيرات في هذا القالب").foregroundStyle(Theme.onMuted) }
+                Section { Text(L("لا متغيرات في هذا القالب")).foregroundStyle(Theme.onMuted) }
             }
         }
         .scrollContentBackground(.hidden)

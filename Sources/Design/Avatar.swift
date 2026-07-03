@@ -10,7 +10,7 @@ struct Avatar: View {
     private var initials: String {
         let parts = name.split(separator: " ").prefix(2)
         let letters = parts.compactMap { $0.first }.map(String.init).joined().uppercased()
-        return letters.isEmpty ? "؟" : letters
+        return letters.isEmpty ? L("؟") : letters
     }
 
     var body: some View {

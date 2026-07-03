@@ -28,7 +28,7 @@ struct LoginView: View {
                 .frame(width: 74, height: 74)
                 .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 22))
             Text("WhatsX").font(.system(size: 30, weight: .bold)).foregroundStyle(.white)
-            Text("منصّة إدارة محادثات واتساب").font(.subheadline).foregroundStyle(.white.opacity(0.9))
+            Text(L("منصّة إدارة محادثات واتساب")).font(.subheadline).foregroundStyle(.white.opacity(0.9))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80).padding(.bottom, 40)
@@ -38,18 +38,18 @@ struct LoginView: View {
 
     private var form: some View {
         VStack(spacing: 14) {
-            Text("مرحبًا بعودتك").font(.title3.bold()).foregroundStyle(Theme.onSurface)
+            Text(L("مرحبًا بعودتك")).font(.title3.bold()).foregroundStyle(Theme.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            field(icon: .user, placeholder: "اسم المستخدم") {
-                TextField("اسم المستخدم", text: $username)
+            field(icon: .user, placeholder: L("اسم المستخدم")) {
+                TextField(L("اسم المستخدم"), text: $username)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
             }
 
-            field(icon: .lock, placeholder: "كلمة المرور") {
+            field(icon: .lock, placeholder: L("كلمة المرور")) {
                 Group {
-                    if showPassword { TextField("كلمة المرور", text: $password) }
-                    else { SecureField("كلمة المرور", text: $password) }
+                    if showPassword { TextField(L("كلمة المرور"), text: $password) }
+                    else { SecureField(L("كلمة المرور"), text: $password) }
                 }
                 .autocorrectionDisabled()
                 Button { showPassword.toggle() } label: {
@@ -68,7 +68,7 @@ struct LoginView: View {
             } label: {
                 HStack {
                     if session.isLoggingIn { ProgressView().tint(Theme.onPrimary) }
-                    else { Text("تسجيل الدخول").font(.headline) }
+                    else { Text(L("تسجيل الدخول")).font(.headline) }
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
                 .background(Theme.primary, in: RoundedRectangle(cornerRadius: 16))
@@ -84,7 +84,7 @@ struct LoginView: View {
                 }
                 .padding(.top, 8)
             } label: {
-                Label("إعدادات الخادم", systemImage: WIcon.settings.symbol())
+                Label(L("إعدادات الخادم"), systemImage: WIcon.settings.symbol())
                     .font(.subheadline).foregroundStyle(Theme.onMuted)
             }
             .tint(Theme.onMuted)

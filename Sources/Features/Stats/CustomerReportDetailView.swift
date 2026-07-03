@@ -12,7 +12,7 @@ struct CustomerReportDetailView: View {
     @State private var range: String? = nil
 
     private let ranges: [(String?, String)] = [
-        (nil, "الكل"), ("24h", "24س"), ("7d", "7 أيام"), ("30d", "30 يومًا"), ("90d", "90 يومًا"),
+        (nil, L("الكل")), ("24h", L("24س")), ("7d", L("7 أيام")), ("30d", L("30 يومًا")), ("90d", L("90 يومًا")),
     ]
 
     var body: some View {
@@ -29,7 +29,7 @@ struct CustomerReportDetailView: View {
                     if !r.agents.isEmpty { agentsCard(r.agents) }
                     if !r.timeline.isEmpty { timelineCard(r.timeline) }
                 } else {
-                    Text("لا بيانات").foregroundStyle(Theme.onMuted).padding(.top, 40)
+                    Text(L("لا بيانات")).foregroundStyle(Theme.onMuted).padding(.top, 40)
                 }
             }
             .padding(16).padding(.bottom, 24)
@@ -88,26 +88,26 @@ struct CustomerReportDetailView: View {
         let t = t ?? CustomerReportTotals()
         return VStack(spacing: 11) {
             HStack(spacing: 11) {
-                metric("الرسائل", "\(t.messages)", Theme.onSurface)
-                metric("الواردة", "\(t.incoming)", Theme.success)
-                metric("الصادرة", "\(t.outgoing)", Theme.info)
+                metric(L("الرسائل"), "\(t.messages)", Theme.onSurface)
+                metric(L("الواردة"), "\(t.incoming)", Theme.success)
+                metric(L("الصادرة"), "\(t.outgoing)", Theme.info)
             }
             HStack(spacing: 11) {
-                infoTile("أول رسالة", relTime(t.firstAt))
-                infoTile("آخر رسالة", relTime(t.lastAt))
+                infoTile(L("أول رسالة"), relTime(t.firstAt))
+                infoTile(L("آخر رسالة"), relTime(t.lastAt))
             }
         }
     }
 
     private func responseCard(_ rs: CustomerReportResponseStats) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("زمن الاستجابة").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("زمن الاستجابة")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
             HStack(spacing: 11) {
-                statTile("المتوسّط", dur(rs.avgSeconds), Theme.primary)
-                statTile("الأسرع", dur(rs.minSeconds), Theme.success)
-                statTile("الأبطأ", dur(rs.maxSeconds), Theme.danger)
+                statTile(L("المتوسّط"), dur(rs.avgSeconds), Theme.primary)
+                statTile(L("الأسرع"), dur(rs.minSeconds), Theme.success)
+                statTile(L("الأبطأ"), dur(rs.maxSeconds), Theme.danger)
             }
-            Text("عدد الردود المحسوبة: \(rs.count)").font(.caption).foregroundStyle(Theme.onFaint)
+            Text(L("عدد الردود المحسوبة:") + " \(rs.count)").font(.caption).foregroundStyle(Theme.onFaint)
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(22)
@@ -115,11 +115,11 @@ struct CustomerReportDetailView: View {
 
     private func statusCard(_ sb: [String: Int]) -> some View {
         let order: [(String, String, Color)] = [
-            ("sent", "مُرسلة", Theme.onMuted), ("delivered", "مُسلّمة", Theme.info),
-            ("read", "مقروءة", Theme.info), ("failed", "فاشلة", Theme.danger),
+            ("sent", L("مُرسلة"), Theme.onMuted), ("delivered", L("مُسلّمة"), Theme.info),
+            ("read", L("مقروءة"), Theme.info), ("failed", L("فاشلة"), Theme.danger),
         ]
         return VStack(alignment: .leading, spacing: 12) {
-            Text("حالات الرسائل").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("حالات الرسائل")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
             HStack(spacing: 11) {
                 ForEach(order, id: \.0) { key, label, color in
                     statTile(label, "\(sb[key] ?? 0)", color)
@@ -132,14 +132,14 @@ struct CustomerReportDetailView: View {
 
     private func agentsCard(_ agents: [CustomerReportAgent]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("مساهمة الموظفين").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("مساهمة الموظفين")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
             ForEach(agents) { a in
                 HStack(spacing: 12) {
                     Avatar(name: a.username, size: 34)
                     Text(a.username).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
                     Spacer()
-                    Text("\(a.sent) رسالة").font(.caption).foregroundStyle(Theme.onMuted)
-                    Text("\(a.replies) رد").font(.caption.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text("\(a.sent) " + L("رسالة")).font(.caption).foregroundStyle(Theme.onMuted)
+                    Text("\(a.replies) " + (L10n.isArabic ? "رد" : "replies")).font(.caption.weight(.semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
@@ -151,12 +151,12 @@ struct CustomerReportDetailView: View {
 
     private func timelineCard(_ items: [CustomerReportTimelineItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("آخر الرسائل").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("آخر الرسائل")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
             ForEach(items) { m in
                 HStack(alignment: .top, spacing: 10) {
                     Circle().fill(m.isOutbound ? Theme.info : Theme.success).frame(width: 8, height: 8).padding(.top, 5)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(m.body?.isEmpty == false ? m.body! : (m.isOutbound ? "رسالة صادرة" : "رسالة واردة"))
+                        Text(m.body?.isEmpty == false ? m.body! : (m.isOutbound ? L("رسالة صادرة") : L("رسالة واردة")))
                             .font(.system(size: 13.5)).foregroundStyle(Theme.onSurface).lineLimit(2)
                         HStack(spacing: 6) {
                             Text(hm(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
@@ -210,15 +210,15 @@ struct CustomerReportDetailView: View {
 
     private func dur(_ seconds: Int?) -> String {
         guard let s = seconds else { return "—" }
-        if s < 60 { return "\(s)ث" }
-        if s < 3600 { return "\(s / 60)د" }
-        if s < 86400 { return "\(s / 3600)س" }
-        return "\(s / 86400)ي"
+        if s < 60 { return "\(s)" + L("ث") }
+        if s < 3600 { return "\(s / 60)" + L("د") }
+        if s < 86400 { return "\(s / 3600)" + L("س") }
+        return "\(s / 86400)" + L("ي")
     }
 
     private func relTime(_ iso: String?) -> String {
         guard let date = parseISO(iso) else { return "—" }
-        let f = DateFormatter(); f.locale = Locale(identifier: "ar"); f.dateFormat = "dd/MM/yyyy"
+        let f = DateFormatter(); f.locale = L10n.dateLocale; f.dateFormat = "dd/MM/yyyy"
         return f.string(from: date)
     }
 

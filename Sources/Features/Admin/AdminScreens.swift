@@ -14,7 +14,7 @@ struct UsersView: View {
             if loading {
                 ZStack { Theme.background.ignoresSafeArea(); ProgressView().tint(Theme.primary) }
             } else if users.isEmpty {
-                ZStack { Theme.background.ignoresSafeArea(); Text("لا مستخدمون").foregroundStyle(Theme.onMuted) }
+                ZStack { Theme.background.ignoresSafeArea(); Text(L("لا مستخدمون")).foregroundStyle(Theme.onMuted) }
             } else {
                 List {
                     ForEach(users) { u in
@@ -32,10 +32,10 @@ struct UsersView: View {
                         }
                         .listRowBackground(Theme.background)
                         .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { Task { await delete(u) } } label: { Label("حذف", systemImage: "trash") }
+                            Button(role: .destructive) { Task { await delete(u) } } label: { Label(L("حذف"), systemImage: "trash") }
                         }
                         .swipeActions(edge: .leading) {
-                            Button { editingUser = u } label: { Label("تعديل", systemImage: "pencil") }.tint(Theme.info)
+                            Button { editingUser = u } label: { Label(L("تعديل"), systemImage: "pencil") }.tint(Theme.info)
                         }
                     }
                 }
@@ -43,7 +43,7 @@ struct UsersView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("المستخدمون")
+        .navigationTitle(L("المستخدمون"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -76,23 +76,23 @@ struct CreateUserSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("اسم المستخدم", text: $username)
+                TextField(L("اسم المستخدم"), text: $username)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
-                SecureField("كلمة المرور", text: $password)
-                Picker("الدور", selection: $role) {
-                    Text("اختر دورًا").tag("")
+                SecureField(L("كلمة المرور"), text: $password)
+                Picker(L("الدور"), selection: $role) {
+                    Text(L("اختر دورًا")).tag("")
                     ForEach(roles) { r in Text(r.name).tag(r.id) }
                 }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("مستخدم جديد")
+            .navigationTitle(L("مستخدم جديد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("إنشاء") { Task { await create() } }
+                    Button(L("إنشاء")) { Task { await create() } }
                         .disabled(saving || username.isEmpty || password.isEmpty || role.isEmpty)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.medium])
@@ -125,19 +125,19 @@ struct EditUserSheet: View {
         NavigationStack {
             Form {
                 Text(user.title).font(.headline).foregroundStyle(Theme.onSurface)
-                Picker("الدور", selection: $role) {
+                Picker(L("الدور"), selection: $role) {
                     ForEach(roles) { r in Text(r.name).tag(r.id) }
                 }
-                SecureField("كلمة مرور جديدة (اختياري)", text: $password)
+                SecureField(L("كلمة مرور جديدة (اختياري)"), text: $password)
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("تعديل المستخدم")
+            .navigationTitle(L("تعديل المستخدم"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }.disabled(saving)
+                    Button(L("حفظ")) { Task { await save() } }.disabled(saving)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
             .onAppear {
                 role = roles.first { $0.id == user.role || $0.name == user.role }?.id ?? roles.first?.id ?? ""
@@ -171,7 +171,7 @@ struct RolesView: View {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if roles.isEmpty {
-                Text("لا أدوار").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(L("لا أدوار")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(roles) { role in
@@ -184,11 +184,11 @@ struct RolesView: View {
                                     .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(role.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                    Text("\(role.permissions.count) صلاحية").font(.caption).foregroundStyle(Theme.onMuted)
+                                    Text("\(role.permissions.count) " + L("صلاحية")).font(.caption).foregroundStyle(Theme.onMuted)
                                 }
                                 Spacer()
                                 if role.isSystem {
-                                    Text("نظام").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onMuted)
+                                    Text(L("نظام")).font(.caption2.weight(.semibold)).foregroundStyle(Theme.onMuted)
                                         .padding(.horizontal, 8).padding(.vertical, 2)
                                         .background(Theme.surface2, in: Capsule())
                                 }
@@ -198,7 +198,7 @@ struct RolesView: View {
                         .listRowBackground(Theme.background)
                         .swipeActions(edge: .trailing) {
                             if !role.isSystem {
-                                Button(role: .destructive) { Task { await delete(role) } } label: { Label("حذف", systemImage: "trash") }
+                                Button(role: .destructive) { Task { await delete(role) } } label: { Label(L("حذف"), systemImage: "trash") }
                             }
                         }
                     }
@@ -207,7 +207,7 @@ struct RolesView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("الأدوار والصلاحيات")
+        .navigationTitle(L("الأدوار والصلاحيات"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -240,18 +240,18 @@ struct CreateRoleSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("اسم الدور", text: $name)
-                TextField("الوصف (اختياري)", text: $desc)
+                TextField(L("اسم الدور"), text: $name)
+                TextField(L("الوصف (اختياري)"), text: $desc)
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("دور جديد")
+            .navigationTitle(L("دور جديد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("إنشاء") { Task { await create() } }
+                    Button(L("إنشاء")) { Task { await create() } }
                         .disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.medium])
@@ -292,11 +292,11 @@ struct RolePermissionsView: View {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if catalog.isEmpty {
-                Text("لا صلاحيات متاحة").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(L("لا صلاحيات متاحة")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     Section {
-                        Text("\(selected.count) صلاحية مُفعّلة").font(.caption).foregroundStyle(Theme.onMuted)
+                        Text("\(selected.count) " + L("صلاحية مُفعّلة")).font(.caption).foregroundStyle(Theme.onMuted)
                     }
                     ForEach(groups, id: \.0) { group, items in
                         Section(group) {
@@ -307,7 +307,7 @@ struct RolePermissionsView: View {
                                             HStack(spacing: 6) {
                                                 Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
                                                 if p.isCritical == true {
-                                                    Text("حسّاس").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                                                    Text(L("حسّاس")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
                                                         .padding(.horizontal, 5).padding(.vertical, 1)
                                                         .background(Theme.dangerBg, in: Capsule())
                                                 }
@@ -336,7 +336,7 @@ struct RolePermissionsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("حفظ") { Task { await save() } }.disabled(saving || loading)
+                Button(L("حفظ")) { Task { await save() } }.disabled(saving || loading)
             }
         }
         .task { await load() }
@@ -396,11 +396,11 @@ struct UserPermissionsView: View {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if catalog.isEmpty {
-                Text("لا صلاحيات متاحة").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(L("لا صلاحيات متاحة")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     Section {
-                        Text("\(overrides.count) تجاوز · \(effectiveCount) صلاحية فعّالة")
+                        Text("\(overrides.count) " + L("تجاوز") + " · \(effectiveCount) " + L("صلاحية فعّالة"))
                             .font(.caption).foregroundStyle(Theme.onMuted)
                     }
                     ForEach(groups, id: \.0) { group, items in
@@ -420,7 +420,7 @@ struct UserPermissionsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("حفظ") { Task { await save() } }.disabled(saving || loading)
+                Button(L("حفظ")) { Task { await save() } }.disabled(saving || loading)
             }
         }
         .task { await load() }
@@ -432,19 +432,19 @@ struct UserPermissionsView: View {
                 Circle().fill(effective(p.id) ? Theme.success : Theme.onFaint).frame(width: 7, height: 7)
                 Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
                 if p.isCritical == true {
-                    Text("حسّاس").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                    Text(L("حسّاس")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(Theme.dangerBg, in: Capsule())
                 }
                 Spacer()
             }
             Picker("", selection: stateBinding(p.id)) {
-                Text("وراثة").tag(0)
-                Text("سماح").tag(1)
-                Text("منع").tag(2)
+                Text(L("وراثة")).tag(0)
+                Text(L("سماح")).tag(1)
+                Text(L("منع")).tag(2)
             }
             .pickerStyle(.segmented)
-            Text(rolePerms.contains(p.id) ? "الدور: يمنحها" : "الدور: لا يمنحها")
+            Text(rolePerms.contains(p.id) ? L("الدور: يمنحها") : L("الدور: لا يمنحها"))
                 .font(.caption2).foregroundStyle(Theme.onFaint)
         }
         .padding(.vertical, 2)
@@ -513,29 +513,29 @@ struct TemplatesView: View {
                             .padding(10).background(Theme.surface2, in: RoundedRectangle(cornerRadius: 12))
                     }
                     if !ready.isEmpty {
-                        Text("الردود الجاهزة").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+                        Text(L("الردود الجاهزة")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
                         ForEach(ready) { r in readyCard(r) }
                     }
                     if !templates.isEmpty {
-                        Text("قوالب Meta").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+                        Text(L("قوالب Meta")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
                         ForEach(templates, id: \.stableId) { t in templateCard(t) }
                     }
                     if ready.isEmpty && templates.isEmpty {
-                        Text("لا قوالب").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity).padding(.top, 40)
+                        Text(L("لا قوالب")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity).padding(.top, 40)
                     }
                 }
                 .padding(16)
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("القوالب والردود")
+        .navigationTitle(L("القوالب والردود"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button { editing = nil; editorOpen = true } label: { Label("رد جاهز جديد", systemImage: "text.bubble") }
-                    Button { createTemplateOpen = true } label: { Label("قالب Meta جديد", systemImage: "doc.badge.plus") }
-                    Button { Task { await sync() } } label: { Label("مزامنة من Meta", systemImage: "arrow.clockwise") }
+                    Button { editing = nil; editorOpen = true } label: { Label(L("رد جاهز جديد"), systemImage: "text.bubble") }
+                    Button { createTemplateOpen = true } label: { Label(L("قالب Meta جديد"), systemImage: "doc.badge.plus") }
+                    Button { Task { await sync() } } label: { Label(L("مزامنة من Meta"), systemImage: "arrow.clockwise") }
                 } label: {
                     if syncing { ProgressView() } else { Image(systemName: "plus") }
                 }
@@ -560,7 +560,7 @@ struct TemplatesView: View {
         syncing = true; banner = nil
         do {
             let r = try await Api.shared.syncTemplates()
-            banner = "تمت المزامنة: \(r.syncedCount) قالب من Meta."
+            banner = L("تمت المزامنة:") + " \(r.syncedCount) " + L("قالب من Meta.")
             await load()
         } catch {
             banner = (error as? ApiError)?.message ?? error.localizedDescription
@@ -612,7 +612,7 @@ struct TemplatesView: View {
             HStack {
                 Text(r.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
                 Spacer()
-                let tag = r.isActive ? "مُفعّل" : "متوقّف"
+                let tag = r.isActive ? L("مُفعّل") : L("متوقّف")
                 Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Theme.primary)
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Theme.primaryContainer, in: Capsule())
@@ -669,19 +669,19 @@ struct ReadyMessageSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("الاسم", text: $name)
-                TextField("النص", text: $text, axis: .vertical).lineLimit(3...8)
-                Toggle("مُفعّل", isOn: $isActive)
+                TextField(L("الاسم"), text: $name)
+                TextField(L("النص"), text: $text, axis: .vertical).lineLimit(3...8)
+                Toggle(L("مُفعّل"), isOn: $isActive)
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle(message == nil ? "رد جاهز جديد" : "تعديل الرد")
+            .navigationTitle(message == nil ? L("رد جاهز جديد") : L("تعديل الرد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }
+                    Button(L("حفظ")) { Task { await save() } }
                         .disabled(saving || name.isEmpty || text.isEmpty)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
             .onAppear {
                 if let message {
@@ -736,35 +736,35 @@ struct CreateTemplateSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("القالب") {
-                    TextField("الاسم (أحرف صغيرة و_)", text: $name)
+                Section(L("القالب")) {
+                    TextField(L("الاسم (أحرف صغيرة و_)"), text: $name)
                         .autocorrectionDisabled().textInputAutocapitalization(.never)
-                    Picker("اللغة", selection: $language) { ForEach(languages, id: \.self) { Text($0).tag($0) } }
-                    Picker("الفئة", selection: $category) { ForEach(categories, id: \.self) { Text($0).tag($0) } }
+                    Picker(L("اللغة"), selection: $language) { ForEach(languages, id: \.self) { Text($0).tag($0) } }
+                    Picker(L("الفئة"), selection: $category) { ForEach(categories, id: \.self) { Text($0).tag($0) } }
                 }
-                Section("نص الرسالة (BODY)") {
-                    TextField("النص", text: $bodyText, axis: .vertical).lineLimit(3...8)
+                Section(L("نص الرسالة (BODY)")) {
+                    TextField(L("النص"), text: $bodyText, axis: .vertical).lineLimit(3...8)
                 }
                 Section {
-                    Toggle("إرسال إلى Meta للاعتماد", isOn: $submitToMeta)
+                    Toggle(L("إرسال إلى Meta للاعتماد"), isOn: $submitToMeta)
                     if submitToMeta {
-                        Picker("الحساب", selection: $instanceId) {
-                            Text("اختر حسابًا").tag("")
+                        Picker(L("الحساب"), selection: $instanceId) {
+                            Text(L("اختر حسابًا")).tag("")
                             ForEach(accounts) { a in Text(a.label).tag(a.id) }
                         }
                     }
                 } footer: {
-                    Text(submitToMeta ? "سيُرسَل للاعتماد لدى Meta (PENDING)." : "سيُحفَظ محليًا (LOCAL) دون إرسال إلى Meta.")
+                    Text(submitToMeta ? L("سيُرسَل للاعتماد لدى Meta (PENDING).") : L("سيُحفَظ محليًا (LOCAL) دون إرسال إلى Meta."))
                 }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("قالب Meta جديد")
+            .navigationTitle(L("قالب Meta جديد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("إنشاء") { Task { await create() } }.disabled(saving || !valid)
+                    Button(L("إنشاء")) { Task { await create() } }.disabled(saving || !valid)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.large])
@@ -800,7 +800,7 @@ struct WhatsAppAccountsView: View {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if accounts.isEmpty {
-                Text("لا حسابات").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(L("لا حسابات")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(accounts) { a in
@@ -808,7 +808,7 @@ struct WhatsAppAccountsView: View {
                             .buttonStyle(.plain)
                             .listRowBackground(Theme.background)
                             .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) { Task { await delete(a) } } label: { Label("حذف", systemImage: "trash") }
+                                Button(role: .destructive) { Task { await delete(a) } } label: { Label(L("حذف"), systemImage: "trash") }
                             }
                     }
                 }
@@ -816,7 +816,7 @@ struct WhatsAppAccountsView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("حسابات واتساب")
+        .navigationTitle(L("حسابات واتساب"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -837,7 +837,7 @@ struct WhatsAppAccountsView: View {
                 HStack(spacing: 6) {
                     Text(a.displayName).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
                     if a.isDefault {
-                        Text("افتراضي").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.primary)
+                        Text(L("افتراضي")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.primary)
                             .padding(.horizontal, 6).padding(.vertical, 1)
                             .background(Theme.primaryContainer, in: Capsule())
                     }
@@ -862,7 +862,7 @@ struct WhatsAppAccountsView: View {
 
     private func statusChip(_ a: WhatsAppAccount) -> some View {
         let ok = a.health == "healthy" || (a.health == nil && a.isActive)
-        let (label, color) = ok ? ("متصل", Theme.success) : ("متوقف", Theme.warning)
+        let (label, color) = ok ? (L("متصل"), Theme.success) : (L("متوقف"), Theme.warning)
         return HStack(spacing: 5) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(label).font(.caption2.weight(.semibold))
@@ -895,28 +895,28 @@ struct CreateWhatsappAccountSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("الأساسيات") {
-                    TextField("اسم الحساب", text: $name)
+                Section(L("الأساسيات")) {
+                    TextField(L("اسم الحساب"), text: $name)
                     TextField("Phone Number ID", text: $phoneNumberId).autocorrectionDisabled().textInputAutocapitalization(.never)
-                    TextField("رقم الهاتف الظاهر (اختياري)", text: $displayPhoneNumber)
-                    TextField("WABA ID (اختياري)", text: $wabaId).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    TextField(L("رقم الهاتف الظاهر (اختياري)"), text: $displayPhoneNumber)
+                    TextField(L("WABA ID (اختياري)"), text: $wabaId).autocorrectionDisabled().textInputAutocapitalization(.never)
                 }
-                Section("الاعتماد") {
+                Section(L("الاعتماد")) {
                     SecureField("Access Token", text: $accessToken)
                 }
                 Section {
-                    Toggle("مفعّل", isOn: $isActive)
-                    Toggle("الحساب الافتراضي", isOn: $isDefault)
+                    Toggle(L("مفعّل"), isOn: $isActive)
+                    Toggle(L("الحساب الافتراضي"), isOn: $isDefault)
                 }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("حساب واتساب جديد")
+            .navigationTitle(L("حساب واتساب جديد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("إنشاء") { Task { await create() } }.disabled(saving || !valid)
+                    Button(L("إنشاء")) { Task { await create() } }.disabled(saving || !valid)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.large])
@@ -958,38 +958,38 @@ struct EditWhatsappAccountSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("الأساسيات") {
-                    TextField("اسم الحساب", text: $name)
-                    TextField("رقم الهاتف الظاهر", text: $displayPhoneNumber)
+                Section(L("الأساسيات")) {
+                    TextField(L("اسم الحساب"), text: $name)
+                    TextField(L("رقم الهاتف الظاهر"), text: $displayPhoneNumber)
                     TextField("WABA ID", text: $wabaId).autocorrectionDisabled().textInputAutocapitalization(.never)
                 }
                 Section {
-                    SecureField("Access Token (اتركه فارغًا للإبقاء)", text: $accessToken)
-                } header: { Text("الاعتماد") } footer: { Text("Phone Number ID: \(account.phoneNumberId ?? "—")") }
+                    SecureField(L("Access Token (اتركه فارغًا للإبقاء)"), text: $accessToken)
+                } header: { Text(L("الاعتماد")) } footer: { Text("Phone Number ID: \(account.phoneNumberId ?? "—")") }
                 Section {
-                    Toggle("مفعّل", isOn: $isActive)
-                    Toggle("الحساب الافتراضي", isOn: $isDefault)
+                    Toggle(L("مفعّل"), isOn: $isActive)
+                    Toggle(L("الحساب الافتراضي"), isOn: $isDefault)
                 }
                 Section {
                     HStack {
-                        Button("طلب رمز SMS") { Task { await requestCode("SMS") } }.buttonStyle(.bordered).disabled(regBusy)
+                        Button(L("طلب رمز SMS")) { Task { await requestCode("SMS") } }.buttonStyle(.bordered).disabled(regBusy)
                         Spacer()
-                        Button("مكالمة صوتية") { Task { await requestCode("VOICE") } }.buttonStyle(.bordered).disabled(regBusy)
+                        Button(L("مكالمة صوتية")) { Task { await requestCode("VOICE") } }.buttonStyle(.bordered).disabled(regBusy)
                     }
-                    TextField("رمز التحقق (٦ أرقام)", text: $pin).keyboardType(.numberPad)
-                    Button("تسجيل الرقم") { Task { await register() } }
+                    TextField(L("رمز التحقق (٦ أرقام)"), text: $pin).keyboardType(.numberPad)
+                    Button(L("تسجيل الرقم")) { Task { await register() } }
                         .disabled(regBusy || pin.count != 6)
                     if let regInfo { Text(regInfo).font(.caption).foregroundStyle(Theme.success) }
-                } header: { Text("تسجيل الرقم لدى Meta") }
+                } header: { Text(L("تسجيل الرقم لدى Meta")) }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle("تعديل الحساب")
+            .navigationTitle(L("تعديل الحساب"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }.disabled(saving)
+                    Button(L("حفظ")) { Task { await save() } }.disabled(saving)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إغلاق") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إغلاق")) { dismiss() } }
             }
             .onAppear {
                 name = account.displayName
@@ -1021,7 +1021,7 @@ struct EditWhatsappAccountSheet: View {
         regBusy = true; error = nil; regInfo = nil
         do {
             try await Api.shared.requestWhatsappCode(account.id, method: method)
-            regInfo = "أُرسل الرمز عبر \(method == "VOICE" ? "مكالمة" : "SMS")."
+            regInfo = L("أُرسل الرمز عبر") + " " + (method == "VOICE" ? L("مكالمة") : "SMS") + "."
         } catch {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
         }
@@ -1032,7 +1032,7 @@ struct EditWhatsappAccountSheet: View {
         regBusy = true; error = nil; regInfo = nil
         do {
             try await Api.shared.registerWhatsappNumber(account.id, pin: pin)
-            regInfo = "تم تسجيل الرقم بنجاح."
+            regInfo = L("تم تسجيل الرقم بنجاح.")
             await onSaved()
         } catch {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
@@ -1053,22 +1053,22 @@ struct VoiceSettingsView: View {
                 ProgressView().tint(Theme.primary).padding(.top, 40)
             } else if let s {
                 VStack(spacing: 0) {
-                    infoRow("مُفعّل", s.enabled ? "نعم" : "لا")
-                    infoRow("SIP", s.sipEnabled ? "مُفعّل" : "متوقف")
+                    infoRow(L("مُفعّل"), s.enabled ? L("نعم") : L("لا"))
+                    infoRow("SIP", s.sipEnabled ? L("مُفعّل") : L("متوقف"))
                     infoRow("Cloudflare", s.cloudflareHostname)
                     infoRow("WebRTC WSS", s.asteriskWebrtcWssUrl)
                     infoRow("UCM IP", s.ucmPublicIp)
-                    infoRow("التحويلة الافتراضية", s.ucmDefaultExtension)
+                    infoRow(L("التحويلة الافتراضية"), s.ucmDefaultExtension)
                     infoRow("SIP Domain", s.whatsappSipDomain)
                 }
                 .glassCard(22)
                 .padding(16)
             } else {
-                Text("تعذّر تحميل الإعدادات").foregroundStyle(Theme.onMuted).padding(.top, 40)
+                Text(L("تعذّر تحميل الإعدادات")).foregroundStyle(Theme.onMuted).padding(.top, 40)
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("الصوت والمكالمات")
+        .navigationTitle(L("الصوت والمكالمات"))
         .navigationBarTitleDisplayMode(.inline)
         .task {
             s = (try? await Api.shared.voiceSettings())?.settings

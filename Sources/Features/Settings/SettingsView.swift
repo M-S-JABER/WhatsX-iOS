@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var session: Session
@@ -14,7 +15,7 @@ struct SettingsView: View {
         NavigationStack {
         VStack(spacing: 0) {
             HStack {
-                Text("الإعدادات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("الإعدادات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
                 Spacer()
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
@@ -23,27 +24,21 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     profileCard.padding(.horizontal, 14).padding(.vertical, 6)
 
-                    section("الأدوات")
+                    section(L("الأدوات"))
                     group {
                         NavigationLink { CallsView() } label: {
-                            SettingRow(icon: .call, title: "سجل المكالمات", subtitle: "الواردة والصادرة والتسجيلات", trailingChevron: true, tint: Theme.success)
+                            SettingRow(icon: .call, title: L("سجل المكالمات"), subtitle: L("الواردة والصادرة والتسجيلات"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
                         NavigationLink { StatsView() } label: {
-                            SettingRow(icon: .chart, title: "الإحصاءات", subtitle: "المؤشرات وتقارير العملاء", trailingChevron: true, tint: Theme.info)
+                            SettingRow(icon: .chart, title: L("الإحصاءات"), subtitle: L("المؤشرات وتقارير العملاء"), trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                     }
 
-                    section("المظهر")
-                    group {
-                        SettingRow(icon: .palette, title: "السمة", subtitle: "حسب النظام", tint: Color(rgb: 0xCE6A47))
-                        SettingRow(icon: .lang, title: "اللغة", subtitle: "العربية", trailingChevron: true, tint: Theme.info)
-                    }
-
-                    section("الإشعارات")
+                    section(L("الإشعارات"))
                     group {
                         HStack {
-                            SettingRow(icon: .bell, title: "تنبيهات الرسائل الجديدة",
-                                       subtitle: "أثناء تشغيل التطبيق (صوت + لافتة)", tint: Theme.warning)
+                            SettingRow(icon: .bell, title: L("تنبيهات الرسائل الجديدة"),
+                                       subtitle: L("أثناء تشغيل التطبيق (صوت + لافتة)"), tint: Theme.warning)
                             Toggle("", isOn: $notifyMessages)
                                 .labelsHidden()
                                 .tint(Theme.primary)
@@ -51,35 +46,35 @@ struct SettingsView: View {
                         }
                     }
 
-                    section("الإدارة")
+                    section(L("الإدارة"))
                     group {
                         NavigationLink { UsersView() } label: {
-                            SettingRow(icon: .users, title: "إدارة المستخدمين", trailingChevron: true, tint: Theme.info)
+                            SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: "الأدوار والصلاحيات", trailingChevron: true, tint: Color(rgb: 0x7C6BD0))
+                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Color(uiColor: .systemPurple))
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: "حسابات واتساب", trailingChevron: true, tint: Color(rgb: 0x23A55A))
+                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Color(uiColor: .systemGreen))
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
-                            SettingRow(icon: .template, title: "القوالب والردود", trailingChevron: true, tint: Theme.primary)
+                            SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
                         }.buttonStyle(.plain)
                     }
 
-                    section("الأمان")
+                    section(L("الأمان"))
                     group {
                         Button { passwordOpen = true } label: {
-                            SettingRow(icon: .lock, title: "تغيير كلمة المرور", trailingChevron: true, tint: Theme.danger)
+                            SettingRow(icon: .lock, title: L("تغيير كلمة المرور"), trailingChevron: true, tint: Theme.danger)
                         }.buttonStyle(.plain)
                     }
 
-                    section("عام")
+                    section(L("عام"))
                     group {
                         NavigationLink { VoiceSettingsView() } label: {
-                            SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true, tint: Theme.success)
+                            SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.7.3 · أسوار المدن")
+                        SettingRow(icon: .info, title: L("الإصدار"), subtitle: "v1.8.0 · " + L("أسوار المدن"))
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
@@ -141,7 +136,7 @@ struct SettingsView: View {
                 if loggingOut { ProgressView().tint(Theme.danger) }
                 else {
                     Image(icon: .logout).font(.system(size: 18))
-                    Text("تسجيل الخروج").font(.headline)
+                    Text(L("تسجيل الخروج")).font(.headline)
                 }
             }
             .frame(maxWidth: .infinity).padding(.vertical, 14)
@@ -203,20 +198,20 @@ struct EditProfileSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("الاسم", text: $name)
-                TextField("البريد الإلكتروني", text: $email)
+                TextField(L("الاسم"), text: $name)
+                TextField(L("البريد الإلكتروني"), text: $email)
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             }
-            .navigationTitle("تعديل الملف")
+            .navigationTitle(L("تعديل الملف"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }.disabled(saving)
+                    Button(L("حفظ")) { Task { await save() } }.disabled(saving)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("إلغاء") { dismiss() }
+                    Button(L("إلغاء")) { dismiss() }
                 }
             }
         }
@@ -252,22 +247,22 @@ struct ChangePasswordSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField("كلمة المرور الحالية", text: $current)
-                    SecureField("كلمة المرور الجديدة", text: $newPass)
-                    SecureField("تأكيد كلمة المرور الجديدة", text: $confirm)
+                    SecureField(L("كلمة المرور الحالية"), text: $current)
+                    SecureField(L("كلمة المرور الجديدة"), text: $newPass)
+                    SecureField(L("تأكيد كلمة المرور الجديدة"), text: $confirm)
                 } footer: {
-                    Text("٦ أحرف على الأقل، ويجب أن يتطابق الحقلان.")
+                    Text(L("٦ أحرف على الأقل، ويجب أن يتطابق الحقلان."))
                 }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
-                if done { Text("تم تغيير كلمة المرور بنجاح").foregroundStyle(Theme.success) }
+                if done { Text(L("تم تغيير كلمة المرور بنجاح")).foregroundStyle(Theme.success) }
             }
-            .navigationTitle("تغيير كلمة المرور")
+            .navigationTitle(L("تغيير كلمة المرور"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }.disabled(saving || !valid)
+                    Button(L("حفظ")) { Task { await save() } }.disabled(saving || !valid)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.medium])

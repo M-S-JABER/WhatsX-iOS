@@ -4,8 +4,8 @@ enum IntegTab: String, CaseIterable {
     case overview, external, flow, logs
     var title: String {
         switch self {
-        case .overview: return "نظرة عامة"; case .external: return "الأنظمة"
-        case .flow: return "التدفّق"; case .logs: return "السجلّ"
+        case .overview: return L("نظرة عامة"); case .external: return L("الأنظمة")
+        case .flow: return L("التدفّق"); case .logs: return L("السجلّ")
         }
     }
 }
@@ -57,7 +57,7 @@ struct IntegrationsView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("التكاملات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("التكاملات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
                 Spacer()
                 if tab == .external {
                     Image(icon: .add).font(.system(size: 20)).foregroundStyle(Theme.primary)
@@ -94,8 +94,8 @@ struct IntegrationsView: View {
         .sheet(item: $openConversation) { conv in
             ChatView(conversation: conv)
         }
-        .alert("التكاملات", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
-            Button("حسنًا", role: .cancel) {}
+        .alert(L("التكاملات"), isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button(L("حسنًا"), role: .cancel) {}
         } message: { Text(notice ?? "") }
     }
 
@@ -130,30 +130,30 @@ struct IntegrationsView: View {
     @ViewBuilder private var overviewTab: some View {
         if let s = vm.overview?.summary {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
-                metric("التكاملات", "\(s.totalIntegrations)", Theme.onSurface)
-                metric("حسابات متصلة", "\(s.whatsappAccountsConnected)", Theme.onSurface)
-                metric("نجاح Webhook", fmtRate(s.webhookSuccessRate), Theme.success)
-                metric("إخفاقات", "\(s.failedIntegrations)", Theme.warning)
+                metric(L("التكاملات"), "\(s.totalIntegrations)", Theme.onSurface)
+                metric(L("حسابات متصلة"), "\(s.whatsappAccountsConnected)", Theme.onSurface)
+                metric(L("نجاح Webhook"), fmtRate(s.webhookSuccessRate), Theme.success)
+                metric(L("إخفاقات"), "\(s.failedIntegrations)", Theme.warning)
             }
         }
         if let h = vm.overview?.health {
-            Text("صحّة الأرقام").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            Text(L("صحّة الأرقام")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
-                healthTile("سليمة", h.healthy, Theme.success)
-                healthTile("تحذير", h.warning, Theme.warning)
-                healthTile("منقطعة", h.disconnected, Theme.danger)
-                healthTile("فاشلة", h.failed, Theme.danger)
+                healthTile(L("سليمة"), h.healthy, Theme.success)
+                healthTile(L("تحذير"), h.warning, Theme.warning)
+                healthTile(L("منقطعة"), h.disconnected, Theme.danger)
+                healthTile(L("فاشلة"), h.failed, Theme.danger)
             }
         }
         if vm.overview == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
 
         // Template sends pushed by external systems (web parity: the
         // integration monitor list on the Overview tab).
-        Text("قوالب النظام الخارجي").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+        Text(L("قوالب النظام الخارجي")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
         if vm.monitor.isEmpty {
-            Text("لا رسائل من الأنظمة الخارجية بعد")
+            Text(L("لا رسائل من الأنظمة الخارجية بعد"))
                 .font(.subheadline).foregroundStyle(Theme.onMuted)
                 .frame(maxWidth: .infinity).padding(.vertical, 18)
                 .glassCard(16)
@@ -192,20 +192,20 @@ struct IntegrationsView: View {
             HStack(spacing: 8) {
                 if let convId = m.conversationId, !convId.isEmpty {
                     Button { openChat(convId) } label: {
-                        actionPill("فتح المحادثة", "bubble.left.and.bubble.right")
+                        actionPill(L("فتح المحادثة"), "bubble.left.and.bubble.right")
                     }
                     .buttonStyle(.plain)
                 }
                 if let instId = m.instance?.id, !instId.isEmpty,
                    let phone = m.phone, !phone.isEmpty {
                     Button { requestCall(instanceId: instId, phone: phone) } label: {
-                        actionPill("طلب اتصال", "phone.badge.plus")
+                        actionPill(L("طلب اتصال"), "phone.badge.plus")
                     }
                     .buttonStyle(.plain)
                 }
                 if let link = m.resolvedUrl, let url = URL(string: link) {
                     Link(destination: url) {
-                        actionPill("فتح الرابط", "arrow.up.right.square")
+                        actionPill(L("فتح الرابط"), "arrow.up.right.square")
                     }
                 }
                 Spacer()
@@ -233,7 +233,7 @@ struct IntegrationsView: View {
             if let conv = try? await Api.shared.conversation(conversationId) {
                 openConversation = conv
             } else {
-                notice = "تعذّر فتح المحادثة"
+                notice = L("تعذّر فتح المحادثة")
             }
         }
     }
@@ -242,7 +242,7 @@ struct IntegrationsView: View {
         Task {
             do {
                 try await Api.shared.requestCallPermission(to: phone.filter { $0.isNumber }, instanceId: instanceId)
-                notice = "أُرسل طلب إذن الاتصال إلى العميل ✓"
+                notice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
             } catch {
                 notice = (error as? ApiError)?.message ?? error.localizedDescription
             }
@@ -292,7 +292,7 @@ struct IntegrationsView: View {
     // MARK: External
     @ViewBuilder private var externalTab: some View {
         if vm.integrations.isEmpty {
-            Text("لا أنظمة خارجية").foregroundStyle(Theme.onMuted).padding(.top, 40)
+            Text(L("لا أنظمة خارجية")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.integrations) { item in
                 VStack(alignment: .leading, spacing: 10) {
@@ -311,7 +311,7 @@ struct IntegrationsView: View {
                         Text(err).font(.caption).foregroundStyle(Theme.danger).lineLimit(2)
                     }
                     HStack(spacing: 7) {
-                        Text(item.isEnabled ? "مُفعّل" : "مُعطّل").font(.caption).foregroundStyle(Theme.onMuted)
+                        Text(item.isEnabled ? L("مُفعّل") : L("مُعطّل")).font(.caption).foregroundStyle(Theme.onMuted)
                         Spacer()
                         Button { editing = item; showForm = true } label: {
                             Image(icon: .edit).font(.system(size: 15))
@@ -326,13 +326,13 @@ struct IntegrationsView: View {
                                 .foregroundStyle(Theme.danger)
                         }.buttonStyle(.plain)
                         Button { Task { await vm.test(item.id) } } label: {
-                            Text("اختبار").font(.footnote.weight(.semibold))
+                            Text(L("اختبار")).font(.footnote.weight(.semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
                                 .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 12))
                                 .foregroundStyle(Theme.onSurface)
                         }.buttonStyle(.plain)
                         Button { Task { await vm.toggle(item) } } label: {
-                            Text(item.isEnabled ? "تعطيل" : "تفعيل").font(.footnote.weight(.semibold))
+                            Text(item.isEnabled ? L("تعطيل") : L("تفعيل")).font(.footnote.weight(.semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.onSurface)
@@ -349,10 +349,10 @@ struct IntegrationsView: View {
     private func healthChip(_ health: String) -> some View {
         let (label, color): (String, Color) = {
             switch health {
-            case "healthy": return ("سليمة", Theme.success)
-            case "warning": return ("تحذير", Theme.warning)
-            case "failed", "disconnected": return ("منقطعة", Theme.danger)
-            default: return ("تهيئة", Theme.onMuted)
+            case "healthy": return (L("سليمة"), Theme.success)
+            case "warning": return (L("تحذير"), Theme.warning)
+            case "failed", "disconnected": return (L("منقطعة"), Theme.danger)
+            default: return (L("تهيئة"), Theme.onMuted)
             }
         }()
         return HStack(spacing: 5) {
@@ -367,14 +367,14 @@ struct IntegrationsView: View {
     // MARK: Message flow
     @ViewBuilder private var flowTab: some View {
         if vm.flow.isEmpty {
-            Text("لا أحداث تدفّق").foregroundStyle(Theme.onMuted).padding(.top, 40)
+            Text(L("لا أحداث تدفّق")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.flow) { e in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
                         Image(icon: e.direction == "inbound" ? .callIn : .callOut).font(.system(size: 14))
                             .foregroundStyle(e.direction == "inbound" ? Theme.success : Theme.info)
-                        Text(e.eventType ?? "حدث").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                        Text(e.eventType ?? L("حدث")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
                         Spacer()
                         flowStatusChip(e.status)
                     }
@@ -396,7 +396,7 @@ struct IntegrationsView: View {
                             Button { Task { await vm.retry(e.id) } } label: {
                                 HStack(spacing: 5) {
                                     Image(icon: .refresh).font(.system(size: 12))
-                                    Text("إعادة المحاولة").font(.footnote.weight(.semibold))
+                                    Text(L("إعادة المحاولة")).font(.footnote.weight(.semibold))
                                 }
                                 .padding(.horizontal, 12).padding(.vertical, 8)
                                 .background(Theme.primaryContainer, in: Capsule())
@@ -430,7 +430,7 @@ struct IntegrationsView: View {
     // MARK: Logs
     @ViewBuilder private var logsTab: some View {
         if vm.logs.isEmpty {
-            Text("لا سجلّات").foregroundStyle(Theme.onMuted).padding(.top, 40)
+            Text(L("لا سجلّات")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             VStack(spacing: 0) {
                 ForEach(Array(vm.logs.enumerated()), id: \.element.id) { idx, log in
@@ -477,30 +477,30 @@ struct IntegrationFormSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("الاسم", text: $name)
-                TextField("رابط الأساس", text: $baseUrl)
+                TextField(L("الاسم"), text: $name)
+                TextField(L("رابط الأساس"), text: $baseUrl)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
-                TextField("المسار", text: $endpoint)
+                TextField(L("المسار"), text: $endpoint)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
-                Picker("المصادقة", selection: $authType) {
-                    Text("بدون").tag("none")
+                Picker(L("المصادقة"), selection: $authType) {
+                    Text(L("بدون")).tag("none")
                     Text("Bearer").tag("bearer")
-                    Text("مفتاح API").tag("api_key")
+                    Text(L("مفتاح API")).tag("api_key")
                 }
-                TextField("المهلة (مللي ثانية)", text: $timeout)
+                TextField(L("المهلة (مللي ثانية)"), text: $timeout)
                     .keyboardType(.numberPad)
-                Toggle("مُفعّل", isOn: $enabled)
+                Toggle(L("مُفعّل"), isOn: $enabled)
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
-            .navigationTitle(isEditing ? "تعديل النظام" : "نظام جديد")
+            .navigationTitle(isEditing ? L("تعديل النظام") : L("نظام جديد"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("حفظ") { Task { await save() } }
+                    Button(L("حفظ")) { Task { await save() } }
                         .disabled(saving || name.isEmpty)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("إلغاء")) { dismiss() } }
             }
         }
         .presentationDetents([.medium])
