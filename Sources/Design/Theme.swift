@@ -1,19 +1,9 @@
 import SwiftUI
 import UIKit
 
-// Luxe Amber identity — mirrors the Android theme (Color.kt / design tokens).
-// Colors are dynamic UIColors so they adapt to light/dark automatically.
-
-extension UIColor {
-    fileprivate convenience init(rgb: UInt) {
-        self.init(
-            red: CGFloat((rgb >> 16) & 0xFF) / 255.0,
-            green: CGFloat((rgb >> 8) & 0xFF) / 255.0,
-            blue: CGFloat(rgb & 0xFF) / 255.0,
-            alpha: 1.0
-        )
-    }
-}
+// Native Apple palette — every token maps to a UIKit system color, so the
+// whole app looks and adapts (light/dark, increased contrast) exactly like
+// Apple's own apps. The bubble pair mirrors Messages (blue out / gray in).
 
 extension Color {
     /// A color that resolves to `light` in light mode and `dark` in dark mode.
@@ -24,68 +14,78 @@ extension Color {
     }
 }
 
+extension UIColor {
+    convenience init(rgb: UInt) {
+        self.init(
+            red: CGFloat((rgb >> 16) & 0xFF) / 255.0,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(rgb & 0xFF) / 255.0,
+            alpha: 1.0
+        )
+    }
+}
+
 enum Theme {
-    // Core surfaces / text
-    static let background = Color(light: 0xF7F2E8, dark: 0x0C0A06)   // screen canvas
-    static let surface = Color(light: 0xFFFFFF, dark: 0x15110A)      // cards
-    static let surface1 = Color(light: 0xFBF7EE, dark: 0x19150D)
-    static let surface2 = Color(light: 0xF1EADB, dark: 0x221C12)     // chips / tiles
-    static let surface3 = Color(light: 0xE9E0CD, dark: 0x2C2418)
-    static let onSurface = Color(light: 0x211B12, dark: 0xF1EBDC)
-    static let onMuted = Color(light: 0x6E654F, dark: 0xABA08A)
-    static let onFaint = Color(light: 0x97907F, dark: 0x756B57)
-    static let outline = Color(light: 0xE5DCC8, dark: 0x2A2317)
+    // Core surfaces / text — the standard iOS grouped-list stack.
+    static let background = Color(uiColor: .systemGroupedBackground)          // screen canvas
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)    // cards
+    static let surface1 = Color(uiColor: .secondarySystemBackground)
+    static let surface2 = Color(uiColor: .tertiarySystemFill)                 // chips / tiles
+    static let surface3 = Color(uiColor: .secondarySystemFill)
+    static let onSurface = Color(uiColor: .label)
+    static let onMuted = Color(uiColor: .secondaryLabel)
+    static let onFaint = Color(uiColor: .tertiaryLabel)
+    static let outline = Color(uiColor: .separator)
 
-    // Accent
-    static let primary = Color(light: 0xB07D1A, dark: 0xE6B24E)      // saffron amber
-    static let onPrimary = Color(light: 0xFFFFFF, dark: 0x2A1E05)
-    static let primaryContainer = Color(light: 0xF7E7C2, dark: 0x4A3809)
-    static let primarySoft = Color(light: 0xFBF1DC, dark: 0x241D10)
+    // Accent — Apple's system blue, like Messages/FaceTime/Phone.
+    static let primary = Color(uiColor: .systemBlue)
+    static let onPrimary = Color.white
+    static let primaryContainer = Color(uiColor: .systemBlue).opacity(0.22)
+    static let primarySoft = Color(uiColor: .systemBlue).opacity(0.12)
 
-    // Chat bubbles
-    static let bubbleIn = Color(light: 0xFFFFFF, dark: 0x1E1810)
-    static let bubbleInFg = Color(light: 0x211B12, dark: 0xF1EBDC)
-    static let bubbleOut = Color(light: 0xF6E7C0, dark: 0x4A3809)
-    static let bubbleOutFg = Color(light: 0x3D2D08, dark: 0xF8E7BE)
+    // Chat bubbles — Messages-style: blue outgoing, gray incoming.
+    static let bubbleIn = Color(uiColor: .secondarySystemBackground)
+    static let bubbleInFg = Color(uiColor: .label)
+    static let bubbleOut = Color(uiColor: .systemBlue)
+    static let bubbleOutFg = Color.white
 
-    // Semantic
-    static let success = Color(light: 0x2E9466, dark: 0x4FB489)
-    static let info = Color(light: 0x3B6FB0, dark: 0x7FA9DE)
-    static let warning = Color(light: 0xB8860B, dark: 0xE6B24E)
-    static let danger = Color(light: 0xC5483A, dark: 0xE78579)
-    static let dangerBg = Color(light: 0xF8E2DE, dark: 0x2E1714)
+    // Semantic — the system palette.
+    static let success = Color(uiColor: .systemGreen)
+    static let info = Color(uiColor: .systemBlue)
+    static let warning = Color(uiColor: .systemOrange)
+    static let danger = Color(uiColor: .systemRed)
+    static let dangerBg = Color(uiColor: .systemRed).opacity(0.12)
 
-    // Gradient for the login hero (matches the Android amber hero).
+    // Login hero gradient — system blues.
     static let heroGradient = LinearGradient(
-        colors: [Color(light: 0x8E5E11, dark: 0x8E5E11),
-                 Color(light: 0xC68A22, dark: 0xC68A22),
-                 Color(light: 0xE0A52E, dark: 0xE0A52E)],
+        colors: [Color(uiColor: .systemBlue), Color(uiColor: .systemIndigo)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 
-    // Distinct donut/chart segment palette (theme-independent), matching the web.
+    // Distinct donut/chart segment palette (system colors).
     static let chartPalette: [Color] = [
-        Color(rgb: 0x1FA98A), Color(rgb: 0x3B82C4), Color(rgb: 0xCE6A47),
-        Color(rgb: 0x7C6BD0), Color(rgb: 0x5C9A3A), Color(rgb: 0xC68A22),
+        Color(uiColor: .systemTeal), Color(uiColor: .systemBlue), Color(uiColor: .systemOrange),
+        Color(uiColor: .systemPurple), Color(uiColor: .systemGreen), Color(uiColor: .systemYellow),
     ]
 }
 
 extension Color {
-    /// Solid RGB (theme-independent) — used for the fixed chart palette.
+    /// Solid RGB (theme-independent) — used for the fixed account palette.
     init(rgb: UInt) {
         self.init(uiColor: UIColor(rgb: rgb))
     }
 }
 
-// Stable per-account color from a seed string (mirrors Android accountColor()).
+// Stable per-account color from a seed string — system palette swatches.
 enum AccountColor {
-    private static let swatches: [UInt] = [
-        0x1FA98A, 0x3B82C4, 0xCE6A47, 0x7C6BD0, 0x5C9A3A, 0xC68A22, 0xB0517A, 0x3F7E8C,
+    private static let swatches: [UIColor] = [
+        .systemTeal, .systemBlue, .systemOrange, .systemPurple,
+        .systemGreen, .systemYellow, .systemPink, .systemIndigo,
     ]
     static func color(_ seed: String) -> Color {
         var hash = 0
         for scalar in seed.unicodeScalars { hash = Int(scalar.value) &+ (hash &* 31) }
         let idx = abs(hash) % swatches.count
-        return Color(rgb: swatches[idx])
+        return Color(uiColor: swatches[idx])
     }
 }

@@ -35,7 +35,7 @@ final class CallCenter: ObservableObject {
             guard let id = event.callId, !id.isEmpty else { return }
             incoming = IncomingCall(
                 callId: id,
-                title: event.displayName?.isEmpty == false ? event.displayName! : (event.phone ?? "مكالمة واردة"),
+                title: event.displayName?.isEmpty == false ? event.displayName! : (event.phone ?? L("مكالمة واردة")),
                 phone: event.phone
             )
         case "voice_call_claimed":
@@ -75,7 +75,7 @@ struct IncomingCallBanner: View {
                         Text(call.title)
                             .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.onSurface)
                             .lineLimit(1)
-                        Text("مكالمة واتساب واردة — الرد متاح من الويب")
+                        Text(L("مكالمة واتساب واردة — الرد متاح من الويب"))
                             .font(.caption).foregroundStyle(Theme.onMuted)
                     }
                     Spacer()

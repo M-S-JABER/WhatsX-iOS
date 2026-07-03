@@ -344,7 +344,7 @@ struct PermissionCatalogItem: Codable, Identifiable {
     var description: String? = nil
     var isCritical: Bool? = nil
     var title: String { label ?? id }
-    var groupTitle: String { groupLabel ?? group ?? "أخرى" }
+    var groupTitle: String { groupLabel ?? group ?? L("أخرى") }
 }
 struct PermissionCatalogResponse: Codable { var items: [PermissionCatalogItem] = [] }
 

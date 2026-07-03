@@ -29,7 +29,7 @@ struct GlobalSearchView: View {
             searchableCore
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Theme.background.ignoresSafeArea())
-                .navigationTitle("المحادثات")
+                .navigationTitle(L("المحادثات"))
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: Conversation.self) { ChatView(conversation: $0) }
                 .task { await load() }
@@ -49,9 +49,9 @@ struct GlobalSearchView: View {
     private var searchableCore: some View {
         if #available(iOS 17.0, *) {
             core.searchable(text: $query, isPresented: $searchActive,
-                            prompt: "ابحث بالاسم أو الرقم أو الرسالة")
+                            prompt: L("ابحث بالاسم أو الرقم أو الرسالة"))
         } else {
-            core.searchable(text: $query, prompt: "ابحث بالاسم أو الرقم أو الرسالة")
+            core.searchable(text: $query, prompt: L("ابحث بالاسم أو الرقم أو الرسالة"))
         }
     }
 
@@ -61,7 +61,7 @@ struct GlobalSearchView: View {
                 ProgressView().tint(Theme.primary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if results.isEmpty {
-                hint(icon: "questionmark.bubble", text: "لا نتائج مطابقة")
+                hint(icon: "questionmark.bubble", text: L("لا نتائج مطابقة"))
             } else {
                 List(results) { conv in
                     ZStack {

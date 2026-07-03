@@ -11,7 +11,7 @@ struct NewConversationSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("محادثة جديدة").font(.title3.bold()).foregroundStyle(Theme.onSurface)
+                Text(L("محادثة جديدة")).font(.title3.bold()).foregroundStyle(Theme.onSurface)
 
                 HStack(spacing: 10) {
                     Image(icon: .call).foregroundStyle(Theme.onFaint)
@@ -23,7 +23,7 @@ struct NewConversationSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outline, lineWidth: 1))
 
                 if !instances.isEmpty {
-                    Text("الرقم المُرسِل").font(.callout.weight(.semibold)).foregroundStyle(Theme.onMuted)
+                    Text(L("الرقم المُرسِل")).font(.callout.weight(.semibold)).foregroundStyle(Theme.onMuted)
                     ForEach(instances) { inst in
                         accountCard(inst)
                     }
@@ -34,7 +34,7 @@ struct NewConversationSheet: View {
                 Button { Task { await create() } } label: {
                     HStack {
                         if creating { ProgressView().tint(Theme.onPrimary) }
-                        else { Text("بدء المحادثة").font(.headline) }
+                        else { Text(L("بدء المحادثة")).font(.headline) }
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
                     .background(Theme.primary, in: RoundedRectangle(cornerRadius: 14))

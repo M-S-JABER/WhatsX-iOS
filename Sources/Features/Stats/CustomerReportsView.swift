@@ -12,7 +12,7 @@ struct CustomerReportsView: View {
                 if loading {
                     ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if customers.isEmpty {
-                    Text("لا عملاء").foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text(L("لا عملاء")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
@@ -30,7 +30,7 @@ struct CustomerReportsView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("تقارير العملاء")
+        .navigationTitle(L("تقارير العملاء"))
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
     }
@@ -38,7 +38,7 @@ struct CustomerReportsView: View {
     private var searchField: some View {
         HStack(spacing: 10) {
             Image(icon: .search).foregroundStyle(Theme.onMuted)
-            TextField("ابحث عن عميل", text: $query)
+            TextField(L("ابحث عن عميل"), text: $query)
                 .foregroundStyle(Theme.onSurface)
                 .submitLabel(.search)
                 .onSubmit { Task { await load() } }

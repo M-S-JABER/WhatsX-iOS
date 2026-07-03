@@ -117,10 +117,10 @@ struct MainTabView: View {
     @available(iOS 26.0, *)
     private var modernTabs: some View {
         TabView(selection: tabSelection) {
-            Tab("التكاملات", systemImage: "point.3.connected.trianglepath.dotted", value: MainTab.integrations) {
+            Tab(L("التكاملات"), systemImage: "point.3.connected.trianglepath.dotted", value: MainTab.integrations) {
                 IntegrationsView()
             }
-            Tab("المحادثات", systemImage: "bubble.left.and.bubble.right", value: MainTab.chats) {
+            Tab(L("المحادثات"), systemImage: "bubble.left.and.bubble.right", value: MainTab.chats) {
                 InboxView()
             }
             .badge(unread.total)
@@ -128,7 +128,7 @@ struct MainTabView: View {
                 SettingsView()
             } label: {
                 settingsTabIcon
-                Text("الإعدادات")
+                Text(L("الإعدادات"))
             }
             Tab(value: MainTab.search, role: .search) {
                 GlobalSearchView()
@@ -140,20 +140,20 @@ struct MainTabView: View {
     private var legacyTabs: some View {
         TabView(selection: tabSelection) {
             IntegrationsView()
-                .tabItem { Label("التكاملات", systemImage: "point.3.connected.trianglepath.dotted") }
+                .tabItem { Label(L("التكاملات"), systemImage: "point.3.connected.trianglepath.dotted") }
                 .tag(MainTab.integrations)
             InboxView()
-                .tabItem { Label("المحادثات", systemImage: "bubble.left.and.bubble.right") }
+                .tabItem { Label(L("المحادثات"), systemImage: "bubble.left.and.bubble.right") }
                 .tag(MainTab.chats)
                 .badge(unread.total)
             SettingsView()
                 .tabItem {
                     settingsTabIcon
-                    Text("الإعدادات")
+                    Text(L("الإعدادات"))
                 }
                 .tag(MainTab.settings)
             GlobalSearchView()
-                .tabItem { Label("بحث", systemImage: "magnifyingglass") }
+                .tabItem { Label(L("بحث"), systemImage: "magnifyingglass") }
                 .tag(MainTab.search)
         }
     }
