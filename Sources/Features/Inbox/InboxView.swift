@@ -162,6 +162,11 @@ struct InboxView: View {
             guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
             Task { await vm.load() }
         }
+        // Second press on the chats tab (while already on it) flips
+        // active ⇄ archive.
+        .onReceive(InboxBus.shared.toggleArchive) { _ in
+            withAnimation { vm.toggleArchived() }
+        }
     }
 
     private var header: some View {
