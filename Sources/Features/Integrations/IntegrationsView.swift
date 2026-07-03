@@ -13,12 +13,19 @@ enum IntegTab: String, CaseIterable {
 @MainActor
 final class IntegrationsViewModel: ObservableObject {
     @Published var overview: IntegrationsOverview?
+    @Published var monitor: [IntegrationMonitorItem] = []
     @Published var integrations: [PublicIntegration] = []
     @Published var logs: [IntegrationLog] = []
     @Published var flow: [MessageFlowEvent] = []
     @Published var loading = false
 
-    func loadOverview() async { do { overview = try await Api.shared.integrationsOverview() } catch {} }
+    func loadOverview() async {
+        do { overview = try await Api.shared.integrationsOverview() } catch {}
+        await loadMonitor()
+    }
+    func loadMonitor() async {
+        do { monitor = try await Api.shared.integrationMonitorMessages().items } catch {}
+    }
     func loadIntegrations() async { do { integrations = try await Api.shared.integrations().items } catch {} }
     func loadLogs() async { do { logs = try await Api.shared.integrationLogs().items } catch {} }
     func loadFlow() async { do { flow = try await Api.shared.messageFlow().items } catch {} }
@@ -75,6 +82,10 @@ struct IntegrationsView: View {
         }
         .background(Theme.background.ignoresSafeArea())
         .task { await reload() }
+        .onReceive(Realtime.shared.events) { event in
+            guard event.name == "integration_message_created" || event.name == "integration_message_status" else { return }
+            Task { await vm.loadMonitor() }
+        }
         .sheet(isPresented: $showForm) {
             IntegrationFormSheet(integration: editing) { await vm.loadIntegrations() }
         }
@@ -128,6 +139,68 @@ struct IntegrationsView: View {
             }
         }
         if vm.overview == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+
+        // Template sends pushed by external systems (web parity: the
+        // integration monitor list on the Overview tab).
+        Text("قوالب النظام الخارجي").font(.callout.bold()).foregroundStyle(Theme.onMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        if vm.monitor.isEmpty {
+            Text("لا رسائل من الأنظمة الخارجية بعد")
+                .font(.subheadline).foregroundStyle(Theme.onMuted)
+                .frame(maxWidth: .infinity).padding(.vertical, 18)
+                .glassCard(16)
+        } else {
+            ForEach(vm.monitor) { m in monitorRow(m) }
+        }
+    }
+
+    private func monitorRow(_ m: IntegrationMonitorItem) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(m.name?.isEmpty == false ? m.name! : (m.phone ?? "—"))
+                    .font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                    .lineLimit(1)
+                Spacer()
+                monitorStatusBadge(m.status)
+            }
+            HStack(spacing: 6) {
+                Image(icon: .template).font(.system(size: 12)).foregroundStyle(Theme.primary)
+                Text([m.templateName, m.templateLanguage].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+            }
+            HStack {
+                if let phone = m.phone, m.name?.isEmpty == false {
+                    Text(phone).font(.caption2).foregroundStyle(Theme.onFaint)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
+                Spacer()
+                if let acct = m.instance?.label {
+                    Text(acct).font(.caption2).foregroundStyle(Theme.onFaint).lineLimit(1)
+                }
+                Text(monitorTime(m.createdAt)).font(.caption2).foregroundStyle(Theme.onFaint)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard(16)
+    }
+
+    private func monitorStatusBadge(_ status: String?) -> some View {
+        let s = (status ?? "").lowercased()
+        let color: Color = s.contains("fail") || s.contains("error") || s.contains("reject") ? Theme.danger
+            : s.contains("read") ? Theme.info
+            : s.contains("deliver") || s.contains("sent") || s.contains("accept") ? Theme.success
+            : Theme.warning
+        return Text(status ?? "—")
+            .font(.caption2.weight(.semibold)).foregroundStyle(color)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(color.opacity(0.13), in: Capsule())
+    }
+
+    private func monitorTime(_ iso: String?) -> String {
+        guard let date = parseISODate(iso) else { return "" }
+        let f = DateFormatter(); f.dateFormat = "d/M HH:mm"
+        return f.string(from: date)
     }
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
