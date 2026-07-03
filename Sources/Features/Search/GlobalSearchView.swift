@@ -22,36 +22,59 @@ struct GlobalSearchView: View {
         }
     }
 
+    @State private var searchActive = false
+
     var body: some View {
         NavigationStack {
-            Group {
-                if loading && all.isEmpty {
-                    ProgressView().tint(Theme.primary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if results.isEmpty {
-                    hint(icon: "questionmark.bubble", text: "لا نتائج مطابقة")
-                } else {
-                    List(results) { conv in
-                        ZStack {
-                            NavigationLink(value: conv) { EmptyView() }.opacity(0)
-                            ConversationRow(conv: conv)
-                        }
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Theme.background)
-                        .listRowSeparatorTint(Theme.outline)
+            searchableCore
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Theme.background.ignoresSafeArea())
+                .navigationTitle("المحادثات")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(for: Conversation.self) { ChatView(conversation: $0) }
+                .task { await load() }
+                .refreshable { await load() }
+        }
+        // Activate the field the moment the tab opens: the search circle
+        // morphs into the bar (system animation) and the keyboard pops up.
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { searchActive = true }
+        }
+        .onDisappear { searchActive = false }
+    }
+
+    /// iOS 17+ gets programmatic activation (auto-focus + keyboard);
+    /// iOS 16 falls back to plain searchable.
+    @ViewBuilder
+    private var searchableCore: some View {
+        if #available(iOS 17.0, *) {
+            core.searchable(text: $query, isPresented: $searchActive,
+                            prompt: "ابحث بالاسم أو الرقم أو الرسالة")
+        } else {
+            core.searchable(text: $query, prompt: "ابحث بالاسم أو الرقم أو الرسالة")
+        }
+    }
+
+    private var core: some View {
+        Group {
+            if loading && all.isEmpty {
+                ProgressView().tint(Theme.primary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if results.isEmpty {
+                hint(icon: "questionmark.bubble", text: "لا نتائج مطابقة")
+            } else {
+                List(results) { conv in
+                    ZStack {
+                        NavigationLink(value: conv) { EmptyView() }.opacity(0)
+                        ConversationRow(conv: conv)
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.background)
+                    .listRowSeparatorTint(Theme.outline)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("المحادثات")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Conversation.self) { ChatView(conversation: $0) }
-            .searchable(text: $query, prompt: "ابحث بالاسم أو الرقم أو الرسالة")
-            .task { await load() }
-            .refreshable { await load() }
         }
     }
 
