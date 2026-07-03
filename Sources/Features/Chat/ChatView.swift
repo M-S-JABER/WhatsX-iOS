@@ -4,6 +4,7 @@ import AVFoundation
 import UIKit
 import UniformTypeIdentifiers
 import MapKit
+import AVKit
 
 // Records a short voice note to a temp .m4a file (AAC) for upload via /api/upload.
 @MainActor
@@ -210,6 +211,8 @@ struct ChatView: View {
     @State private var matchIndex = 0
     @State private var showCallMenu = false
     @State private var callNotice: String?
+    @State private var lightboxItem: MediaItem?
+    @State private var docItem: MediaItem?
     @State private var photoItem: PhotosPickerItem?
 
     init(conversation: Conversation) {
@@ -309,6 +312,8 @@ struct ChatView: View {
         .sheet(isPresented: $showInfo) {
             ConversationInfoView(conversation: vm.conversation, messages: vm.messages)
         }
+        .fullScreenCover(item: $lightboxItem) { ImageLightbox(item: $0) }
+        .sheet(item: $docItem) { DocPreviewSheet(item: $0) }
         .sheet(isPresented: $showTemplates) {
             TemplatePickerSheet { name, lang, params in await vm.sendTemplate(name: name, language: lang, params: params) }
         }
@@ -325,6 +330,15 @@ struct ChatView: View {
                 Text(vm.conversation.title).font(.wx(16, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                 if let acct = vm.conversation.instance?.label {
                     Text(acct).font(.wx(11)).foregroundStyle(Theme.onMuted)
+                }
+            }
+            // Long-press the name to copy the customer's number (web parity).
+            .contextMenu {
+                if let phone = vm.conversation.phone, !phone.isEmpty {
+                    Button { UIPasteboard.general.string = phone } label: {
+                        Label(phone, systemImage: "doc.on.doc")
+                            .environment(\.layoutDirection, .leftToRight)
+                    }
                 }
             }
             Spacer()
@@ -356,7 +370,9 @@ struct ChatView: View {
                     case .message(let msg):
                         MessageBubble(msg: msg,
                                       onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil,
-                                      highlighted: highlightedMessageId == msg.id)
+                                      highlighted: highlightedMessageId == msg.id,
+                                      onImageTap: { lightboxItem = MediaItem(url: $0) },
+                                      onDocTap: { docItem = MediaItem(url: $0) })
                             .contextMenu {
                                 Button { vm.replyTarget = msg } label: {
                                     Label(L("رد"), systemImage: "arrowshape.turn.up.left")
@@ -532,6 +548,8 @@ struct MessageBubble: View {
     let msg: Message
     var onRetry: (() -> Void)? = nil
     var highlighted: Bool = false
+    var onImageTap: ((URL) -> Void)? = nil
+    var onDocTap: ((URL) -> Void)? = nil
     private var outbound: Bool { msg.isOutbound }
     private var failed: Bool { msg.status == "failed" }
     private var fg: Color { outbound ? Theme.bubbleOutFg : Theme.bubbleInFg }
@@ -546,10 +564,20 @@ struct MessageBubble: View {
                 if let media = msg.media, let url = Api.mediaURL(media.url) {
                     mediaView(media, url)
                 }
-                if msg.media == nil, let location = parseSharedLocation(msg.body) {
+                // Shared contacts (vCards) with tap-to-copy phones.
+                ForEach(Array(msg.sharedContacts.enumerated()), id: \.offset) { _, contact in
+                    contactCard(contact)
+                }
+                if msg.isTemplateMessage {
+                    templateCard
+                } else if msg.media == nil, let location = parseSharedLocation(msg.body) {
                     LocationCard(location: location, fg: fg)
-                } else if let body = msg.body, !body.isEmpty {
+                } else if let body = msg.body, !body.isEmpty, msg.sharedContacts.isEmpty {
                     Text(body).font(.wx(14.5)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                    // Link preview card for the first URL in the text.
+                    if let link = firstURL(in: body), parseSharedLocation(body) == nil {
+                        LinkPreviewCard(url: link, fg: fg)
+                    }
                 }
                 HStack(spacing: 3) {
                     Text(clockTime(msg.createdAt)).font(.wx(10.5))
@@ -607,22 +635,105 @@ struct MessageBubble: View {
             AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Theme.surface2 }
                 .frame(width: 220, height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .contentShape(RoundedRectangle(cornerRadius: 12))
+                .onTapGesture { onImageTap?(url) }
+        } else if isVideo(media) {
+            VideoPlayer(player: AVPlayer(url: url))
+                .frame(width: 230, height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if isAudio(media) {
             AudioMessage(url: url, tint: outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
         } else {
-            HStack(spacing: 10) {
-                Image(icon: .doc).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
-                Text(L("مستند")).font(.wx(13)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
-                Spacer()
-                Image(icon: .download).foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.7))
+            Button { onDocTap?(url) } label: {
+                HStack(spacing: 10) {
+                    Image(icon: .doc).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                    Text(L("مستند")).font(.wx(13)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                    Spacer()
+                    Image(icon: .download).foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.7))
+                }
+                .padding(10).frame(minWidth: 200)
+                .background((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
-            .padding(10).frame(minWidth: 200)
-            .background((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .buttonStyle(.plain)
         }
+    }
+
+    /// Template message card: name/language header, resolved body, and the
+    /// interactive buttons (web parity: templatePreview.resolvedButtons).
+    private var templateCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(icon: .template).font(.wx(11)).foregroundStyle(Theme.primary)
+                Text([msg.templateName ?? L("قالب"), msg.templateLanguage].compactMap { $0 }.joined(separator: " · "))
+                    .font(.wx(11, .semibold)).foregroundStyle(Theme.primary).lineLimit(1)
+            }
+            if let text = msg.templatePreview?.resolvedBodyText ?? msg.body, !text.isEmpty {
+                Text(text).font(.wx(14.5)).foregroundStyle(fg)
+            }
+            let buttons = msg.templatePreview?.resolvedButtons ?? []
+            if !buttons.isEmpty {
+                VStack(spacing: 5) {
+                    ForEach(Array(buttons.enumerated()), id: \.offset) { _, button in
+                        templateButton(button)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func templateButton(_ button: TemplatePreviewButton) -> some View {
+        let label = HStack(spacing: 5) {
+            Image(systemName: button.type == "url" ? "arrow.up.right.square" : "arrowshape.turn.up.left")
+                .font(.wx(11, .semibold))
+            Text(button.text?.isEmpty == false ? button.text! : L("فتح الرابط"))
+                .font(.wx(12.5, .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Theme.primary)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
+        .background(fg.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+
+        if let urlString = button.resolvedUrl, let url = URL(string: urlString) {
+            Link(destination: url) { label }.buttonStyle(.plain)
+        } else {
+            label
+        }
+    }
+
+    /// Shared-contact card with tap-to-copy phone numbers.
+    private func contactCard(_ contact: SharedContact) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.crop.circle")
+                    .font(.wx(20)).foregroundStyle(Theme.primary)
+                Text(contact.name.isEmpty ? (contact.phones.first ?? "—") : contact.name)
+                    .font(.wx(13.5, .semibold)).foregroundStyle(fg).lineLimit(1)
+            }
+            ForEach(contact.phones, id: \.self) { phone in
+                Button { UIPasteboard.general.string = phone } label: {
+                    HStack(spacing: 6) {
+                        Text(phone).font(.wx(12.5)).foregroundStyle(fg.opacity(0.8))
+                            .environment(\.layoutDirection, .leftToRight)
+                        Image(systemName: "doc.on.doc")
+                            .font(.wx(10)).foregroundStyle(fg.opacity(0.55))
+                        Spacer(minLength: 0)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(9).frame(minWidth: 200, alignment: .leading)
+        .background(fg.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func isImage(_ m: MessageMedia) -> Bool {
         m.mediaType == "image" || (m.mimeType?.hasPrefix("image/") ?? false)
+    }
+    private func isVideo(_ m: MessageMedia) -> Bool {
+        m.mediaType == "video" || (m.mimeType?.hasPrefix("video/") ?? false)
     }
     private func isAudio(_ m: MessageMedia) -> Bool {
         m.mediaType == "audio" || (m.mimeType?.hasPrefix("audio/") ?? false)

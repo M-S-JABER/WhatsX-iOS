@@ -24,6 +24,7 @@ final class StatsViewModel: ObservableObject {
 
 struct StatsView: View {
     @StateObject private var vm = StatsViewModel()
+    @State private var exportURL: MediaItem?
     private let ranges: [(String?, String)] = [(nil, L("الكل")), ("24h", L("24س")), ("7d", L("7 أيام")), ("30d", L("30 يومًا")), ("90d", L("90 يومًا"))]
 
     // Pushed inside the Settings navigation stack (no NavigationStack of its
@@ -31,28 +32,66 @@ struct StatsView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 16) {
-                    rangeChips
-                    if vm.accounts.count > 1 { accountChips }
-                    if let t = vm.data?.totals { kpiGrid(t) }
-                    if let s = vm.data?.series, !s.isEmpty { seriesChart(s) }
-                    if let d = vm.data?.delivery { statusCard(d) }
-                    if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
-                    if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
-                    if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
-                    reportsLink
-                }
-                .padding(16)
-                .padding(.bottom, 24)
+                reportBody
+                    .padding(16)
+                    .padding(.bottom, 24)
             }
         }
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(L("الإحصاءات"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { exportPDF() } label: { Image(systemName: "square.and.arrow.up") }
+                    .disabled(vm.data == nil)
+            }
+        }
+        .sheet(item: $exportURL) { item in
+            ActivityShareSheet(items: [item.url])
+        }
         .task {
             await vm.load()
             await vm.loadAccounts()
         }
+    }
+
+    /// The report content — shared between the screen and the PDF export.
+    private var reportBody: some View {
+        VStack(spacing: 16) {
+            rangeChips
+            if vm.accounts.count > 1 { accountChips }
+            if let t = vm.data?.totals { kpiGrid(t) }
+            if let s = vm.data?.series, !s.isEmpty { seriesChart(s) }
+            if let d = vm.data?.delivery { statusCard(d) }
+            if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
+            if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
+            if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+            reportsLink
+        }
+    }
+
+    /// Render the on-screen report to a shareable PDF (web parity:
+    /// Statistics.tsx exportPdf via jsPDF/html2canvas).
+    @MainActor
+    private func exportPDF() {
+        let content = reportBody
+            .padding(20)
+            .frame(width: 640)
+            .background(Theme.background)
+            .environment(\.layoutDirection, L10n.isArabic ? .rightToLeft : .leftToRight)
+        let renderer = ImageRenderer(content: content)
+        renderer.proposedSize = ProposedViewSize(width: 640, height: nil)
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("whatsx-statistics.pdf")
+        renderer.render { size, draw in
+            var box = CGRect(origin: .zero, size: size)
+            guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else { return }
+            pdf.beginPDFPage(nil)
+            draw(pdf)
+            pdf.endPDFPage()
+            pdf.closePDF()
+        }
+        exportURL = MediaItem(url: url)
     }
 
     private var reportsLink: some View {
