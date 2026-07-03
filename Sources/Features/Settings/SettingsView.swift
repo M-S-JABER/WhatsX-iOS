@@ -23,6 +23,16 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     profileCard.padding(.horizontal, 14).padding(.vertical, 6)
 
+                    section("الأدوات")
+                    group {
+                        NavigationLink { CallsView() } label: {
+                            SettingRow(icon: .call, title: "سجل المكالمات", subtitle: "الواردة والصادرة والتسجيلات", trailingChevron: true, tint: Theme.success)
+                        }.buttonStyle(.plain)
+                        NavigationLink { StatsView() } label: {
+                            SettingRow(icon: .chart, title: "الإحصاءات", subtitle: "المؤشرات وتقارير العملاء", trailingChevron: true, tint: Theme.info)
+                        }.buttonStyle(.plain)
+                    }
+
                     section("المظهر")
                     group {
                         SettingRow(icon: .palette, title: "السمة", subtitle: "حسب النظام", tint: Color(rgb: 0xCE6A47))
@@ -69,7 +79,7 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.3 · أسوار المدن")
+                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.5.0 · أسوار المدن")
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)

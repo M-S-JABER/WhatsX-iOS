@@ -26,37 +26,32 @@ struct StatsView: View {
     @StateObject private var vm = StatsViewModel()
     private let ranges: [(String?, String)] = [(nil, "الكل"), ("24h", "24س"), ("7d", "7 أيام"), ("30d", "30 يومًا"), ("90d", "90 يومًا")]
 
+    // Pushed inside the Settings navigation stack (no NavigationStack of its
+    // own) — its NavigationLinks resolve against the enclosing stack.
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                HStack {
-                    Text("الإحصاءات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
-                    Spacer()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    rangeChips
+                    if vm.accounts.count > 1 { accountChips }
+                    if let t = vm.data?.totals { kpiGrid(t) }
+                    if let s = vm.data?.series, !s.isEmpty { seriesChart(s) }
+                    if let d = vm.data?.delivery { statusCard(d) }
+                    if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
+                    if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
+                    if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+                    reportsLink
                 }
-                .padding(.horizontal, 16).padding(.vertical, 8)
-
-                ScrollView {
-                    VStack(spacing: 16) {
-                        rangeChips
-                        if vm.accounts.count > 1 { accountChips }
-                        if let t = vm.data?.totals { kpiGrid(t) }
-                        if let s = vm.data?.series, !s.isEmpty { seriesChart(s) }
-                        if let d = vm.data?.delivery { statusCard(d) }
-                        if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
-                        if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
-                        if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
-                        reportsLink
-                    }
-                    .padding(16)
-                    .padding(.bottom, 84)
-                }
+                .padding(16)
+                .padding(.bottom, 84)
             }
-            .background(Theme.background.ignoresSafeArea())
-            .navigationBarHidden(true)
-            .task {
-                await vm.load()
-                await vm.loadAccounts()
-            }
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("الإحصاءات")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await vm.load()
+            await vm.loadAccounts()
         }
     }
 
