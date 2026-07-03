@@ -242,6 +242,21 @@ final class Api {
     func retryMessageFlow(_ id: String) async throws -> RetryResult {
         try await request("api/integrations/message-flow/\(id)/retry", method: "POST")
     }
+    /// Webhook center KPIs + shared URL (web parity: the Webhook tab).
+    func webhookCenter() async throws -> WebhookCenter {
+        try await request("api/integrations/webhooks")
+    }
+    func webhookConfig() async throws -> WebhookConfig? {
+        let resp: WebhookConfigResponse = try await request("api/admin/webhook-config")
+        return resp.config
+    }
+    func updateWebhookConfig(path: String, verifyToken: String?) async throws -> WebhookConfig? {
+        let resp: WebhookConfigResponse = try await request(
+            "api/admin/webhook-config", method: "PUT",
+            body: UpdateWebhookConfigRequest(path: path, verifyToken: verifyToken))
+        return resp.config
+    }
+
     func whatsappAccounts() async throws -> WhatsAppAccountsResponse {
         try await request("api/integrations/whatsapp-accounts")
     }

@@ -292,5 +292,16 @@ enum L10n {
         "د": "m",
         "س": "h",
         "ي": "d",
+        "سلوك طلبات إذن الاتصال": "Call-permission behavior",
+        "تلقائي": "Automatic",
+        "قبول تلقائي": "Auto-accept",
+        "رفض تلقائي": "Auto-reject",
+        "مُهيّأ": "Configured",
+        "يحتاج تهيئة": "Needs setup",
+        "آخر استقبال": "Last received",
+        "رابط الويب هوك المشترك": "Shared webhook URL",
+        "مسار الويب هوك": "Webhook path",
+        "نُسخ الرابط ✓": "Link copied ✓",
+        "حُفظت إعدادات الويب هوك ✓": "Webhook settings saved ✓",
     ]
 }

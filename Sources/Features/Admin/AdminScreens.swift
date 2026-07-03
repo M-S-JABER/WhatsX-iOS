@@ -948,6 +948,7 @@ struct EditWhatsappAccountSheet: View {
     @State private var accessToken = ""
     @State private var isActive = true
     @State private var isDefault = false
+    @State private var webhookBehavior = "auto"
     @State private var saving = false
     @State private var error: String?
     // Registration
@@ -969,6 +970,13 @@ struct EditWhatsappAccountSheet: View {
                 Section {
                     Toggle(L("مفعّل"), isOn: $isActive)
                     Toggle(L("الحساب الافتراضي"), isOn: $isDefault)
+                }
+                Section {
+                    Picker(L("سلوك طلبات إذن الاتصال"), selection: $webhookBehavior) {
+                        Text(L("تلقائي")).tag("auto")
+                        Text(L("قبول تلقائي")).tag("accept")
+                        Text(L("رفض تلقائي")).tag("reject")
+                    }
                 }
                 Section {
                     HStack {
@@ -997,6 +1005,7 @@ struct EditWhatsappAccountSheet: View {
                 wabaId = account.wabaId ?? ""
                 isActive = account.isActive
                 isDefault = account.isDefault
+                webhookBehavior = account.webhookBehavior ?? "auto"
             }
         }
         .presentationDetents([.large])
@@ -1008,7 +1017,8 @@ struct EditWhatsappAccountSheet: View {
             _ = try await Api.shared.updateWhatsappAccount(account.id, UpdateWhatsappAccountRequest(
                 name: name, displayPhoneNumber: displayPhoneNumber, wabaId: wabaId,
                 accessToken: accessToken.isEmpty ? nil : accessToken,
-                isActive: isActive, isDefault: isDefault))
+                isActive: isActive, isDefault: isDefault,
+                webhookBehavior: webhookBehavior))
             await onSaved()
             dismiss()
         } catch {
