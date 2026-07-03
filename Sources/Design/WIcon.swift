@@ -40,7 +40,7 @@ enum WIcon {
         case .alert: return "exclamationmark.triangle"
         case .image: return "photo"
         case .doc: return "doc"
-        case .download: return "square.and.arrow.down"
+        case .download: return "arrow.down.circle"
         case .play: return "play.fill"
         case .pause: return "pause.fill"
         case .info: return "info.circle"
@@ -83,7 +83,7 @@ enum WIcon {
         case .lock: return "lock.fill"
         case .star: return "star.fill"
         case .flag: return "flag.fill"
-        case .pdf: return "doc.richtext"
+        case .pdf: return "chart.bar.doc.horizontal"
         case .cloud: return "cloud"
         case .share: return "square.and.arrow.up"
         case .reply: return "arrowshape.turn.up.left"
@@ -98,7 +98,10 @@ enum WIcon {
 
 extension Image {
     /// `Image(icon: .chat)` — outline; `Image(icon: .chat, filled: true)` — solid.
+    /// Hierarchical rendering gives multi-layer symbols (phone arrows, badges,
+    /// slashes) subtle depth from the single tint color.
     init(icon: WIcon, filled: Bool = false) {
-        self.init(systemName: icon.symbol(filled: filled))
+        self = Image(systemName: icon.symbol(filled: filled))
+            .symbolRenderingMode(.hierarchical)
     }
 }

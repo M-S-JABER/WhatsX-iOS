@@ -339,7 +339,7 @@ struct ChatView: View {
             .buttonStyle(.plain)
             .disabled(vm.conversation.phone?.isEmpty != false)
             Button { showInfo = true } label: {
-                Image(icon: .more).font(.system(size: 20)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
+                Image(icon: .info).font(.system(size: 19)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
             }
             .buttonStyle(.plain)
         }

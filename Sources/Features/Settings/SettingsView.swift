@@ -25,15 +25,15 @@ struct SettingsView: View {
 
                     section("المظهر")
                     group {
-                        SettingRow(icon: .palette, title: "السمة", subtitle: "حسب النظام")
-                        SettingRow(icon: .lang, title: "اللغة", subtitle: "العربية", trailingChevron: true)
+                        SettingRow(icon: .palette, title: "السمة", subtitle: "حسب النظام", tint: Color(rgb: 0xCE6A47))
+                        SettingRow(icon: .lang, title: "اللغة", subtitle: "العربية", trailingChevron: true, tint: Theme.info)
                     }
 
                     section("الإشعارات")
                     group {
                         HStack {
                             SettingRow(icon: .bell, title: "تنبيهات الرسائل الجديدة",
-                                       subtitle: "أثناء تشغيل التطبيق (صوت + لافتة)")
+                                       subtitle: "أثناء تشغيل التطبيق (صوت + لافتة)", tint: Theme.warning)
                             Toggle("", isOn: $notifyMessages)
                                 .labelsHidden()
                                 .tint(Theme.primary)
@@ -44,32 +44,32 @@ struct SettingsView: View {
                     section("الإدارة")
                     group {
                         NavigationLink { UsersView() } label: {
-                            SettingRow(icon: .users, title: "إدارة المستخدمين", trailingChevron: true)
+                            SettingRow(icon: .users, title: "إدارة المستخدمين", trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: "الأدوار والصلاحيات", trailingChevron: true)
+                            SettingRow(icon: .shield, title: "الأدوار والصلاحيات", trailingChevron: true, tint: Color(rgb: 0x7C6BD0))
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: "حسابات واتساب", trailingChevron: true)
+                            SettingRow(icon: .whatsapp, title: "حسابات واتساب", trailingChevron: true, tint: Color(rgb: 0x23A55A))
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
-                            SettingRow(icon: .template, title: "القوالب والردود", trailingChevron: true)
+                            SettingRow(icon: .template, title: "القوالب والردود", trailingChevron: true, tint: Theme.primary)
                         }.buttonStyle(.plain)
                     }
 
                     section("الأمان")
                     group {
                         Button { passwordOpen = true } label: {
-                            SettingRow(icon: .lock, title: "تغيير كلمة المرور", trailingChevron: true)
+                            SettingRow(icon: .lock, title: "تغيير كلمة المرور", trailingChevron: true, tint: Theme.danger)
                         }.buttonStyle(.plain)
                     }
 
                     section("عام")
                     group {
                         NavigationLink { VoiceSettingsView() } label: {
-                            SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true)
+                            SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.1 · أسوار المدن")
+                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.2 · أسوار المدن")
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
@@ -163,12 +163,15 @@ struct SettingRow: View {
     let title: String
     var subtitle: String? = nil
     var trailingChevron: Bool = false
+    /// iOS-Settings-style colored icon tile; nil keeps the neutral surface tile.
+    var tint: Color? = nil
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(icon: icon).font(.system(size: 18)).foregroundStyle(Theme.onSurface)
+            Image(icon: icon).font(.system(size: 17, weight: .medium))
+                .foregroundStyle(tint == nil ? Theme.onSurface : .white)
                 .frame(width: 38, height: 38)
-                .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
+                .background(tint ?? Theme.surface2, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
                 if let subtitle { Text(subtitle).font(.caption).foregroundStyle(Theme.onMuted) }
