@@ -14,7 +14,6 @@ final class InboxViewModel: ObservableObject {
     @Published var loadingMore = false
     @Published var error: String?
     @Published var segment: InboxSegment = .active
-    @Published var query = ""
     @Published var instances: [Instance] = []
     @Published var selectedInstanceIds: Set<String> = []
 
@@ -26,23 +25,17 @@ final class InboxViewModel: ObservableObject {
     var showArchived: Bool { segment == .archived }
 
     var shown: [Conversation] {
-        var list = items
-        let q = query.trimmingCharacters(in: .whitespaces)
-        if !q.isEmpty {
-            list = list.filter { $0.title.localizedCaseInsensitiveContains(q) || $0.preview.localizedCaseInsensitiveContains(q) }
-        }
-        if segment == .unread { list = list.filter { $0.unread > 0 } }
         // Pinned conversations float to the top, preserving the backend order otherwise.
-        return list.enumerated().sorted { a, b in
+        items.enumerated().sorted { a, b in
             if a.element.isPinned != b.element.isPinned { return a.element.isPinned }
             return a.offset < b.offset
         }.map { $0.element }
     }
 
-    func select(_ seg: InboxSegment) {
-        let crosses = (seg == .archived) != showArchived
-        segment = seg
-        if crosses { Task { await load() } }
+    /// Floating archive button: flip between the active inbox and the archive.
+    func toggleArchived() {
+        segment = showArchived ? .active : .archived
+        Task { await load() }
     }
 
     /// Load the WhatsApp accounts once for the filter chips (multi-account inboxes).
@@ -136,13 +129,11 @@ final class InboxViewModel: ObservableObject {
 struct InboxView: View {
     @StateObject private var vm = InboxViewModel()
     @State private var showNew = false
-    @State private var didHideSearch = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
-                segments
                 content
             }
             .background(Theme.background.ignoresSafeArea())
@@ -151,6 +142,12 @@ struct InboxView: View {
                 floatingActions
                     .padding(.trailing, 16)
                     .padding(.bottom, 16)
+            }
+            // RTL: trailing = the visual top-LEFT corner.
+            .overlay(alignment: .topTrailing) {
+                archiveButton
+                    .padding(.trailing, 16)
+                    .padding(.top, 6)
             }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
@@ -166,10 +163,25 @@ struct InboxView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Text("المحادثات").font(.title2.bold()).foregroundStyle(Theme.onSurface)
+            Text(vm.showArchived ? "الأرشيف" : "المحادثات")
+                .font(.title2.bold()).foregroundStyle(Theme.onSurface)
             Spacer()
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+    }
+
+    /// Floating archive toggle (visual top-left): opens the archive; while
+    /// inside it, turns amber and flips back to the active inbox.
+    private var archiveButton: some View {
+        Button { withAnimation { vm.toggleArchived() } } label: {
+            Image(systemName: vm.showArchived ? "archivebox.fill" : "archivebox")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(vm.showArchived ? Theme.onPrimary : Theme.primary)
+                .frame(width: 40, height: 40)
+                .background(vm.showArchived ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(.clear), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .glassCircle()
     }
 
     /// Floating vertical glass pill (Telegram-style): compose a new
@@ -236,36 +248,6 @@ struct InboxView: View {
         }
     }
 
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            Image(icon: .search).foregroundStyle(Theme.onMuted)
-            TextField("ابحث في المحادثات", text: $vm.query)
-                .foregroundStyle(Theme.onSurface)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 24))
-        .padding(.horizontal, 12)
-    }
-
-    private var segments: some View {
-        HStack(spacing: 4) {
-            ForEach(InboxSegment.allCases, id: \.self) { seg in
-                let active = vm.segment == seg
-                Button { vm.select(seg) } label: {
-                    Text(seg.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(active ? Theme.primary : Theme.onMuted)
-                        .frame(maxWidth: .infinity).padding(.vertical, 8)
-                        .background(active ? Theme.surface : .clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(Theme.surface2, in: Capsule())
-        .padding(.horizontal, 12).padding(.vertical, 6)
-    }
-
     private var content: some View {
         Group {
             if vm.loading && vm.items.isEmpty {
@@ -281,13 +263,7 @@ struct InboxView: View {
                 }
                 Spacer()
             } else {
-                ScrollViewReader { proxy in
                 List {
-                    // Hidden above the fold — pull down to reveal (Telegram-style).
-                    searchField
-                        .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 8, trailing: 12))
-                        .listRowBackground(Theme.background)
-                        .listRowSeparator(.hidden)
                     ForEach(vm.shown) { conv in
                         ZStack {
                             NavigationLink(value: conv) { EmptyView() }.opacity(0)
@@ -329,14 +305,6 @@ struct InboxView: View {
                     ChatView(conversation: conv)
                 }
                 .refreshable { await vm.load() }
-                .onAppear {
-                    // Start scrolled past the search row so it only appears
-                    // when the user pulls the list down.
-                    guard !didHideSearch, let first = vm.shown.first else { return }
-                    proxy.scrollTo(first.id, anchor: .top)
-                    didHideSearch = true
-                }
-                }
             }
         }
     }
