@@ -69,7 +69,7 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.2 · أسوار المدن")
+                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.3 · أسوار المدن")
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)

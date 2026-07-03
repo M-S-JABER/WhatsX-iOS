@@ -11,11 +11,17 @@ enum InboxSegment: String, CaseIterable {
 final class InboxViewModel: ObservableObject {
     @Published var items: [Conversation] = []
     @Published var loading = false
+    @Published var loadingMore = false
     @Published var error: String?
     @Published var segment: InboxSegment = .active
     @Published var query = ""
     @Published var instances: [Instance] = []
     @Published var selectedInstanceIds: Set<String> = []
+
+    private var page = 1
+    private var total = 0
+    private let pageSize = 50
+    private var pins: Set<String> = []
 
     var showArchived: Bool { segment == .archived }
 
@@ -54,16 +60,22 @@ final class InboxViewModel: ObservableObject {
         Task { await load() }
     }
 
+    private var instanceFilter: String? {
+        selectedInstanceIds.isEmpty ? nil : selectedInstanceIds.sorted().joined(separator: ",")
+    }
+
     func load() async {
         loading = items.isEmpty
         error = nil
-        let filter = selectedInstanceIds.isEmpty ? nil : selectedInstanceIds.sorted().joined(separator: ",")
         do {
-            async let convTask = Api.shared.conversations(archived: showArchived, instanceIds: filter)
+            async let convTask = Api.shared.conversations(
+                archived: showArchived, page: 1, pageSize: pageSize, instanceIds: instanceFilter)
             async let pinsTask = Api.shared.pinnedConversationIds()
             let resp = try await convTask
-            let pins = Set((try? await pinsTask) ?? [])
+            pins = Set((try? await pinsTask) ?? [])
             // Stamp the pinned state onto each conversation so rows can sort/mark it.
+            page = 1
+            total = resp.total
             items = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
             // Active inbox feeds the tab badge (archived view must not clobber it).
             if !showArchived {
@@ -73,6 +85,32 @@ final class InboxViewModel: ObservableObject {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
         }
         loading = false
+    }
+
+    /// Infinite scroll: pull the next page once the given row is near the end
+    /// of the visible list.
+    func loadMoreIfNeeded(after conv: Conversation) {
+        guard items.count < total, !loadingMore, !loading else { return }
+        let tail = shown.suffix(6).map { $0.id }
+        guard tail.contains(conv.id) else { return }
+        loadingMore = true
+        Task {
+            let next = page + 1
+            if let resp = try? await Api.shared.conversations(
+                archived: showArchived, page: next, pageSize: pageSize, instanceIds: instanceFilter) {
+                page = next
+                total = resp.total
+                let existing = Set(items.map { $0.id })
+                let fresh = resp.items
+                    .filter { !existing.contains($0.id) }
+                    .map { var c = $0; c.pinned = pins.contains(c.id); return c }
+                items += fresh
+                if !showArchived {
+                    UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
+                }
+            }
+            loadingMore = false
+        }
     }
 
     func archive(_ conv: Conversation) async {
@@ -205,26 +243,40 @@ struct InboxView: View {
                 }
                 Spacer()
             } else {
-                List(vm.shown) { conv in
-                    ZStack {
-                        NavigationLink(value: conv) { EmptyView() }.opacity(0)
-                        ConversationRow(conv: conv)
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Theme.background)
-                    .listRowSeparatorTint(Theme.outline)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
-                            Label("حذف", systemImage: "trash")
+                List {
+                    ForEach(vm.shown) { conv in
+                        ZStack {
+                            NavigationLink(value: conv) { EmptyView() }.opacity(0)
+                            ConversationRow(conv: conv)
                         }
-                        Button { Task { await vm.archive(conv) } } label: {
-                            Label(vm.showArchived ? "إلغاء الأرشفة" : "أرشفة", systemImage: "archivebox")
-                        }.tint(Theme.success)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.background)
+                        .listRowSeparatorTint(Theme.outline)
+                        .onAppear { vm.loadMoreIfNeeded(after: conv) }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
+                                Label("حذف", systemImage: "trash")
+                            }
+                            Button { Task { await vm.archive(conv) } } label: {
+                                Label(vm.showArchived ? "إلغاء الأرشفة" : "أرشفة", systemImage: "archivebox")
+                            }.tint(Theme.success)
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button { Task { await vm.pin(conv) } } label: {
+                                Label(conv.isPinned ? "إلغاء التثبيت" : "تثبيت", systemImage: conv.isPinned ? "pin.slash" : "pin")
+                            }.tint(Theme.primary)
+                        }
                     }
-                    .swipeActions(edge: .leading) {
-                        Button { Task { await vm.pin(conv) } } label: {
-                            Label(conv.isPinned ? "إلغاء التثبيت" : "تثبيت", systemImage: conv.isPinned ? "pin.slash" : "pin")
-                        }.tint(Theme.primary)
+                    if vm.loadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView().tint(Theme.primary)
+                            Spacer()
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.background)
+                        .listRowSeparator(.hidden)
+                        .padding(.vertical, 12)
                     }
                 }
                 .listStyle(.plain)
