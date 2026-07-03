@@ -53,9 +53,9 @@ struct CustomerReportsView: View {
         HStack(spacing: 12) {
             Avatar(name: c.title, size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text(c.title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                Text(c.title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                 if let sub = subtitle(c) {
-                    Text(sub).font(.caption).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    Text(sub).font(.wx(12)).foregroundStyle(Theme.onMuted).lineLimit(1)
                 }
             }
             Spacer()
@@ -67,8 +67,8 @@ struct CustomerReportsView: View {
 
     private func countPill(_ count: Int) -> some View {
         HStack(spacing: 5) {
-            Image(icon: .chat).font(.system(size: 11))
-            Text("\(count)").font(.caption.weight(.semibold))
+            Image(icon: .chat).font(.wx(11))
+            Text("\(count)").font(.wx(12, .semibold))
         }
         .foregroundStyle(Theme.primary)
         .padding(.horizontal, 9).padding(.vertical, 4)

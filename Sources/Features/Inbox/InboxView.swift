@@ -186,7 +186,7 @@ struct InboxView: View {
     private var header: some View {
         HStack(spacing: 10) {
             Text(vm.showArchived ? L("الأرشيف") : L("المحادثات"))
-                .font(.title2.bold()).foregroundStyle(Theme.onSurface)
+                .font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
             Spacer()
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 22)
@@ -200,7 +200,7 @@ struct InboxView: View {
     private var archiveButton: some View {
         Button { withAnimation { vm.toggleArchived() } } label: {
             Image(systemName: vm.showArchived ? "archivebox.fill" : "archivebox")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.wx(20, .semibold))
                 .foregroundStyle(vm.showArchived ? Theme.onPrimary : Theme.primary)
                 .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
                 .background(vm.showArchived ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(.clear), in: Circle())
@@ -223,19 +223,19 @@ struct InboxView: View {
     private var searchContainer: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.wx(20, .semibold))
                 .foregroundStyle(Theme.primary)
                 .frame(width: searchOpen ? 26 : Self.floatingButtonSide,
                        height: Self.floatingButtonSide)
             if searchOpen {
                 TextField(L("ابحث في المحادثات"), text: $searchText)
-                    .font(.system(size: 15))
+                    .font(.wx(15))
                     .foregroundStyle(Theme.onSurface)
                     .focused($searchFocused)
                     .submitLabel(.search)
                 Button { closeSearch() } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.wx(14, .semibold))
                         .foregroundStyle(Theme.onMuted)
                         .frame(width: 34, height: 34)
                         .background(Theme.surface2, in: Circle())
@@ -268,7 +268,7 @@ struct InboxView: View {
     private var composeButton: some View {
         Button { showNew = true } label: {
             Image(systemName: "square.and.pencil")
-                .font(.system(size: 21, weight: .medium))
+                .font(.wx(21, .medium))
                 .foregroundStyle(Theme.primary)
                 .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
         }
@@ -309,16 +309,16 @@ struct InboxView: View {
         } label: {
             ZStack {
                 Image(systemName: "circle.dashed")
-                    .font(.system(size: 25, weight: .regular))
+                    .font(.wx(25, .regular))
                 Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.wx(12, .bold))
             }
             .foregroundStyle(Theme.primary)
             .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
             .overlay(alignment: .topTrailing) {
                 if !vm.selectedInstanceIds.isEmpty {
                     Text("\(vm.selectedInstanceIds.count)")
-                        .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.onPrimary)
+                        .font(.wx(9, .bold)).foregroundStyle(Theme.onPrimary)
                         .frame(width: 16, height: 16)
                         .background(Theme.primary, in: Circle())
                         .offset(x: 2, y: -2)
@@ -337,7 +337,7 @@ struct InboxView: View {
                 VStack(spacing: 12) {
                     Image(systemName: !searchText.isEmpty ? "questionmark.bubble"
                             : (vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right"))
-                        .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
+                        .font(.wx(42)).symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Theme.onFaint)
                     Text(!searchText.isEmpty ? L("لا نتائج مطابقة") : L("لا توجد محادثات"))
                         .foregroundStyle(Theme.onMuted)
@@ -400,25 +400,25 @@ struct ConversationRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     if conv.isPinned {
-                        Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(Theme.primary)
+                        Image(systemName: "pin.fill").font(.wx(10)).foregroundStyle(Theme.primary)
                     }
-                    Text(conv.title).font(.system(size: 15.5, weight: .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                    Text(conv.title).font(.wx(15.5, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                     Spacer()
-                    Text(shortTime(conv.lastAt)).font(.caption2)
+                    Text(shortTime(conv.lastAt)).font(.wx(11))
                         .foregroundStyle(conv.unread > 0 ? Theme.primary : Theme.onFaint)
                 }
                 HStack {
-                    Text(conv.preview).font(.system(size: 13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    Text(conv.preview).font(.wx(13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
                     Spacer()
                     if conv.unread > 0 {
-                        Text("\(conv.unread)").font(.system(size: 11, weight: .bold))
+                        Text("\(conv.unread)").font(.wx(11, .bold))
                             .foregroundStyle(Theme.onPrimary)
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Theme.primary, in: Capsule())
                     }
                 }
                 if let acct = conv.instance?.label {
-                    Text(acct).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
+                    Text(acct).font(.wx(10, .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 1)
                         .background(AccountColor.color(conv.instance?.id ?? acct), in: Capsule())
                         .padding(.top, 2)

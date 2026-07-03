@@ -24,8 +24,8 @@ struct UsersView: View {
                             HStack(spacing: 12) {
                                 Avatar(name: u.title, size: 44)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(u.title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                    Text(u.role ?? "—").font(.caption).foregroundStyle(Theme.onMuted)
+                                    Text(u.title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
+                                    Text(u.role ?? "—").font(.wx(12)).foregroundStyle(Theme.onMuted)
                                 }
                                 Spacer()
                             }
@@ -124,7 +124,7 @@ struct EditUserSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Text(user.title).font(.headline).foregroundStyle(Theme.onSurface)
+                Text(user.title).font(.wx(17, .semibold)).foregroundStyle(Theme.onSurface)
                 Picker(L("الدور"), selection: $role) {
                     ForEach(roles) { r in Text(r.name).tag(r.id) }
                 }
@@ -183,12 +183,12 @@ struct RolesView: View {
                                     .frame(width: 40, height: 40)
                                     .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 11))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(role.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
-                                    Text("\(role.permissions.count) " + L("صلاحية")).font(.caption).foregroundStyle(Theme.onMuted)
+                                    Text(role.name).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
+                                    Text("\(role.permissions.count) " + L("صلاحية")).font(.wx(12)).foregroundStyle(Theme.onMuted)
                                 }
                                 Spacer()
                                 if role.isSystem {
-                                    Text(L("نظام")).font(.caption2.weight(.semibold)).foregroundStyle(Theme.onMuted)
+                                    Text(L("نظام")).font(.wx(11, .semibold)).foregroundStyle(Theme.onMuted)
                                         .padding(.horizontal, 8).padding(.vertical, 2)
                                         .background(Theme.surface2, in: Capsule())
                                 }
@@ -296,7 +296,7 @@ struct RolePermissionsView: View {
             } else {
                 List {
                     Section {
-                        Text("\(selected.count) " + L("صلاحية مُفعّلة")).font(.caption).foregroundStyle(Theme.onMuted)
+                        Text("\(selected.count) " + L("صلاحية مُفعّلة")).font(.wx(12)).foregroundStyle(Theme.onMuted)
                     }
                     ForEach(groups, id: \.0) { group, items in
                         Section(group) {
@@ -305,15 +305,15 @@ struct RolePermissionsView: View {
                                     HStack(spacing: 12) {
                                         VStack(alignment: .leading, spacing: 2) {
                                             HStack(spacing: 6) {
-                                                Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
+                                                Text(p.title).font(.wx(14, .medium)).foregroundStyle(Theme.onSurface)
                                                 if p.isCritical == true {
-                                                    Text(L("حسّاس")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                                                    Text(L("حسّاس")).font(.wx(9, .bold)).foregroundStyle(Theme.danger)
                                                         .padding(.horizontal, 5).padding(.vertical, 1)
                                                         .background(Theme.dangerBg, in: Capsule())
                                                 }
                                             }
                                             if let d = p.description, !d.isEmpty {
-                                                Text(d).font(.caption2).foregroundStyle(Theme.onMuted)
+                                                Text(d).font(.wx(11)).foregroundStyle(Theme.onMuted)
                                             }
                                         }
                                         Spacer()
@@ -401,7 +401,7 @@ struct UserPermissionsView: View {
                 List {
                     Section {
                         Text("\(overrides.count) " + L("تجاوز") + " · \(effectiveCount) " + L("صلاحية فعّالة"))
-                            .font(.caption).foregroundStyle(Theme.onMuted)
+                            .font(.wx(12)).foregroundStyle(Theme.onMuted)
                     }
                     ForEach(groups, id: \.0) { group, items in
                         Section(group) {
@@ -430,9 +430,9 @@ struct UserPermissionsView: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Circle().fill(effective(p.id) ? Theme.success : Theme.onFaint).frame(width: 7, height: 7)
-                Text(p.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.onSurface)
+                Text(p.title).font(.wx(14, .medium)).foregroundStyle(Theme.onSurface)
                 if p.isCritical == true {
-                    Text(L("حسّاس")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.danger)
+                    Text(L("حسّاس")).font(.wx(9, .bold)).foregroundStyle(Theme.danger)
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(Theme.dangerBg, in: Capsule())
                 }
@@ -445,7 +445,7 @@ struct UserPermissionsView: View {
             }
             .pickerStyle(.segmented)
             Text(rolePerms.contains(p.id) ? L("الدور: يمنحها") : L("الدور: لا يمنحها"))
-                .font(.caption2).foregroundStyle(Theme.onFaint)
+                .font(.wx(11)).foregroundStyle(Theme.onFaint)
         }
         .padding(.vertical, 2)
     }
@@ -508,16 +508,16 @@ struct TemplatesView: View {
             } else {
                 VStack(alignment: .leading, spacing: 14) {
                     if let banner {
-                        Text(banner).font(.caption).foregroundStyle(Theme.success)
+                        Text(banner).font(.wx(12)).foregroundStyle(Theme.success)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10).background(Theme.surface2, in: RoundedRectangle(cornerRadius: 12))
                     }
                     if !ready.isEmpty {
-                        Text(L("الردود الجاهزة")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+                        Text(L("الردود الجاهزة")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
                         ForEach(ready) { r in readyCard(r) }
                     }
                     if !templates.isEmpty {
-                        Text(L("قوالب Meta")).font(.callout.bold()).foregroundStyle(Theme.onMuted)
+                        Text(L("قوالب Meta")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
                         ForEach(templates, id: \.stableId) { t in templateCard(t) }
                     }
                     if ready.isEmpty && templates.isEmpty {
@@ -581,22 +581,22 @@ struct TemplatesView: View {
     private func templateCard(_ t: Template) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(t.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                Text(t.name).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 let tag = t.status ?? t.language ?? ""
                 if !tag.isEmpty {
-                    Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text(tag).font(.wx(11, .semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 8).padding(.vertical, 2)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
             }
             if let body = t.bodyText, !body.isEmpty {
-                Text(body).font(.footnote).foregroundStyle(Theme.onMuted).lineLimit(3)
+                Text(body).font(.wx(13)).foregroundStyle(Theme.onMuted).lineLimit(3)
             }
             HStack {
                 Spacer()
                 Button { Task { await deleteTemplate(t) } } label: {
-                    Image(icon: .trash).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.danger)
+                    Image(icon: .trash).font(.wx(14, .semibold)).foregroundStyle(Theme.danger)
                         .frame(width: 32, height: 32)
                         .background(Theme.dangerBg, in: RoundedRectangle(cornerRadius: 9))
                 }
@@ -610,23 +610,23 @@ struct TemplatesView: View {
     private func readyCard(_ r: ReadyMessage) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(r.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                Text(r.name).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 let tag = r.isActive ? L("مُفعّل") : L("متوقّف")
-                Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Theme.primary)
+                Text(tag).font(.wx(11, .semibold)).foregroundStyle(Theme.primary)
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Theme.primaryContainer, in: Capsule())
             }
-            if !r.body.isEmpty { Text(r.body).font(.footnote).foregroundStyle(Theme.onMuted).lineLimit(3) }
+            if !r.body.isEmpty { Text(r.body).font(.wx(13)).foregroundStyle(Theme.onMuted).lineLimit(3) }
             HStack(spacing: 8) {
                 Spacer()
                 Button { editing = r; editorOpen = true } label: {
-                    Image(icon: .edit).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                    Image(icon: .edit).font(.wx(14, .semibold)).foregroundStyle(Theme.onSurface)
                         .frame(width: 32, height: 32)
                         .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 9))
                 }
                 Button { Task { await delete(r) } } label: {
-                    Image(icon: .trash).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.danger)
+                    Image(icon: .trash).font(.wx(14, .semibold)).foregroundStyle(Theme.danger)
                         .frame(width: 32, height: 32)
                         .background(Theme.dangerBg, in: RoundedRectangle(cornerRadius: 9))
                 }
@@ -640,15 +640,15 @@ struct TemplatesView: View {
     private func card(title: String, body: String, tag: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                Text(title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 if !tag.isEmpty {
-                    Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Theme.primary)
+                    Text(tag).font(.wx(11, .semibold)).foregroundStyle(Theme.primary)
                         .padding(.horizontal, 8).padding(.vertical, 2)
                         .background(Theme.primaryContainer, in: Capsule())
                 }
             }
-            if !body.isEmpty { Text(body).font(.footnote).foregroundStyle(Theme.onMuted).lineLimit(3) }
+            if !body.isEmpty { Text(body).font(.wx(13)).foregroundStyle(Theme.onMuted).lineLimit(3) }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -835,14 +835,14 @@ struct WhatsAppAccountsView: View {
                 .background(AccountColor.color(a.id), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(a.displayName).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.onSurface)
+                    Text(a.displayName).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                     if a.isDefault {
-                        Text(L("افتراضي")).font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.primary)
+                        Text(L("افتراضي")).font(.wx(9, .bold)).foregroundStyle(Theme.primary)
                             .padding(.horizontal, 6).padding(.vertical, 1)
                             .background(Theme.primaryContainer, in: Capsule())
                     }
                 }
-                if let phone = a.phoneNumber { Text(phone).font(.caption).foregroundStyle(Theme.onMuted) }
+                if let phone = a.phoneNumber { Text(phone).font(.wx(12)).foregroundStyle(Theme.onMuted) }
             }
             Spacer()
             statusChip(a)
@@ -865,7 +865,7 @@ struct WhatsAppAccountsView: View {
         let (label, color) = ok ? (L("متصل"), Theme.success) : (L("متوقف"), Theme.warning)
         return HStack(spacing: 5) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).font(.caption2.weight(.semibold))
+            Text(label).font(.wx(11, .semibold))
         }
         .foregroundStyle(color)
         .padding(.horizontal, 9).padding(.vertical, 3)
@@ -979,7 +979,7 @@ struct EditWhatsappAccountSheet: View {
                     TextField(L("رمز التحقق (٦ أرقام)"), text: $pin).keyboardType(.numberPad)
                     Button(L("تسجيل الرقم")) { Task { await register() } }
                         .disabled(regBusy || pin.count != 6)
-                    if let regInfo { Text(regInfo).font(.caption).foregroundStyle(Theme.success) }
+                    if let regInfo { Text(regInfo).font(.wx(12)).foregroundStyle(Theme.success) }
                 } header: { Text(L("تسجيل الرقم لدى Meta")) }
                 if let error { Text(error).foregroundStyle(Theme.danger) }
             }
@@ -1078,9 +1078,9 @@ struct VoiceSettingsView: View {
 
     private func infoRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).font(.subheadline).foregroundStyle(Theme.onSurface)
+            Text(label).font(.wx(15)).foregroundStyle(Theme.onSurface)
             Spacer()
-            Text(value.isEmpty ? "—" : value).font(.caption).foregroundStyle(Theme.onMuted)
+            Text(value.isEmpty ? "—" : value).font(.wx(12)).foregroundStyle(Theme.onMuted)
                 .monospaced().lineLimit(1)
         }
         .padding(.horizontal, 16).padding(.vertical, 13)

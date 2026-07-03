@@ -1,9 +1,10 @@
 import SwiftUI
 import UIKit
 
-// Native Apple palette — every token maps to a UIKit system color, so the
-// whole app looks and adapts (light/dark, increased contrast) exactly like
-// Apple's own apps. The bubble pair mirrors Messages (blue out / gray in).
+// WEB-PARITY palette — every token is converted from the web client's CSS
+// variables (client/src/index.css + whatsx-redesign.css), light AND dark,
+// so the app matches the web's Luxe Amber theme and its dark mode exactly.
+// Chat bubbles mirror the web's WhatsApp-style pair (pale green / deep teal).
 
 extension Color {
     /// A color that resolves to `light` in light mode and `dark` in dark mode.
@@ -26,46 +27,52 @@ extension UIColor {
 }
 
 enum Theme {
-    // Core surfaces / text — the standard iOS grouped-list stack.
-    static let background = Color(uiColor: .systemGroupedBackground)          // screen canvas
-    static let surface = Color(uiColor: .secondarySystemGroupedBackground)    // cards
-    static let surface1 = Color(uiColor: .secondarySystemBackground)
-    static let surface2 = Color(uiColor: .tertiarySystemFill)                 // chips / tiles
-    static let surface3 = Color(uiColor: .secondarySystemFill)
-    static let onSurface = Color(uiColor: .label)
-    static let onMuted = Color(uiColor: .secondaryLabel)
-    static let onFaint = Color(uiColor: .tertiaryLabel)
-    static let outline = Color(uiColor: .separator)
+    // Core surfaces / text — web --background/--card/--sidebar/--secondary.
+    static let background = Color(light: 0xF8F6F2, dark: 0x1C1A17)   // --background
+    static let surface = Color(light: 0xFFFFFF, dark: 0x24211E)      // --card
+    static let surface1 = Color(light: 0xF2EEE9, dark: 0x221F1C)     // --sidebar
+    static let surface2 = Color(light: 0xEAE6E1, dark: 0x37332F)     // --secondary
+    static let surface3 = Color(light: 0xD9D3C9, dark: 0x48423D)     // --input
+    static let onSurface = Color(light: 0x2A241D, dark: 0xEFECE6)    // --foreground
+    static let onMuted = Color(light: 0x696159, dark: 0xADA69F)      // --muted-foreground
+    static let onFaint = Color(light: 0x938A80, dark: 0x7C756E)
+    static let outline = Color(light: 0xE2DDD5, dark: 0x3D3834)      // --border
 
-    // Accent — Apple's system blue, like Messages/FaceTime/Phone.
-    static let primary = Color(uiColor: .systemBlue)
-    static let onPrimary = Color.white
-    static let primaryContainer = Color(uiColor: .systemBlue).opacity(0.22)
-    static let primarySoft = Color(uiColor: .systemBlue).opacity(0.12)
+    // Accent — the web's saffron amber --primary.
+    static let primary = Color(light: 0xD98E26, dark: 0xE4A944)
+    static let onPrimary = Color(light: 0x261F17, dark: 0x201A13)    // --primary-foreground
+    static let primaryContainer = Color(light: 0xF2D7B0, dark: 0x6F522A)
+    static let primarySoft = Color(light: 0xFAEDDB, dark: 0x493B27)  // --accent
 
-    // Chat bubbles — Messages-style: blue outgoing, gray incoming.
-    static let bubbleIn = Color(uiColor: .secondarySystemBackground)
-    static let bubbleInFg = Color(uiColor: .label)
-    static let bubbleOut = Color(uiColor: .systemBlue)
-    static let bubbleOutFg = Color.white
+    // Chat bubbles — web --wx-message-in/out (WhatsApp-style).
+    static let bubbleIn = Color(light: 0xFFFFFF, dark: 0x172024)
+    static let bubbleInFg = Color(light: 0x111B21, dark: 0xF4F7F6)
+    static let bubbleOut = Color(light: 0xD9FDD3, dark: 0x005C4B)
+    static let bubbleOutFg = Color(light: 0x0B332B, dark: 0xFFFFFF)
 
-    // Semantic — the system palette.
-    static let success = Color(uiColor: .systemGreen)
-    static let info = Color(uiColor: .systemBlue)
-    static let warning = Color(uiColor: .systemOrange)
-    static let danger = Color(uiColor: .systemRed)
-    static let dangerBg = Color(uiColor: .systemRed).opacity(0.12)
+    // Semantic — web statuses (emerald / slate / amber / --destructive).
+    static let success = Color(light: 0x4D8970, dark: 0x6BB395)
+    static let info = Color(light: 0x63789C, dark: 0x97A7C4)
+    static let warning = Color(light: 0xC17915, dark: 0xE4A944)
+    static let danger = Color(light: 0xD44A35, dark: 0xD46554)
+    static let dangerBg = Color(light: 0xF9E9E7, dark: 0x391D18)
 
-    // Login hero gradient — system blues.
+    // Login hero gradient — the web's amber hero.
     static let heroGradient = LinearGradient(
-        colors: [Color(uiColor: .systemBlue), Color(uiColor: .systemIndigo)],
+        colors: [Color(light: 0x8E5E11, dark: 0x8E5E11),
+                 Color(light: 0xC68A22, dark: 0xC68A22),
+                 Color(light: 0xE0A52E, dark: 0xE0A52E)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 
-    // Distinct donut/chart segment palette (system colors).
+    // Charts — web --chart-1…5 (light/dark aware) + a teal companion.
     static let chartPalette: [Color] = [
-        Color(uiColor: .systemTeal), Color(uiColor: .systemBlue), Color(uiColor: .systemOrange),
-        Color(uiColor: .systemPurple), Color(uiColor: .systemGreen), Color(uiColor: .systemYellow),
+        Color(light: 0xD98E26, dark: 0xECB351),
+        Color(light: 0x63789C, dark: 0x97A7C4),
+        Color(light: 0x4D8970, dark: 0x6BB395),
+        Color(light: 0xC67553, dark: 0xD38969),
+        Color(light: 0x89639C, dark: 0xAC88BF),
+        Color(light: 0x3F7E8C, dark: 0x6FA9B8),
     ]
 }
 
@@ -76,16 +83,15 @@ extension Color {
     }
 }
 
-// Stable per-account color from a seed string — system palette swatches.
+// Stable per-account color from a seed string — the web chart swatches.
 enum AccountColor {
-    private static let swatches: [UIColor] = [
-        .systemTeal, .systemBlue, .systemOrange, .systemPurple,
-        .systemGreen, .systemYellow, .systemPink, .systemIndigo,
+    private static let swatches: [UInt] = [
+        0xD98E26, 0x63789C, 0x4D8970, 0xC67553, 0x89639C, 0x3F7E8C, 0xB0517A, 0x5C9A3A,
     ]
     static func color(_ seed: String) -> Color {
         var hash = 0
         for scalar in seed.unicodeScalars { hash = Int(scalar.value) &+ (hash &* 31) }
         let idx = abs(hash) % swatches.count
-        return Color(uiColor: swatches[idx])
+        return Color(rgb: swatches[idx])
     }
 }

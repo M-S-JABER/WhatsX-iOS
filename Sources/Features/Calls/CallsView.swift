@@ -65,20 +65,20 @@ struct CallsView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Text(L("المكالمات")).font(.title2.bold()).foregroundStyle(Theme.onSurface)
+            Text(L("المكالمات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
             Spacer()
             Button { filterOpen = true } label: {
                 ZStack(alignment: .topTrailing) {
-                    Image(icon: .filter).font(.system(size: 20)).foregroundStyle(Theme.onMuted)
+                    Image(icon: .filter).font(.wx(20)).foregroundStyle(Theme.onMuted)
                     if vm.advancedCount > 0 {
-                        Text("\(vm.advancedCount)").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.onPrimary)
+                        Text("\(vm.advancedCount)").font(.wx(9, .bold)).foregroundStyle(Theme.onPrimary)
                             .frame(width: 14, height: 14).background(Theme.primary, in: Circle())
                             .offset(x: 6, y: -6)
                     }
                 }
             }
             Button { withAnimation { showSearch.toggle() }; if !showSearch { vm.search = ""; vm.reload() } } label: {
-                Image(icon: showSearch ? .close : .search).font(.system(size: 20)).foregroundStyle(Theme.onMuted)
+                Image(icon: showSearch ? .close : .search).font(.wx(20)).foregroundStyle(Theme.onMuted)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
@@ -103,7 +103,7 @@ struct CallsView: View {
                 ForEach(chips, id: \.0) { key, label in
                     let active = vm.filter == key
                     Button { vm.apply(key) } label: {
-                        Text(label).font(.subheadline.weight(.semibold))
+                        Text(label).font(.wx(15, .semibold))
                             .foregroundStyle(active ? Theme.background : Theme.onMuted)
                             .padding(.horizontal, 14).padding(.vertical, 7)
                             .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
@@ -122,7 +122,7 @@ struct CallsView: View {
             Spacer()
             VStack(spacing: 12) {
                 Image(systemName: "phone.and.waveform")
-                    .font(.system(size: 42)).symbolRenderingMode(.hierarchical)
+                    .font(.wx(42)).symbolRenderingMode(.hierarchical)
                     .foregroundStyle(Theme.onFaint)
                 Text(L("لا مكالمات بعد")).foregroundStyle(Theme.onMuted)
             }
@@ -150,27 +150,27 @@ struct CallRow: View {
                 Avatar(name: call.title, size: 48)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
-                        Text(call.title).font(.system(size: 15, weight: .semibold))
+                        Text(call.title).font(.wx(15, .semibold))
                             .foregroundStyle(call.isMissed ? Theme.danger : Theme.onSurface).lineLimit(1)
                         Spacer()
-                        Text(shortTime(call.startedAt)).font(.caption2).foregroundStyle(Theme.onMuted)
+                        Text(shortTime(call.startedAt)).font(.wx(11)).foregroundStyle(Theme.onMuted)
                     }
                     HStack(spacing: 6) {
-                        Image(icon: dirIcon).font(.system(size: 13)).foregroundStyle(dirColor)
-                        Text(statusText(call)).font(.system(size: 13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
+                        Image(icon: dirIcon).font(.wx(13)).foregroundStyle(dirColor)
+                        Text(statusText(call)).font(.wx(13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
                         if call.recordingPath != nil {
-                            Image(icon: .history).font(.system(size: 11)).foregroundStyle(Theme.primary)
+                            Image(icon: .history).font(.wx(11)).foregroundStyle(Theme.primary)
                         }
                     }
                 }
                 if call.recordingPath != nil {
                     Button { withAnimation { showPlayer.toggle() } } label: {
-                        Image(icon: showPlayer ? .chevUp : .play).font(.system(size: 14)).foregroundStyle(Theme.primary)
+                        Image(icon: showPlayer ? .chevUp : .play).font(.wx(14)).foregroundStyle(Theme.primary)
                             .frame(width: 34, height: 34).background(Theme.primaryContainer, in: Circle())
                     }.buttonStyle(.plain)
                 }
                 if call.phone != nil {
-                    Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary)
+                    Image(icon: .phoneCall).font(.wx(20)).foregroundStyle(Theme.primary)
                 }
             }
             if showPlayer, let path = call.recordingPath, let url = Api.mediaURL(path) {

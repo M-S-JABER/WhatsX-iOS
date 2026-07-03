@@ -18,7 +18,7 @@ struct AudioMessage: View {
         HStack(spacing: 10) {
             Button(action: toggle) {
                 Image(systemName: playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 16))
+                    .font(.wx(16))
                     .foregroundStyle(Theme.onPrimary)
                     .frame(width: 36, height: 36)
                     .background(Theme.primary, in: Circle())
