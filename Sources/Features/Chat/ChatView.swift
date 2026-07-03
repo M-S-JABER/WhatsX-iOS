@@ -208,6 +208,8 @@ struct ChatView: View {
     @State private var showChatSearch = false
     @State private var chatQuery = ""
     @State private var matchIndex = 0
+    @State private var showCallMenu = false
+    @State private var callNotice: String?
     @State private var photoItem: PhotosPickerItem?
 
     init(conversation: Conversation) {
@@ -245,12 +247,37 @@ struct ChatView: View {
         .background(chatBackground)
         .navigationBarHidden(true)
         .task { await vm.load() }
+        .onAppear { Notifier.shared.activeConversationId = vm.conversation.id }
+        .onDisappear {
+            if Notifier.shared.activeConversationId == vm.conversation.id {
+                Notifier.shared.activeConversationId = nil
+            }
+        }
         .onReceive(Realtime.shared.events) { event in
             guard RealtimeEvent.chatEvents.contains(event.name),
                   event.conversationId == nil || event.conversationId == vm.conversation.id
             else { return }
             Task { await vm.load() }
         }
+        .confirmationDialog("الاتصال", isPresented: $showCallMenu, titleVisibility: .visible) {
+            Button("طلب إذن الاتصال عبر واتساب") {
+                Task {
+                    let digits = (vm.conversation.phone ?? "").filter { $0.isNumber }
+                    do {
+                        try await Api.shared.requestCallPermission(to: digits, instanceId: vm.conversation.instanceId)
+                        callNotice = "أُرسل طلب إذن الاتصال إلى العميل ✓"
+                    } catch {
+                        callNotice = (error as? ApiError)?.message ?? error.localizedDescription
+                    }
+                }
+            }
+            Button("إلغاء", role: .cancel) {}
+        } message: {
+            Text("المكالمات الصوتية الحية متاحة من نسخة الويب؛ من هنا يمكن إرسال طلب إذن الاتصال للعميل.")
+        }
+        .alert("الاتصال", isPresented: Binding(get: { callNotice != nil }, set: { if !$0 { callNotice = nil } })) {
+            Button("حسنًا", role: .cancel) {}
+        } message: { Text(callNotice ?? "") }
         .confirmationDialog("إرفاق", isPresented: $showAttachMenu, titleVisibility: .visible) {
             Button("صورة") { showPhotoPicker = true }
             Button("مستند") { showDocImporter = true }
@@ -306,7 +333,11 @@ struct ChatView: View {
                     .foregroundStyle(showChatSearch ? Theme.primary : Theme.onMuted)
             }
             .buttonStyle(.plain)
-            Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary).padding(.leading, 8)
+            Button { showCallMenu = true } label: {
+                Image(icon: .phoneCall).font(.system(size: 20)).foregroundStyle(Theme.primary).padding(.leading, 8)
+            }
+            .buttonStyle(.plain)
+            .disabled(vm.conversation.phone?.isEmpty != false)
             Button { showInfo = true } label: {
                 Image(icon: .more).font(.system(size: 20)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
             }
@@ -530,6 +561,9 @@ struct MessageBubble: View {
                 .foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.6))
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
+                if failed, let reason = msg.failureReason {
+                    Text(reason).font(.system(size: 11)).foregroundStyle(Theme.danger).lineLimit(3)
+                }
                 if failed, let onRetry {
                     Button(action: onRetry) {
                         HStack(spacing: 4) {

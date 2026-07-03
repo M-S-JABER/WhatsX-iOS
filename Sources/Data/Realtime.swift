@@ -15,10 +15,18 @@ import Combine
 // `data` shapes vary per event, so only the routing fields are decoded here;
 // consumers treat events as invalidation signals and refetch via REST.
 
-/// One pushed server event, reduced to what consumers route on.
+/// One pushed server event, reduced to what consumers route on. Message
+/// events fill body/senderLabel; voice-call events fill callId/phone/
+/// displayName/status. Everything is optional — shapes vary per event.
 struct RealtimeEvent {
     let name: String
     let conversationId: String?
+    var body: String? = nil
+    var senderLabel: String? = nil
+    var callId: String? = nil
+    var phone: String? = nil
+    var displayName: String? = nil
+    var status: String? = nil
 }
 
 @MainActor
@@ -45,8 +53,31 @@ final class Realtime: ObservableObject {
     private struct Envelope: Decodable {
         let event: String
         let data: Routing?
+        // Lenient per-field decoding — payload shapes vary per event and an
+        // unexpected type in one field must never drop the whole event.
         struct Routing: Decodable {
-            let conversationId: String?
+            var conversationId: String? = nil
+            var body: String? = nil
+            var senderLabel: String? = nil
+            var callId: String? = nil
+            var phone: String? = nil
+            var displayName: String? = nil
+            var status: String? = nil
+
+            private enum CodingKeys: String, CodingKey {
+                case conversationId, body, senderLabel, callId, phone, displayName, status
+            }
+
+            init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                conversationId = (try? c.decodeIfPresent(String.self, forKey: .conversationId)) ?? nil
+                body = (try? c.decodeIfPresent(String.self, forKey: .body)) ?? nil
+                senderLabel = (try? c.decodeIfPresent(String.self, forKey: .senderLabel)) ?? nil
+                callId = (try? c.decodeIfPresent(String.self, forKey: .callId)) ?? nil
+                phone = (try? c.decodeIfPresent(String.self, forKey: .phone)) ?? nil
+                displayName = (try? c.decodeIfPresent(String.self, forKey: .displayName)) ?? nil
+                status = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? nil
+            }
         }
     }
 
@@ -121,7 +152,16 @@ final class Realtime: ObservableObject {
         }
         guard let payload,
               let envelope = try? JSONDecoder().decode(Envelope.self, from: payload) else { return }
-        events.send(RealtimeEvent(name: envelope.event, conversationId: envelope.data?.conversationId))
+        events.send(RealtimeEvent(
+            name: envelope.event,
+            conversationId: envelope.data?.conversationId,
+            body: envelope.data?.body,
+            senderLabel: envelope.data?.senderLabel,
+            callId: envelope.data?.callId,
+            phone: envelope.data?.phone,
+            displayName: envelope.data?.displayName,
+            status: envelope.data?.status
+        ))
     }
 
     private func startPing() {

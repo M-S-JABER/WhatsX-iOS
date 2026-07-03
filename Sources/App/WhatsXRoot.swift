@@ -29,6 +29,7 @@ struct RootView: View {
                 ProgressView().tint(Theme.primary)
             } else if session.isAuthenticated {
                 MainTabView()
+                IncomingCallBanner()
             } else {
                 LoginView()
             }
