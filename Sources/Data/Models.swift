@@ -124,8 +124,17 @@ struct Message: Codable, Identifiable, Equatable {
     var media: MessageMedia? = nil
     var senderLabel: String? = nil
     var replyTo: ReplySummary? = nil
+    var errorCode: String? = nil
+    var errorTitle: String? = nil
+    var errorDetails: String? = nil
 
     var isOutbound: Bool { direction == "outbound" }
+    /// Human-readable reason a send failed, best field first.
+    var failureReason: String? {
+        errorTitle?.isEmpty == false ? errorTitle
+            : (errorDetails?.isEmpty == false ? errorDetails
+                : (errorCode?.isEmpty == false ? errorCode : nil))
+    }
 }
 
 struct MessagesResponse: Codable {
@@ -222,6 +231,16 @@ struct VoiceCall: Codable, Identifiable, Equatable {
 struct VoiceCallsResponse: Codable {
     var total: Int = 0
     var items: [VoiceCall] = []
+}
+
+struct RejectCallRequest: Codable {
+    var callId: String
+    var action: String
+}
+
+struct CallPermissionRequest: Codable {
+    var to: String
+    var instanceId: String?
 }
 
 // GET /api/voice/calls/filters -> { accounts:[{id,name,displayPhoneNumber}], agents:[username] }

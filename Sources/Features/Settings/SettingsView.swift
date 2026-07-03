@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var passwordOpen = false
     @State private var photoItem: PhotosPickerItem?
     @State private var uploading = false
+    @AppStorage(Notifier.messagesEnabledKey) private var notifyMessages = true
 
     var body: some View {
         NavigationStack {
@@ -26,6 +27,18 @@ struct SettingsView: View {
                     group {
                         SettingRow(icon: .palette, title: "السمة", subtitle: "حسب النظام")
                         SettingRow(icon: .lang, title: "اللغة", subtitle: "العربية", trailingChevron: true)
+                    }
+
+                    section("الإشعارات")
+                    group {
+                        HStack {
+                            SettingRow(icon: .bell, title: "تنبيهات الرسائل الجديدة",
+                                       subtitle: "أثناء تشغيل التطبيق (صوت + لافتة)")
+                            Toggle("", isOn: $notifyMessages)
+                                .labelsHidden()
+                                .tint(Theme.primary)
+                                .padding(.trailing, 14)
+                        }
                     }
 
                     section("الإدارة")
@@ -56,7 +69,7 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: "الصوت والمكالمات", subtitle: "إعدادات SIP وWebRTC", trailingChevron: true)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.0.1 · أسوار المدن")
+                        SettingRow(icon: .info, title: "الإصدار", subtitle: "v1.4.0 · أسوار المدن")
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)

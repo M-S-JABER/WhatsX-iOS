@@ -188,6 +188,18 @@ final class Api {
     func voiceCallFilters() async throws -> VoiceCallFilters {
         try await request("api/voice/calls/filters")
     }
+    /// Reject a ringing call — or terminate an active one (action: "terminate").
+    func rejectCall(callId: String, action: String = "reject") async throws {
+        let _: EmptyResponse = try await request(
+            "api/voice/whatsapp/reject", method: "POST",
+            body: RejectCallRequest(callId: callId, action: action))
+    }
+    /// Ask the contact (Meta interactive message) to allow business-initiated calls.
+    func requestCallPermission(to: String, instanceId: String?) async throws {
+        let _: EmptyResponse = try await request(
+            "api/voice/whatsapp/call-permission", method: "POST",
+            body: CallPermissionRequest(to: to, instanceId: instanceId))
+    }
 
     // MARK: - Statistics
     func statistics(range: String? = nil, instanceId: String? = nil) async throws -> StatsResponse {

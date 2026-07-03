@@ -89,12 +89,20 @@ project.yml  XcodeGen spec (Mac build)
 - **رسائل الموقع الجغرافي**: خريطة مصغّرة (MapKit) بالاسم/العنوان، تفتح في الخرائط.
 - **فواصل التواريخ** (اليوم/أمس/التاريخ) داخل خط زمن المحادثة.
 - **شارة غير المقروء** على تبويب المحادثات، تتحدث لحظيًا مع الأحداث الفورية.
+- **إشعارات محلية** (صوت + لافتة نظام) للرسائل والمكالمات الواردة أثناء تشغيل التطبيق، مع مفتاح تحكم في الإعدادات — البديل الممكن داخل Playgrounds عن APNs.
+- **لافتة المكالمة الواردة** أعلى الشاشة فور الرنين، مع **رفض المكالمة** فعليًا عبر Meta، وتختفي تلقائيًا إذا ردّ موظف آخر.
+- **طلب إذن الاتصال** من شاشة المحادثة (زر الهاتف) — رسالة Meta تفاعلية للعميل.
+- **سبب فشل الإرسال** يظهر تحت الرسالة الفاشلة (errorTitle/details من الخادم).
 
 ## لم يُنقل بعد — Not yet ported
-المكالمات الصوتية الحيّة (WebRTC)، إشعارات APNs في الخلفية، ومركز الإشعارات —
-جميعها تتطلّب مكتبات/صلاحيات native ويُفضَّل إنجازها على الماك.
-Live WebRTC calling, background APNs push, and a notification center — all need
-native libs/entitlements, best done on the Mac.
+**صوت المكالمات الحيّة (WebRTC)** و**إشعارات الخلفية (APNs/FCM)** فقط — يتطلبان
+مكتبات ثنائية وصلاحيات native لا تتوفر لتطبيقات Swift Playgrounds، ويُنجزان على الماك.
+(المتوفر بدلًا عنهما داخل الحزمة: لافتة المكالمة الواردة مع الرفض وطلب إذن الاتصال،
+وإشعارات محلية أثناء عمل التطبيق.)
+Only **live call audio (WebRTC)** and **background push (APNs/FCM)** remain — both
+need binary libs/entitlements unavailable to Swift Playgrounds apps (in-package
+stand-ins: the incoming-call banner with reject + call-permission request, and
+local notifications while the app runs).
 
 ## ملاحظات — Notes
 - **Liquid Glass**: الحزمة تشترط **iOS 16** فقط كي تُحمَّل في Swift Playgrounds؛ على **iOS 26** تُعرض البطاقات والشرائح وشريط التبويبات بزجاج Liquid Glass الأصلي تلقائيًّا، وعلى الأنظمة الأقدم تعود لأسطح Luxe الكلاسيكية (انظر `Sources/Design/Glass.swift`).

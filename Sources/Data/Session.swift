@@ -16,7 +16,7 @@ final class Session: ObservableObject {
     func bootstrap() async {
         do { user = try await Api.shared.me() } catch { user = nil }
         isBootstrapping = false
-        if isAuthenticated { Realtime.shared.connect() }
+        if isAuthenticated { startLiveServices() }
     }
 
     func login(username: String, password: String) async {
@@ -24,7 +24,7 @@ final class Session: ObservableObject {
         loginError = nil
         do {
             user = try await Api.shared.login(username: username, password: password)
-            Realtime.shared.connect()
+            startLiveServices()
         } catch {
             loginError = (error as? ApiError)?.message ?? error.localizedDescription
         }
@@ -35,5 +35,12 @@ final class Session: ObservableObject {
         Realtime.shared.disconnect()
         try? await Api.shared.logout()
         user = nil
+    }
+
+    /// Realtime socket + the consumers that must outlive any single screen.
+    private func startLiveServices() {
+        Realtime.shared.connect()
+        CallCenter.shared.start()
+        Notifier.shared.start()
     }
 }
