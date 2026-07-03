@@ -58,16 +58,26 @@ final class TabAvatar: ObservableObject {
 // with a regular search tab is used.
 struct MainTabView: View {
     @State private var tab: MainTab = .chats
+    @State private var lastChatsTap: Date? = nil
     @StateObject private var unread = UnreadCenter.shared
     @StateObject private var avatar = TabAvatar.shared
 
-    /// Re-selecting the chats tab toggles the inbox's archive mode.
+    /// DOUBLE-press on the chats tab toggles the inbox's archive mode:
+    /// two taps within the window count; a single (re)tap does nothing.
     private var tabSelection: Binding<MainTab> {
         Binding(
             get: { tab },
             set: { newValue in
-                if newValue == .chats && tab == .chats {
-                    InboxBus.shared.toggleArchive.send()
+                if newValue == .chats {
+                    let now = Date()
+                    if tab == .chats, let last = lastChatsTap, now.timeIntervalSince(last) < 0.45 {
+                        InboxBus.shared.toggleArchive.send()
+                        lastChatsTap = nil
+                    } else {
+                        lastChatsTap = now
+                    }
+                } else {
+                    lastChatsTap = nil
                 }
                 tab = newValue
             }
