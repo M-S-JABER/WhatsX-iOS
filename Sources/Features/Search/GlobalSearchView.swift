@@ -9,9 +9,12 @@ struct GlobalSearchView: View {
     @State private var all: [Conversation] = []
     @State private var loading = false
 
+    // The full conversations list (active + archived) when the query is
+    // empty — pressing the search tab keeps you "on the same list" while the
+    // bottom bar morphs into the search field; typing filters it live.
     private var results: [Conversation] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return [] }
+        guard !q.isEmpty else { return all }
         return all.filter {
             $0.title.localizedCaseInsensitiveContains(q)
                 || ($0.phone ?? "").localizedCaseInsensitiveContains(q)
@@ -25,8 +28,6 @@ struct GlobalSearchView: View {
                 if loading && all.isEmpty {
                     ProgressView().tint(Theme.primary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                    hint(icon: "magnifyingglass", text: "ابحث في كل المحادثات\nبالاسم أو الرقم أو نص آخر رسالة")
                 } else if results.isEmpty {
                     hint(icon: "questionmark.bubble", text: "لا نتائج مطابقة")
                 } else {
@@ -45,7 +46,7 @@ struct GlobalSearchView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("بحث")
+            .navigationTitle("المحادثات")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Conversation.self) { ChatView(conversation: $0) }
             .searchable(text: $query, prompt: "ابحث بالاسم أو الرقم أو الرسالة")
