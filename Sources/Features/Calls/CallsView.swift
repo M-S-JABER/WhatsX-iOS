@@ -134,7 +134,6 @@ struct CallsView: View {
                     .listRowBackground(Theme.background)
             }
             .listStyle(.plain).scrollContentBackground(.hidden)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 84) }
         }
     }
 }

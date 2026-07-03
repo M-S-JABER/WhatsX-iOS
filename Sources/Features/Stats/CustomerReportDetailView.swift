@@ -32,7 +32,7 @@ struct CustomerReportDetailView: View {
                     Text("لا بيانات").foregroundStyle(Theme.onMuted).padding(.top, 40)
                 }
             }
-            .padding(16).padding(.bottom, 84)
+            .padding(16).padding(.bottom, 24)
         }
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(title)
