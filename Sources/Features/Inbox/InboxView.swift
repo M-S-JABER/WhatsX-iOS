@@ -180,12 +180,15 @@ struct InboxView: View {
 
     /// Floating archive toggle (visual top-left): opens the archive; while
     /// inside it, turns amber and flips back to the active inbox.
+    /// One size for all three floating circles (archive · accounts · compose).
+    static let floatingButtonSide: CGFloat = 52
+
     private var archiveButton: some View {
         Button { withAnimation { vm.toggleArchived() } } label: {
             Image(systemName: vm.showArchived ? "archivebox.fill" : "archivebox")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(vm.showArchived ? Theme.onPrimary : Theme.primary)
-                .frame(width: 40, height: 40)
+                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
                 .background(vm.showArchived ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(.clear), in: Circle())
         }
         .buttonStyle(.plain)
@@ -198,7 +201,7 @@ struct InboxView: View {
             Image(systemName: "square.and.pencil")
                 .font(.system(size: 21, weight: .medium))
                 .foregroundStyle(Theme.primary)
-                .frame(width: 54, height: 54)
+                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
         }
         .buttonStyle(.plain)
         .glassCircle()
@@ -237,19 +240,19 @@ struct InboxView: View {
         } label: {
             ZStack {
                 Image(systemName: "circle.dashed")
-                    .font(.system(size: 21, weight: .regular))
+                    .font(.system(size: 25, weight: .regular))
                 Image(systemName: "plus")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
             }
             .foregroundStyle(Theme.primary)
-            .frame(width: 40, height: 40)
+            .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
             .overlay(alignment: .topTrailing) {
                 if !vm.selectedInstanceIds.isEmpty {
                     Text("\(vm.selectedInstanceIds.count)")
                         .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.onPrimary)
-                        .frame(width: 15, height: 15)
+                        .frame(width: 16, height: 16)
                         .background(Theme.primary, in: Circle())
-                        .offset(x: 3, y: -3)
+                        .offset(x: 2, y: -2)
                 }
             }
         }
