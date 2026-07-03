@@ -1,7 +1,16 @@
 import SwiftUI
 import UIKit
+import Combine
 
 enum MainTab: Hashable { case integrations, chats, settings, search }
+
+/// Tiny event bus between the tab bar and the inbox: re-tapping the chats
+/// tab (a second press while already on it) flips active ⇄ archive.
+@MainActor
+final class InboxBus: ObservableObject {
+    static let shared = InboxBus()
+    let toggleArchive = PassthroughSubject<Void, Never>()
+}
 
 /// Downloads the signed avatar and renders it as a small circular tab icon
 /// (original colors, aspect-filled). Falls back to the gear symbol until an
@@ -52,6 +61,19 @@ struct MainTabView: View {
     @StateObject private var unread = UnreadCenter.shared
     @StateObject private var avatar = TabAvatar.shared
 
+    /// Re-selecting the chats tab toggles the inbox's archive mode.
+    private var tabSelection: Binding<MainTab> {
+        Binding(
+            get: { tab },
+            set: { newValue in
+                if newValue == .chats && tab == .chats {
+                    InboxBus.shared.toggleArchive.send()
+                }
+                tab = newValue
+            }
+        )
+    }
+
     var body: some View {
         Group {
             #if compiler(>=6.2)
@@ -84,7 +106,7 @@ struct MainTabView: View {
     #if compiler(>=6.2)
     @available(iOS 26.0, *)
     private var modernTabs: some View {
-        TabView(selection: $tab) {
+        TabView(selection: tabSelection) {
             Tab("التكاملات", systemImage: "point.3.connected.trianglepath.dotted", value: MainTab.integrations) {
                 IntegrationsView()
             }
@@ -106,7 +128,7 @@ struct MainTabView: View {
     #endif
 
     private var legacyTabs: some View {
-        TabView(selection: $tab) {
+        TabView(selection: tabSelection) {
             IntegrationsView()
                 .tabItem { Label("التكاملات", systemImage: "point.3.connected.trianglepath.dotted") }
                 .tag(MainTab.integrations)
