@@ -114,6 +114,50 @@ struct ReplySummary: Codable, Equatable {
     var createdAt: String? = nil
 }
 
+// Template message snapshot (server: TemplatePreviewSnapshot) — the resolved
+// body and interactive buttons of a template message, for display in-thread.
+struct TemplatePreviewButton: Codable, Equatable {
+    var type: String? = nil            // quick_reply | url | unknown
+    var text: String? = nil
+    var resolvedUrl: String? = nil
+}
+
+struct TemplatePreviewSnapshot: Codable, Equatable {
+    var resolvedBodyText: String? = nil
+    var resolvedButtons: [TemplatePreviewButton]? = nil
+}
+
+// Shared-contact (vCard) payload embedded in the raw WhatsApp message.
+struct RawContactName: Codable, Equatable {
+    var formatted_name: String? = nil
+    var first_name: String? = nil
+    var last_name: String? = nil
+}
+struct RawContactPhone: Codable, Equatable {
+    var phone: String? = nil
+}
+struct RawContact: Codable, Equatable {
+    var name: RawContactName? = nil
+    var phones: [RawContactPhone]? = nil
+}
+/// Lenient slice of the raw webhook payload — only what the UI renders.
+struct RawPayload: Codable, Equatable {
+    var contacts: [RawContact]? = nil
+
+    private enum CodingKeys: String, CodingKey { case contacts }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try? decoder.container(keyedBy: CodingKeys.self)
+        contacts = (try? c?.decodeIfPresent([RawContact].self, forKey: .contacts)) ?? nil
+    }
+}
+
+/// A displayable shared contact extracted from `raw.contacts`.
+struct SharedContact: Equatable {
+    let name: String
+    let phones: [String]
+}
+
 struct Message: Codable, Identifiable, Equatable {
     var id: String = ""
     var conversationId: String? = nil
@@ -127,8 +171,56 @@ struct Message: Codable, Identifiable, Equatable {
     var errorCode: String? = nil
     var errorTitle: String? = nil
     var errorDetails: String? = nil
+    var templateName: String? = nil
+    var templateLanguage: String? = nil
+    var templatePreview: TemplatePreviewSnapshot? = nil
+    var raw: RawPayload? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case id, conversationId, direction, body, status, createdAt, media, senderLabel
+        case replyTo, errorCode, errorTitle, errorDetails
+        case templateName, templateLanguage, templatePreview, raw
+    }
+
+    init() {}
+
+    // Fully lenient decoding — `raw`/`templatePreview` are free-form JSON on
+    // the server; a malformed field must never sink the whole thread.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? nil ?? ""
+        conversationId = (try? c.decodeIfPresent(String.self, forKey: .conversationId)) ?? nil
+        direction = (try? c.decodeIfPresent(String.self, forKey: .direction)) ?? nil
+        body = (try? c.decodeIfPresent(String.self, forKey: .body)) ?? nil
+        status = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? nil
+        createdAt = (try? c.decodeIfPresent(String.self, forKey: .createdAt)) ?? nil
+        media = (try? c.decodeIfPresent(MessageMedia.self, forKey: .media)) ?? nil
+        senderLabel = (try? c.decodeIfPresent(String.self, forKey: .senderLabel)) ?? nil
+        replyTo = (try? c.decodeIfPresent(ReplySummary.self, forKey: .replyTo)) ?? nil
+        errorCode = (try? c.decodeIfPresent(String.self, forKey: .errorCode)) ?? nil
+        errorTitle = (try? c.decodeIfPresent(String.self, forKey: .errorTitle)) ?? nil
+        errorDetails = (try? c.decodeIfPresent(String.self, forKey: .errorDetails)) ?? nil
+        templateName = (try? c.decodeIfPresent(String.self, forKey: .templateName)) ?? nil
+        templateLanguage = (try? c.decodeIfPresent(String.self, forKey: .templateLanguage)) ?? nil
+        templatePreview = (try? c.decodeIfPresent(TemplatePreviewSnapshot.self, forKey: .templatePreview)) ?? nil
+        raw = (try? c.decodeIfPresent(RawPayload.self, forKey: .raw)) ?? nil
+    }
 
     var isOutbound: Bool { direction == "outbound" }
+    var isTemplateMessage: Bool { templatePreview != nil || templateName?.isEmpty == false }
+
+    /// Shared contacts (vCards), extracted like the web MessageBubble does.
+    var sharedContacts: [SharedContact] {
+        (raw?.contacts ?? []).compactMap { contact in
+            let name = contact.name?.formatted_name?.trimmingCharacters(in: .whitespaces)
+                ?? [contact.name?.first_name, contact.name?.last_name]
+                    .compactMap { $0 }.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+            let phones = (contact.phones ?? []).compactMap { $0.phone?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            if name.isEmpty && phones.isEmpty { return nil }
+            return SharedContact(name: name, phones: phones)
+        }
+    }
+
     /// Human-readable reason a send failed, best field first.
     var failureReason: String? {
         errorTitle?.isEmpty == false ? errorTitle
