@@ -143,7 +143,6 @@ struct InboxView: View {
             VStack(spacing: 0) {
                 header
                 segments
-                if vm.instances.count > 1 { accountChips }
                 content
             }
             .background(Theme.background.ignoresSafeArea())
@@ -265,34 +264,6 @@ struct InboxView: View {
         .padding(4)
         .background(Theme.surface2, in: Capsule())
         .padding(.horizontal, 12).padding(.vertical, 6)
-    }
-
-    /// Multi-account filter (web parity: instance filter on Home) — shown only
-    /// when the user can see more than one WhatsApp account.
-    private var accountChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                chip("كل الحسابات", active: vm.selectedInstanceIds.isEmpty) { vm.toggleInstance(nil) }
-                ForEach(vm.instances) { inst in
-                    chip(inst.label, active: vm.selectedInstanceIds.contains(inst.id)) {
-                        vm.toggleInstance(inst.id)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-        }
-        .padding(.bottom, 6)
-    }
-
-    private func chip(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(active ? Theme.onPrimary : Theme.onMuted)
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(active ? Theme.primary : Theme.surface2, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     private var content: some View {
