@@ -3,6 +3,7 @@ import PhotosUI
 import AVFoundation
 import UIKit
 import UniformTypeIdentifiers
+import MapKit
 
 // Records a short voice note to a temp .m4a file (AAC) for upload via /api/upload.
 @MainActor
@@ -74,16 +75,29 @@ final class ChatViewModel: ObservableObject {
     init(conversation: Conversation) { self.conversation = conversation }
 
     /// Messages merged chronologically with the conversation's call events
-    /// (web parity: call bubbles inline in the thread).
+    /// (web parity: call bubbles inline in the thread), with a day separator
+    /// injected wherever the calendar day changes.
     var timeline: [ChatEntry] {
-        guard !calls.isEmpty else { return messages.map { ChatEntry.message($0) } }
         let entries: [(entry: ChatEntry, date: Date, order: Int)] =
             messages.enumerated().map { (i, m) in (ChatEntry.message(m), parseISODate(m.createdAt) ?? .distantPast, i) }
             + calls.enumerated().map { (i, c) in (ChatEntry.call(c), parseISODate(c.startedAt) ?? .distantPast, i) }
-        return entries.sorted { a, b in
+        let sorted = entries.sorted { a, b in
             if a.date != b.date { return a.date < b.date }
             return a.order < b.order
-        }.map { $0.entry }
+        }
+        var out: [ChatEntry] = []
+        var lastDay: String? = nil
+        for item in sorted {
+            if item.date != .distantPast {
+                let day = dayLabel(item.date)
+                if day != lastDay {
+                    out.append(.day(day))
+                    lastDay = day
+                }
+            }
+            out.append(item.entry)
+        }
+        return out
     }
 
     func load() async {
@@ -155,16 +169,29 @@ final class ChatViewModel: ObservableObject {
     }
 }
 
-/// One row of the chat timeline: a message bubble or an inline call event.
+/// One row of the chat timeline: a message bubble, an inline call event,
+/// or a day separator.
 enum ChatEntry: Identifiable, Equatable {
     case message(Message)
     case call(VoiceCall)
+    case day(String)
     var id: String {
         switch self {
         case .message(let m): return "m-\(m.id)"
         case .call(let c): return "c-\(c.id)"
+        case .day(let d): return "d-\(d)"
         }
     }
+}
+
+func dayLabel(_ date: Date) -> String {
+    let cal = Calendar.current
+    if cal.isDateInToday(date) { return "اليوم" }
+    if cal.isDateInYesterday(date) { return "أمس" }
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "ar")
+    f.dateFormat = "d MMMM yyyy"
+    return f.string(from: date)
 }
 
 struct ChatView: View {
@@ -312,6 +339,14 @@ struct ChatView: View {
                             .id(entry.id)
                     case .call(let call):
                         CallEventRow(call: call)
+                            .id(entry.id)
+                    case .day(let label):
+                        Text(label)
+                            .font(.system(size: 11.5, weight: .medium)).foregroundStyle(Theme.onMuted)
+                            .padding(.horizontal, 12).padding(.vertical, 5)
+                            .background(Theme.surface2, in: Capsule())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
                             .id(entry.id)
                     }
                 }
@@ -480,7 +515,9 @@ struct MessageBubble: View {
                 if let media = msg.media, let url = Api.mediaURL(media.url) {
                     mediaView(media, url)
                 }
-                if let body = msg.body, !body.isEmpty {
+                if msg.media == nil, let location = parseSharedLocation(msg.body) {
+                    LocationCard(location: location, fg: fg)
+                } else if let body = msg.body, !body.isEmpty {
                     Text(body).font(.system(size: 14.5)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
                 }
                 HStack(spacing: 3) {
@@ -555,6 +592,88 @@ struct MessageBubble: View {
     }
     private func isAudio(_ m: MessageMedia) -> Bool {
         m.mediaType == "audio" || (m.mimeType?.hasPrefix("audio/") ?? false)
+    }
+}
+
+// MARK: - Shared location (web parity: LocationPreview)
+
+/// A WhatsApp location share, detected in the message body as a
+/// `https://maps.google.com/?q=lat,lng` link with the place name/address on
+/// the preceding lines (same parsing as the web MessageBubble).
+struct SharedLocation: Equatable {
+    let lat: Double
+    let lng: Double
+    let name: String?
+    let address: String?
+    let mapsUrl: URL
+}
+
+func parseSharedLocation(_ body: String?) -> SharedLocation? {
+    guard let body, !body.isEmpty else { return nil }
+    let pattern = #"https?://maps\.google\.com/\?q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)"#
+    guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+          let match = re.firstMatch(in: body, options: [], range: NSRange(body.startIndex..., in: body)),
+          let urlRange = Range(match.range, in: body),
+          let latRange = Range(match.range(at: 1), in: body),
+          let lngRange = Range(match.range(at: 2), in: body),
+          let lat = Double(body[latRange]),
+          let lng = Double(body[lngRange]),
+          let url = URL(string: String(body[urlRange]))
+    else { return nil }
+    let lines = body[body.startIndex..<urlRange.lowerBound]
+        .split(separator: "\n")
+        .map { $0.trimmingCharacters(in: .whitespaces) }
+        .filter { !$0.isEmpty }
+    let address = lines.dropFirst().joined(separator: "، ")
+    return SharedLocation(lat: lat, lng: lng,
+                          name: lines.first,
+                          address: address.isEmpty ? nil : address,
+                          mapsUrl: url)
+}
+
+/// Location bubble content: static map thumbnail + place name/address;
+/// tapping opens the original maps link.
+struct LocationCard: View {
+    let location: SharedLocation
+    let fg: Color
+
+    private struct MapPin: Identifiable {
+        let id = "pin"
+        let coordinate: CLLocationCoordinate2D
+    }
+
+    private var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: location.lat, longitude: location.lng)
+    }
+
+    var body: some View {
+        Link(destination: location.mapsUrl) {
+            VStack(alignment: .leading, spacing: 6) {
+                Map(coordinateRegion: .constant(MKCoordinateRegion(
+                        center: coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))),
+                    interactionModes: [],
+                    annotationItems: [MapPin(coordinate: coordinate)]) { pin in
+                    MapMarker(coordinate: pin.coordinate, tint: .red)
+                }
+                .frame(width: 230, height: 130)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .allowsHitTesting(false)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 5) {
+                        Image(icon: .place).font(.system(size: 12)).foregroundStyle(Theme.primary)
+                        Text(location.name?.isEmpty == false ? location.name! : "موقع")
+                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(fg)
+                            .lineLimit(1)
+                    }
+                    Text(location.address ?? String(format: "%.5f, %.5f", location.lat, location.lng))
+                        .font(.system(size: 11.5)).foregroundStyle(fg.opacity(0.7)).lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

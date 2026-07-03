@@ -65,6 +65,10 @@ final class InboxViewModel: ObservableObject {
             let pins = Set((try? await pinsTask) ?? [])
             // Stamp the pinned state onto each conversation so rows can sort/mark it.
             items = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
+            // Active inbox feeds the tab badge (archived view must not clobber it).
+            if !showArchived {
+                UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
+            }
         } catch {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
         }
