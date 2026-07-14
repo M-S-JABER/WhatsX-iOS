@@ -370,6 +370,7 @@ struct ChatView: View {
     private var topBar: some View {
         HStack(spacing: 6) {
             Button { dismiss() } label: { Image(icon: .back).font(.wx(20)).foregroundStyle(Theme.onMuted) }
+                .accessibilityLabel(L("رجوع"))
             Avatar(name: vm.conversation.title, size: 40)
             VStack(alignment: .leading, spacing: 1) {
                 Text(vm.conversation.title).font(.wx(16, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
@@ -392,15 +393,18 @@ struct ChatView: View {
                     .foregroundStyle(showChatSearch ? Theme.primary : Theme.onMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L("بحث في المحادثة"))
             Button { showCallMenu = true } label: {
                 Image(icon: .phoneCall).font(.wx(20)).foregroundStyle(Theme.primary).padding(.leading, 8)
             }
             .buttonStyle(.plain)
             .disabled(vm.conversation.phone?.isEmpty != false)
+            .accessibilityLabel(L("الاتصال"))
             Button { showInfo = true } label: {
                 Image(icon: .info).font(.wx(19)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L("معلومات المحادثة"))
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Theme.surface)
@@ -536,9 +540,11 @@ struct ChatView: View {
                 Button { showReady = true } label: {
                     Image(icon: .bolt).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
                 }
+                .accessibilityLabel(L("الردود الجاهزة"))
                 Button { showAttachMenu = true } label: {
                     Image(icon: .attach).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
                 }
+                .accessibilityLabel(L("إرفاق"))
             }
             .padding(.horizontal, 6).frame(minHeight: 48)
             .glassCard(24)
@@ -556,6 +562,8 @@ struct ChatView: View {
                     .background(Theme.primary, in: Circle())
             }
             .disabled(vm.sending)
+            .accessibilityLabel(vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? L("تسجيل رسالة صوتية") : L("إرسال"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(Theme.background)
@@ -566,6 +574,7 @@ struct ChatView: View {
             Button { recorder.cancel() } label: {
                 Image(icon: .trash).font(.wx(20)).foregroundStyle(Theme.danger).frame(width: 44, height: 44)
             }
+            .accessibilityLabel(L("إلغاء التسجيل"))
             HStack(spacing: 8) {
                 Circle().fill(Theme.danger).frame(width: 10, height: 10)
                 Text(L("جارٍ التسجيل") + "  \(timeStr(recorder.elapsed))")
@@ -581,6 +590,7 @@ struct ChatView: View {
                 Image(icon: .send).font(.wx(20)).foregroundStyle(Theme.onPrimary)
                     .frame(width: 48, height: 48).background(Theme.primary, in: Circle())
             }
+            .accessibilityLabel(L("إرسال الرسالة الصوتية"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(Theme.background)
@@ -636,8 +646,11 @@ struct MessageBubble: View {
                 HStack(spacing: 3) {
                     Text(clockTime(msg.createdAt)).font(.wx(10.5))
                     if outbound {
-                        Image(icon: failed ? .alert : .checkDouble).font(.wx(11))
-                            .foregroundStyle(failed ? Theme.danger : (outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.6))
+                        // Sent = single tick, delivered = circled, read = filled
+                        // blue — the WhatsApp semantics the flat icon lost.
+                        Image(systemName: statusSymbol).font(.wx(11))
+                            .foregroundStyle(statusColor)
+                            .accessibilityLabel(statusLabel)
                     }
                 }
                 .foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.6))
@@ -664,6 +677,30 @@ struct MessageBubble: View {
             .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
             .frame(maxWidth: 300, alignment: outbound ? .trailing : .leading)
             if !outbound { Spacer(minLength: 40) }
+        }
+    }
+
+    private var statusSymbol: String {
+        if failed { return WIcon.alert.symbol() }
+        switch msg.status {
+        case "read": return "checkmark.circle.fill"
+        case "delivered": return "checkmark.circle"
+        default: return "checkmark"
+        }
+    }
+
+    private var statusColor: Color {
+        if failed { return Theme.danger }
+        if msg.status == "read" { return Theme.info }
+        return fg.opacity(0.6)
+    }
+
+    private var statusLabel: String {
+        if failed { return L("فشل الإرسال") }
+        switch msg.status {
+        case "read": return L("قُرئت")
+        case "delivered": return L("وصلت")
+        default: return L("أُرسلت")
         }
     }
 

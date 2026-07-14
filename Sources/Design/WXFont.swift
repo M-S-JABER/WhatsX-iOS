@@ -46,10 +46,26 @@ enum WXFont {
 }
 
 extension Font {
-    /// The app typeface at a given size/weight. `.custom` falls back to the
-    /// system font automatically when the face is unavailable.
+    /// Nearest system text style for a design size — anchors custom fonts to
+    /// Dynamic Type so the whole app honors the user's text-size setting.
+    private static func textStyle(for size: CGFloat) -> Font.TextStyle {
+        switch size {
+        case ..<12: return .caption2
+        case ..<13: return .caption
+        case ..<15: return .footnote
+        case ..<16: return .subheadline
+        case ..<18: return .body
+        case ..<21: return .title3
+        case ..<26: return .title2
+        case ..<32: return .title
+        default: return .largeTitle
+        }
+    }
+
+    /// The app typeface at a given size/weight, scaling with Dynamic Type.
+    /// `.custom` falls back to the system font when the face is unavailable.
     static func wx(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         WXFont.registerIfNeeded()
-        return .custom(WXFont.name(for: weight), size: size)
+        return .custom(WXFont.name(for: weight), size: size, relativeTo: textStyle(for: size))
     }
 }

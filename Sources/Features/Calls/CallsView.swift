@@ -89,9 +89,11 @@ struct CallsView: View {
                     }
                 }
             }
+            .accessibilityLabel(L("تصفية المكالمات"))
             Button { withAnimation { showSearch.toggle() }; if !showSearch { vm.search = ""; vm.reload() } } label: {
                 Image(icon: showSearch ? .close : .search).font(.wx(20)).foregroundStyle(Theme.onMuted)
             }
+            .accessibilityLabel(showSearch ? L("إغلاق البحث") : L("بحث"))
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
     }

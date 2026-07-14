@@ -52,10 +52,10 @@ struct SettingsView: View {
                             SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Color(rgb: 0x89639C))
+                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Theme.accentPurple)
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Color(rgb: 0x4D8970))
+                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
                             SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
@@ -74,7 +74,8 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: L("الإصدار"), subtitle: "v1.12.0 · " + L("أسوار المدن"))
+                        SettingRow(icon: .info, title: L("الإصدار"),
+                                   subtitle: "v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1") + " · " + L("أسوار المدن"))
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)

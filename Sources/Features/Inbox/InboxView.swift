@@ -257,6 +257,7 @@ struct InboxView: View {
         }
         .buttonStyle(.plain)
         .glassCircle()
+        .accessibilityLabel(vm.showArchived ? L("عودة للمحادثات النشطة") : L("الأرشيف"))
     }
 
     /// Bottom floating row: the search circle that EXPANDS in place into a
@@ -292,6 +293,7 @@ struct InboxView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 6)
+                .accessibilityLabel(L("إغلاق البحث"))
             }
         }
         .frame(maxWidth: searchOpen ? .infinity : Self.floatingButtonSide)
@@ -299,6 +301,8 @@ struct InboxView: View {
         .glassCapsule(interactive: true)
         .contentShape(Capsule())
         .onTapGesture { if !searchOpen { openSearch() } }
+        .accessibilityLabel(L("ابحث في المحادثات"))
+        .accessibilityAddTraits(.isButton)
     }
 
     private func openSearch() {
@@ -324,6 +328,7 @@ struct InboxView: View {
         }
         .buttonStyle(.plain)
         .glassCircle()
+        .accessibilityLabel(L("محادثة جديدة"))
     }
 
     /// Top account picker (next to the archive button): multi-select menu;

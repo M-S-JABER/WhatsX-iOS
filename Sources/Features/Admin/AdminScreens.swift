@@ -615,6 +615,7 @@ struct TemplatesView: View {
                         .frame(width: 32, height: 32)
                         .background(Theme.dangerBg, in: RoundedRectangle(cornerRadius: 9))
                 }
+                .accessibilityLabel(L("حذف"))
             }
         }
         .padding(14)
@@ -640,11 +641,13 @@ struct TemplatesView: View {
                         .frame(width: 32, height: 32)
                         .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 9))
                 }
+                .accessibilityLabel(L("تعديل"))
                 Button { Task { await delete(r) } } label: {
                     Image(icon: .trash).font(.wx(14, .semibold)).foregroundStyle(Theme.danger)
                         .frame(width: 32, height: 32)
                         .background(Theme.dangerBg, in: RoundedRectangle(cornerRadius: 9))
                 }
+                .accessibilityLabel(L("حذف"))
             }
         }
         .padding(14)

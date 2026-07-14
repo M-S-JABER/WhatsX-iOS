@@ -117,11 +117,17 @@ struct IntegrationsView: View {
                 Text(L("التكاملات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 if tab == .external {
-                    Image(icon: .add).font(.wx(20)).foregroundStyle(Theme.primary)
-                        .onTapGesture { editing = nil; showForm = true }
+                    Button { editing = nil; showForm = true } label: {
+                        Image(icon: .add).font(.wx(20)).foregroundStyle(Theme.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L("نظام جديد"))
                 }
-                Image(icon: .refresh).font(.wx(20)).foregroundStyle(Theme.onMuted)
-                    .onTapGesture { Task { await reload() } }
+                Button { Task { await reload() } } label: {
+                    Image(icon: .refresh).font(.wx(20)).foregroundStyle(Theme.onMuted)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("تحديث"))
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
 
@@ -463,12 +469,14 @@ struct IntegrationsView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.onSurface)
                         }.buttonStyle(.plain)
+                            .accessibilityLabel(L("تعديل"))
                         Button { Task { await vm.delete(item.id) } } label: {
                             Image(icon: .trash).font(.wx(15))
                                 .frame(width: 36, height: 36)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.danger)
                         }.buttonStyle(.plain)
+                            .accessibilityLabel(L("حذف"))
                         Button { Task { await vm.test(item.id) } } label: {
                             Text(L("اختبار")).font(.wx(13, .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
