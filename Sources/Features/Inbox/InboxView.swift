@@ -21,12 +21,17 @@ final class InboxViewModel: ObservableObject {
     private var total = 0
     private let pageSize = 50
     private var pins: Set<String> = []
+    private var realtimeRefreshTask: Task<Void, Never>?
 
     var showArchived: Bool { segment == .archived }
 
-    var shown: [Conversation] {
-        // Pinned conversations float to the top, preserving the backend order otherwise.
-        items.enumerated().sorted { a, b in
+    /// Pinned conversations float to the top, preserving the backend order
+    /// otherwise. Stored (not computed) — sorting the whole list on every
+    /// body evaluation showed up in scrolling.
+    @Published private(set) var shown: [Conversation] = []
+
+    private func updateShown() {
+        shown = items.enumerated().sorted { a, b in
             if a.element.isPinned != b.element.isPinned { return a.element.isPinned }
             return a.offset < b.offset
         }.map { $0.element }
@@ -76,6 +81,7 @@ final class InboxViewModel: ObservableObject {
             page = 1
             total = resp.total
             items = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
+            updateShown()
             // Active inbox feeds the tab badge (archived view must not clobber it).
             if !showArchived {
                 UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
@@ -84,6 +90,42 @@ final class InboxViewModel: ObservableObject {
             self.error = (error as? ApiError)?.message ?? error.localizedDescription
         }
         loading = false
+    }
+
+    /// Realtime message events: refetch page 1 and MERGE it over the loaded
+    /// list instead of resetting to page 1 — the old full reload threw away
+    /// every extra page (and the scroll position) on each incoming message.
+    /// Bursts are coalesced into one refetch.
+    func scheduleRealtimeRefresh() {
+        realtimeRefreshTask?.cancel()
+        realtimeRefreshTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.refreshFirstPage()
+        }
+    }
+
+    func cancelRealtimeRefresh() {
+        realtimeRefreshTask?.cancel()
+        realtimeRefreshTask = nil
+    }
+
+    private func refreshFirstPage() async {
+        do {
+            async let convTask = Api.shared.conversations(
+                archived: showArchived, page: 1, pageSize: pageSize, instanceIds: instanceFilter)
+            async let pinsTask = Api.shared.pinnedConversationIds()
+            let resp = try await convTask
+            pins = Set((try? await pinsTask) ?? [])
+            total = resp.total
+            let fresh = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
+            let freshIds = Set(fresh.map { $0.id })
+            items = fresh + items.filter { !freshIds.contains($0.id) }
+            updateShown()
+            if !showArchived {
+                UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
+            }
+        } catch {}
     }
 
     /// Infinite scroll: pull the next page once the given row is near the end
@@ -104,6 +146,7 @@ final class InboxViewModel: ObservableObject {
                     .filter { !existing.contains($0.id) }
                     .map { var c = $0; c.pinned = pins.contains(c.id); return c }
                 items += fresh
+                updateShown()
                 if !showArchived {
                     UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
                 }
@@ -174,8 +217,15 @@ struct InboxView: View {
         }
         .onReceive(Realtime.shared.events) { event in
             guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
-            Task { await vm.load() }
+            // Pin/archive change the list's membership — do a full reload.
+            // Message traffic just reorders/updates rows — merge page 1 in.
+            if event.name.hasPrefix("conversation_") {
+                Task { await vm.load() }
+            } else {
+                vm.scheduleRealtimeRefresh()
+            }
         }
+        .onDisappear { vm.cancelRealtimeRefresh() }
         // Second press on the chats tab (while already on it) flips
         // active ⇄ archive.
         .onReceive(InboxBus.shared.toggleArchive) { _ in

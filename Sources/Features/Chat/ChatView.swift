@@ -72,14 +72,17 @@ final class ChatViewModel: ObservableObject {
     @Published var sending = false
     @Published var attachError: String?
     @Published var replyTarget: Message? = nil
+    /// Messages merged chronologically with the conversation's call events —
+    /// rebuilt only when messages/calls change, never during body evaluation
+    /// (the merge+sort is too heavy to run on every keystroke).
+    @Published private(set) var timeline: [ChatEntry] = []
     let conversation: Conversation
+
+    private var realtimeReloadTask: Task<Void, Never>?
 
     init(conversation: Conversation) { self.conversation = conversation }
 
-    /// Messages merged chronologically with the conversation's call events
-    /// (web parity: call bubbles inline in the thread), with a day separator
-    /// injected wherever the calendar day changes.
-    var timeline: [ChatEntry] {
+    private func rebuildTimeline() {
         let entries: [(entry: ChatEntry, date: Date, order: Int)] =
             messages.enumerated().map { (i, m) in (ChatEntry.message(m), parseISODate(m.createdAt) ?? .distantPast, i) }
             + calls.enumerated().map { (i, c) in (ChatEntry.call(c), parseISODate(c.startedAt) ?? .distantPast, i) }
@@ -99,18 +102,45 @@ final class ChatViewModel: ObservableObject {
             }
             out.append(item.entry)
         }
-        return out
+        timeline = out
     }
 
     func load() async {
         loading = messages.isEmpty
+        await loadMessages()
+        // Requires calls.view — silently absent for roles without it.
+        calls = (try? await Api.shared.conversationCalls(conversationId: conversation.id).items) ?? []
+        rebuildTimeline()
+        loading = false
+    }
+
+    /// Refetch the transcript only — realtime message events don't touch the
+    /// call log, so reloading calls on every event was wasted work.
+    func loadMessages() async {
         do {
             messages = try await Api.shared.messages(conversationId: conversation.id).items
             loadError = nil
         } catch { loadError = error.apiMessage }
-        // Requires calls.view — silently absent for roles without it.
-        calls = (try? await Api.shared.conversationCalls(conversationId: conversation.id).items) ?? []
-        loading = false
+        rebuildTimeline()
+    }
+
+    /// Coalesces realtime bursts: many events within a beat trigger ONE
+    /// refetch, and an in-flight refetch is cancelled instead of racing the
+    /// next one (two concurrent loads used to finish in either order).
+    func scheduleRealtimeReload() {
+        realtimeReloadTask?.cancel()
+        realtimeReloadTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.loadMessages()
+        }
+    }
+
+    /// Call when the screen goes away — a pending refetch must not mutate a
+    /// dismissed view's state.
+    func cancelRealtimeReload() {
+        realtimeReloadTask?.cancel()
+        realtimeReloadTask = nil
     }
 
     func send() async {
@@ -122,8 +152,13 @@ final class ChatViewModel: ObservableObject {
             try await Api.shared.sendMessage(conversationId: conversation.id, body: text,
                                              replyToMessageId: replyTarget?.id)
             replyTarget = nil
-            await load()
-        } catch { input = text }
+            await loadMessages()
+        } catch {
+            // Restore the failed text only if the box is still empty —
+            // overwriting would eat whatever the user typed meanwhile.
+            if input.isEmpty { input = text }
+            attachError = error.apiMessage
+        }
         sending = false
     }
 
@@ -135,7 +170,7 @@ final class ChatViewModel: ObservableObject {
             try await Api.shared.sendMedia(conversationId: conversation.id, mediaUrl: up.url, caption: caption,
                                            replyToMessageId: replyTarget?.id)
             replyTarget = nil
-            await load()
+            await loadMessages()
         } catch { attachError = (error as? ApiError)?.message ?? error.localizedDescription }
         sending = false
     }
@@ -149,7 +184,7 @@ final class ChatViewModel: ObservableObject {
         sending = true; attachError = nil
         do {
             try await Api.shared.sendTemplate(conversationId: conversation.id, name: name, language: language, params: params)
-            await load()
+            await loadMessages()
         } catch { attachError = (error as? ApiError)?.message ?? error.localizedDescription }
         sending = false
     }
@@ -167,7 +202,7 @@ final class ChatViewModel: ObservableObject {
             } else if let body = msg.body, !body.isEmpty {
                 try await Api.shared.sendMessage(conversationId: conversation.id, body: body)
             }
-            await load()
+            await loadMessages()
         } catch { attachError = (error as? ApiError)?.message ?? error.localizedDescription }
         sending = false
     }
@@ -217,6 +252,9 @@ struct ChatView: View {
     @State private var lightboxItem: MediaItem?
     @State private var docItem: MediaItem?
     @State private var photoItem: PhotosPickerItem?
+    /// Whether the view is scrolled to the newest message — auto-scroll on
+    /// new messages must not yank the operator out of reading history.
+    @State private var atBottom = true
 
     init(conversation: Conversation) {
         _vm = StateObject(wrappedValue: ChatViewModel(conversation: conversation))
@@ -245,6 +283,9 @@ struct ChatView: View {
                 composer
             }
             .onChange(of: vm.messages.count) { _ in
+                // Follow the tail only when the user is already at the bottom
+                // or just sent something themselves.
+                guard atBottom || vm.messages.last?.isOutbound == true else { return }
                 if let last = vm.messages.last {
                     withAnimation { proxy.scrollTo("m-\(last.id)", anchor: .bottom) }
                 }
@@ -255,6 +296,7 @@ struct ChatView: View {
         .task { await vm.load() }
         .onAppear { Notifier.shared.activeConversationId = vm.conversation.id }
         .onDisappear {
+            vm.cancelRealtimeReload()
             if Notifier.shared.activeConversationId == vm.conversation.id {
                 Notifier.shared.activeConversationId = nil
             }
@@ -263,7 +305,7 @@ struct ChatView: View {
             guard RealtimeEvent.chatEvents.contains(event.name),
                   event.conversationId == nil || event.conversationId == vm.conversation.id
             else { return }
-            Task { await vm.load() }
+            vm.scheduleRealtimeReload()
         }
         .confirmationDialog(L("الاتصال"), isPresented: $showCallMenu, titleVisibility: .visible) {
             Button(L("طلب إذن الاتصال عبر واتساب")) {
@@ -404,6 +446,11 @@ struct ChatView: View {
                             .id(entry.id)
                     }
                 }
+                // Bottom sentinel: tracks whether the user is at the tail so
+                // incoming messages only auto-scroll when they should.
+                Color.clear.frame(height: 1)
+                    .onAppear { atBottom = true }
+                    .onDisappear { atBottom = false }
             }
             .padding(.horizontal, 12).padding(.vertical, 12)
         }
@@ -639,15 +686,13 @@ struct MessageBubble: View {
     @ViewBuilder
     private func mediaView(_ media: MessageMedia, _ url: URL) -> some View {
         if isImage(media) {
-            AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Theme.surface2 }
+            RemoteImage(url: url, targetSize: 230) { Theme.surface2 }
                 .frame(width: 220, height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(RoundedRectangle(cornerRadius: 12))
                 .onTapGesture { onImageTap?(url) }
         } else if isVideo(media) {
-            VideoPlayer(player: AVPlayer(url: url))
-                .frame(width: 230, height: 160)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            VideoBubble(url: url)
         } else if isAudio(media) {
             AudioMessage(url: url, tint: outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
         } else {
@@ -760,10 +805,15 @@ struct SharedLocation: Equatable {
     let mapsUrl: URL
 }
 
+/// Compiled once — this runs per bubble per render; recompiling the pattern
+/// every call was measurable scroll jank.
+private let sharedLocationRegex = try? NSRegularExpression(
+    pattern: #"https?://maps\.google\.com/\?q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)"#,
+    options: [.caseInsensitive])
+
 func parseSharedLocation(_ body: String?) -> SharedLocation? {
     guard let body, !body.isEmpty else { return nil }
-    let pattern = #"https?://maps\.google\.com/\?q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)"#
-    guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+    guard let re = sharedLocationRegex,
           let match = re.firstMatch(in: body, options: [], range: NSRange(body.startIndex..., in: body)),
           let urlRange = Range(match.range, in: body),
           let latRange = Range(match.range(at: 1), in: body),
@@ -1000,15 +1050,26 @@ struct TemplatePickerSheet: View {
     }
 }
 
+// Formatters are expensive to create and these run per row per render —
+// build them once. All call sites are on the main actor.
+private let isoFractionalParser: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return f
+}()
+private let isoPlainParser = ISO8601DateFormatter()
+private let clockFormatter: DateFormatter = {
+    let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
+}()
+
 func parseISODate(_ iso: String?) -> Date? {
     guard let iso else { return nil }
-    let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return parser.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+    return isoFractionalParser.date(from: iso) ?? isoPlainParser.date(from: iso)
 }
 
 func clockTime(_ iso: String?) -> String {
     guard let date = parseISODate(iso) else { return "" }
-    let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
+    return clockFormatter.string(from: date)
 }
 
 func mimeType(for url: URL) -> String {

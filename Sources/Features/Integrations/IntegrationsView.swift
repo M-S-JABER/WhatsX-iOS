@@ -89,6 +89,18 @@ final class IntegrationsViewModel: ObservableObject {
         try? await Api.shared.deleteIntegration(id)
         await loadIntegrations()
     }
+
+    /// Tab switching only fetches when that tab has nothing yet — already
+    /// loaded tabs render instantly (the refresh button still forces it).
+    func needsLoad(_ tab: IntegTab) -> Bool {
+        switch tab {
+        case .overview: return overview == nil
+        case .external: return integrations.isEmpty
+        case .flow: return flow.isEmpty
+        case .webhook: return webhook == nil
+        case .logs: return logs.isEmpty
+        }
+    }
 }
 
 struct IntegrationsView: View {
@@ -149,7 +161,10 @@ struct IntegrationsView: View {
         HStack(spacing: 4) {
             ForEach(IntegTab.allCases, id: \.self) { t in
                 let active = tab == t
-                Button { tab = t; Task { await reload() } } label: {
+                Button {
+                    tab = t
+                    if vm.needsLoad(t) { Task { await reload() } }
+                } label: {
                     VStack(spacing: 6) {
                         Text(t.title).font(.wx(14, .semibold))
                             .foregroundStyle(active ? Theme.onSurface : Theme.onMuted)
