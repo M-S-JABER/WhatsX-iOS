@@ -37,5 +37,7 @@
     <string>تُستخدم الكاميرا لالتقاط صورة الملف الشخصي والوسائط.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>يُستخدم للوصول إلى الصور لإرسالها أو تعيين صورة الملف الشخصي.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>يُستخدم Face ID لقفل التطبيق وحماية محادثات العملاء.</string>
 </dict>
 </plist>

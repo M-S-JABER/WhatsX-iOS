@@ -15,7 +15,10 @@ struct LoadFailedView: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
             if let retry {
-                Button(action: retry) {
+                Button {
+                    Haptics.tap()
+                    retry()
+                } label: {
                     HStack(spacing: 6) {
                         Image(icon: .refresh).font(.wx(13))
                         Text(L("إعادة المحاولة")).font(.wx(14, .semibold))
@@ -24,7 +27,7 @@ struct LoadFailedView: View {
                     .background(Theme.primary, in: Capsule())
                     .foregroundStyle(Theme.onPrimary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .frame(maxWidth: .infinity)

@@ -42,6 +42,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             post(title: event.senderLabel?.isEmpty == false ? event.senderLabel! : L("رسالة واردة جديدة"),
                  body: event.body?.isEmpty == false ? event.body! : L("وسائط 📎"))
         case "voice_call_incoming":
+            Haptics.warning()
             post(title: L("مكالمة واتساب واردة 📞"),
                  body: event.displayName ?? event.phone ?? "")
         default:

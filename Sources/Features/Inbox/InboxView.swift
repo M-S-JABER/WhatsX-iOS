@@ -411,15 +411,15 @@ struct InboxView: View {
                         .listRowSeparator(.hidden, edges: .top)
                         .onAppear { if searchText.isEmpty { vm.loadMoreIfNeeded(after: conv) } }
                         .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
+                            Button(role: .destructive) { Haptics.action(); Task { await vm.delete(conv) } } label: {
                                 Label(L("حذف"), systemImage: "trash")
                             }
-                            Button { Task { await vm.archive(conv) } } label: {
+                            Button { Haptics.action(); Task { await vm.archive(conv) } } label: {
                                 Label(vm.showArchived ? L("إلغاء الأرشفة") : L("أرشفة"), systemImage: "archivebox")
                             }.tint(Theme.success)
                         }
                         .swipeActions(edge: .leading) {
-                            Button { Task { await vm.pin(conv) } } label: {
+                            Button { Haptics.action(); Task { await vm.pin(conv) } } label: {
                                 Label(conv.isPinned ? L("إلغاء التثبيت") : L("تثبيت"), systemImage: conv.isPinned ? "pin.slash" : "pin")
                             }.tint(Theme.primary)
                         }

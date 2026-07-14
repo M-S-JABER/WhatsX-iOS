@@ -323,6 +323,7 @@ struct ChatView: View {
             .glassCard(24)
 
             Button {
+                Haptics.action()
                 if vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     recorder.start()
                 } else {
@@ -344,7 +345,10 @@ struct ChatView: View {
 
     private var recordingBar: some View {
         HStack(spacing: 12) {
-            Button { recorder.cancel() } label: {
+            Button {
+                Haptics.tap()
+                recorder.cancel()
+            } label: {
                 Image(icon: .trash).font(.wx(20)).foregroundStyle(Theme.danger).frame(width: 44, height: 44)
             }
             .accessibilityLabel(L("إلغاء التسجيل"))
@@ -358,6 +362,7 @@ struct ChatView: View {
             .glassCard(24)
 
             Button {
+                Haptics.action()
                 if let data = recorder.stop() { Task { await vm.sendVoiceNote(data) } }
             } label: {
                 Image(icon: .send).font(.wx(20)).foregroundStyle(Theme.onPrimary)

@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum MainTab: Hashable { case integrations, chats, settings }
+enum MainTab: Hashable { case integrations, chats, reports, settings }
 
 /// Tiny event bus between the tab bar and the inbox: re-tapping the chats
 /// tab (a second press while already on it) flips active ⇄ archive.
@@ -66,6 +66,7 @@ struct MainTabView: View {
         Binding(
             get: { tab },
             set: { newValue in
+                if newValue != tab { Haptics.selection() }
                 if newValue == .chats {
                     let now = Date()
                     if tab == .chats, let last = lastChatsTap, now.timeIntervalSince(last) < 0.45 {
@@ -122,6 +123,9 @@ struct MainTabView: View {
                 InboxView()
             }
             .badge(unread.total)
+            Tab(L("التقارير"), systemImage: "chart.bar.xaxis", value: MainTab.reports) {
+                NavigationStack { StatsView() }
+            }
             Tab(value: MainTab.settings) {
                 SettingsView()
             } label: {
@@ -141,6 +145,9 @@ struct MainTabView: View {
                 .tabItem { Label(L("المحادثات"), systemImage: "bubble.left.and.bubble.right") }
                 .tag(MainTab.chats)
                 .badge(unread.total)
+            NavigationStack { StatsView() }
+                .tabItem { Label(L("التقارير"), systemImage: "chart.bar.xaxis") }
+                .tag(MainTab.reports)
             SettingsView()
                 .tabItem {
                     settingsTabIcon

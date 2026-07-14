@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var uploading = false
     @AppStorage(Notifier.messagesEnabledKey) private var notifyMessages = true
+    @StateObject private var settings = AppSettings.shared
 
     var body: some View {
         NavigationStack {
@@ -29,9 +30,43 @@ struct SettingsView: View {
                         NavigationLink { CallsView() } label: {
                             SettingRow(icon: .call, title: L("سجل المكالمات"), subtitle: L("الواردة والصادرة والتسجيلات"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        NavigationLink { StatsView() } label: {
-                            SettingRow(icon: .chart, title: L("الإحصاءات"), subtitle: L("المؤشرات وتقارير العملاء"), trailingChevron: true, tint: Theme.info)
-                        }.buttonStyle(.plain)
+                    }
+
+                    section(L("التخصيص"))
+                    group {
+                        HStack {
+                            SettingRow(icon: .sun, title: L("المظهر"), tint: Theme.warning)
+                            Picker("", selection: $settings.appearance) {
+                                Text(L("تلقائي")).tag("system")
+                                Text(L("فاتح")).tag("light")
+                                Text(L("داكن")).tag("dark")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.onMuted)
+                            .padding(.trailing, 8)
+                            .onChange(of: settings.appearance) { _ in Haptics.tap() }
+                        }
+                        HStack {
+                            SettingRow(icon: .lang, title: L("اللغة"), tint: Theme.info)
+                            Picker("", selection: $settings.language) {
+                                Text(L("تلقائي")).tag("system")
+                                Text(L("العربية")).tag("ar")
+                                Text("English").tag("en")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.onMuted)
+                            .padding(.trailing, 8)
+                            .onChange(of: settings.language) { _ in Haptics.tap() }
+                        }
+                        HStack {
+                            SettingRow(icon: .lock, title: L("قفل بالوجه (Face ID)"),
+                                       subtitle: L("يُقفل التطبيق عند مغادرته"), tint: Theme.accentPurple)
+                            Toggle("", isOn: $settings.faceIDLock)
+                                .labelsHidden()
+                                .tint(Theme.primary)
+                                .padding(.trailing, 14)
+                                .onChange(of: settings.faceIDLock) { _ in Haptics.tap() }
+                        }
                     }
 
                     section(L("الإشعارات"))
