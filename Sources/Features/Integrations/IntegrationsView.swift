@@ -22,9 +22,16 @@ final class IntegrationsViewModel: ObservableObject {
     @Published var webhookPath = ""
     @Published var webhookToken = ""
     @Published var loading = false
+    /// Failure message of the current tab's last load (nil = loaded fine).
+    @Published var loadError: String?
 
     func loadWebhook() async {
-        webhook = try? await Api.shared.webhookCenter()
+        do {
+            webhook = try await Api.shared.webhookCenter()
+            loadError = nil
+        } catch {
+            loadError = error.apiMessage
+        }
         if let config = try? await Api.shared.webhookConfig() {
             webhookPath = config.path ?? webhook?.metaWebhookPath ?? ""
             webhookToken = config.verifyToken ?? ""
@@ -47,15 +54,26 @@ final class IntegrationsViewModel: ObservableObject {
     }
 
     func loadOverview() async {
-        do { overview = try await Api.shared.integrationsOverview() } catch {}
+        do { overview = try await Api.shared.integrationsOverview(); loadError = nil }
+        catch { loadError = error.apiMessage }
         await loadMonitor()
     }
+    /// Secondary list on the overview tab — its own empty state covers it.
     func loadMonitor() async {
         do { monitor = try await Api.shared.integrationMonitorMessages().items } catch {}
     }
-    func loadIntegrations() async { do { integrations = try await Api.shared.integrations().items } catch {} }
-    func loadLogs() async { do { logs = try await Api.shared.integrationLogs().items } catch {} }
-    func loadFlow() async { do { flow = try await Api.shared.messageFlow().items } catch {} }
+    func loadIntegrations() async {
+        do { integrations = try await Api.shared.integrations().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
+    func loadLogs() async {
+        do { logs = try await Api.shared.integrationLogs().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
+    func loadFlow() async {
+        do { flow = try await Api.shared.messageFlow().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
     func retry(_ id: String) async {
         _ = try? await Api.shared.retryMessageFlow(id)
         await loadFlow()
@@ -200,7 +218,7 @@ struct IntegrationsView: View {
                     .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
                     .padding(10)
                     .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 10))
-                TextField("Verify Token", text: $vm.webhookToken)
+                SecureField("Verify Token", text: $vm.webhookToken)
                     .autocorrectionDisabled().textInputAutocapitalization(.never)
                     .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
                     .padding(10)
@@ -222,6 +240,8 @@ struct IntegrationsView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard(16)
+        } else if let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadWebhook() } }
         } else {
             ProgressView().tint(Theme.primary).padding(.top, 40)
         }
@@ -247,7 +267,13 @@ struct IntegrationsView: View {
                 healthTile(L("فاشلة"), h.failed, Theme.danger)
             }
         }
-        if vm.overview == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+        if vm.overview == nil {
+            if let err = vm.loadError {
+                LoadFailedView(message: err) { Task { await vm.loadOverview() } }
+            } else {
+                ProgressView().tint(Theme.primary).padding(.top, 40)
+            }
+        }
 
         // Template sends pushed by external systems (web parity: the
         // integration monitor list on the Overview tab).
@@ -392,7 +418,9 @@ struct IntegrationsView: View {
 
     // MARK: External
     @ViewBuilder private var externalTab: some View {
-        if vm.integrations.isEmpty {
+        if vm.integrations.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadIntegrations() } }
+        } else if vm.integrations.isEmpty {
             Text(L("لا أنظمة خارجية")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.integrations) { item in
@@ -467,7 +495,9 @@ struct IntegrationsView: View {
 
     // MARK: Message flow
     @ViewBuilder private var flowTab: some View {
-        if vm.flow.isEmpty {
+        if vm.flow.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadFlow() } }
+        } else if vm.flow.isEmpty {
             Text(L("لا أحداث تدفّق")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.flow) { e in
@@ -530,7 +560,9 @@ struct IntegrationsView: View {
 
     // MARK: Logs
     @ViewBuilder private var logsTab: some View {
-        if vm.logs.isEmpty {
+        if vm.logs.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadLogs() } }
+        } else if vm.logs.isEmpty {
             Text(L("لا سجلّات")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             VStack(spacing: 0) {

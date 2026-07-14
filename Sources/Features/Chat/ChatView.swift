@@ -67,6 +67,7 @@ final class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var calls: [VoiceCall] = []
     @Published var loading = false
+    @Published var loadError: String?
     @Published var input = ""
     @Published var sending = false
     @Published var attachError: String?
@@ -103,8 +104,10 @@ final class ChatViewModel: ObservableObject {
 
     func load() async {
         loading = messages.isEmpty
-        do { messages = try await Api.shared.messages(conversationId: conversation.id).items }
-        catch { }
+        do {
+            messages = try await Api.shared.messages(conversationId: conversation.id).items
+            loadError = nil
+        } catch { loadError = error.apiMessage }
         // Requires calls.view — silently absent for roles without it.
         calls = (try? await Api.shared.conversationCalls(conversationId: conversation.id).items) ?? []
         loading = false
@@ -365,6 +368,10 @@ struct ChatView: View {
     private var messages: some View {
         ScrollView {
             LazyVStack(spacing: 4) {
+                if vm.timeline.isEmpty, !vm.loading, let err = vm.loadError {
+                    LoadFailedView(message: err) { Task { await vm.load() } }
+                        .padding(.top, 60)
+                }
                 ForEach(vm.timeline) { entry in
                     switch entry {
                     case .message(let msg):

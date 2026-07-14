@@ -4,6 +4,7 @@ import SwiftUI
 final class StatsViewModel: ObservableObject {
     @Published var data: StatsResponse?
     @Published var loading = false
+    @Published var loadError: String?
     @Published var range: String? = nil
     @Published var instanceId: String? = nil
     @Published var accounts: [Instance] = []
@@ -13,7 +14,10 @@ final class StatsViewModel: ObservableObject {
 
     func load() async {
         loading = data == nil
-        do { data = try await Api.shared.statistics(range: range, instanceId: instanceId) } catch { }
+        do {
+            data = try await Api.shared.statistics(range: range, instanceId: instanceId)
+            loadError = nil
+        } catch { loadError = error.apiMessage }
         loading = false
     }
 
@@ -66,6 +70,9 @@ struct StatsView: View {
             if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
             if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
             if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+            if !vm.loading, vm.data == nil, let err = vm.loadError {
+                LoadFailedView(message: err) { Task { await vm.load() } }
+            }
             reportsLink
         }
     }

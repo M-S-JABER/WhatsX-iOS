@@ -34,6 +34,27 @@ final class Session: ObservableObject {
     func logout() async {
         Realtime.shared.disconnect()
         try? await Api.shared.logout()
+        clearLocalSession()
+    }
+
+    /// Called by the API layer when any authenticated call answers 401 —
+    /// the cookie expired or was revoked server-side. Drops straight back to
+    /// the login screen instead of leaving a "logged-in" app whose every
+    /// request fails.
+    func handleUnauthorized() {
+        guard user != nil else { return }
+        Realtime.shared.disconnect()
+        clearLocalSession()
+        loginError = L("انتهت الجلسة — سجّل الدخول من جديد")
+    }
+
+    /// Wipes local auth state. The session cookie is removed even when the
+    /// server logout call never succeeded (offline logout must still forget
+    /// the credentials on this device).
+    private func clearLocalSession() {
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
+        }
         user = nil
     }
 

@@ -6,6 +6,7 @@ struct UsersView: View {
     @State private var users: [AuthUser] = []
     @State private var roles: [Role] = []
     @State private var loading = true
+    @State private var loadError: String?
     @State private var createOpen = false
     @State private var editingUser: AuthUser?
 
@@ -13,6 +14,8 @@ struct UsersView: View {
         Group {
             if loading {
                 ZStack { Theme.background.ignoresSafeArea(); ProgressView().tint(Theme.primary) }
+            } else if let err = loadError, users.isEmpty {
+                LoadFailedView(message: err) { Task { loading = true; await load() } }
             } else if users.isEmpty {
                 ZStack { Theme.background.ignoresSafeArea(); Text(L("لا مستخدمون")).foregroundStyle(Theme.onMuted) }
             } else {
@@ -56,7 +59,8 @@ struct UsersView: View {
     }
 
     private func load() async {
-        do { users = try await Api.shared.users().items } catch {}
+        do { users = try await Api.shared.users().items; loadError = nil }
+        catch { loadError = error.apiMessage }
         roles = (try? await Api.shared.roles())?.items ?? []
         loading = false
     }
@@ -164,12 +168,15 @@ struct EditUserSheet: View {
 struct RolesView: View {
     @State private var roles: [Role] = []
     @State private var loading = true
+    @State private var loadError: String?
     @State private var createOpen = false
 
     var body: some View {
         Group {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let err = loadError, roles.isEmpty {
+                LoadFailedView(message: err) { Task { loading = true; await load() } }
             } else if roles.isEmpty {
                 Text(L("لا أدوار")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -219,7 +226,8 @@ struct RolesView: View {
     }
 
     private func load() async {
-        do { roles = try await Api.shared.roles().items } catch {}
+        do { roles = try await Api.shared.roles().items; loadError = nil }
+        catch { loadError = error.apiMessage }
         loading = false
     }
 
@@ -495,6 +503,7 @@ struct TemplatesView: View {
     @State private var ready: [ReadyMessage] = []
     @State private var accounts: [Instance] = []
     @State private var loading = true
+    @State private var loadError: String?
     @State private var editorOpen = false
     @State private var createTemplateOpen = false
     @State private var editing: ReadyMessage?
@@ -505,6 +514,8 @@ struct TemplatesView: View {
         ScrollView {
             if loading {
                 ProgressView().tint(Theme.primary).padding(.top, 40)
+            } else if let err = loadError {
+                LoadFailedView(message: err) { Task { loading = true; await load() } }
             } else {
                 VStack(alignment: .leading, spacing: 14) {
                     if let banner {
@@ -550,9 +561,13 @@ struct TemplatesView: View {
         async let r = Api.shared.readyMessages()
         async let t = Api.shared.templates()
         async let a = Api.shared.instances()
-        ready = (try? await r)?.items ?? []
-        templates = (try? await t)?.items ?? []
+        let readyResp = try? await r
+        let templatesResp = try? await t
+        ready = readyResp?.items ?? []
+        templates = templatesResp?.items ?? []
         accounts = (try? await a)?.items ?? []
+        // Both primary lists failing means the load itself failed — show it.
+        loadError = (readyResp == nil && templatesResp == nil) ? L("تعذّر الاتصال بالخادم") : nil
         loading = false
     }
 
@@ -792,6 +807,7 @@ struct CreateTemplateSheet: View {
 struct WhatsAppAccountsView: View {
     @State private var accounts: [WhatsAppAccount] = []
     @State private var loading = true
+    @State private var loadError: String?
     @State private var createOpen = false
     @State private var editing: WhatsAppAccount?
 
@@ -799,6 +815,8 @@ struct WhatsAppAccountsView: View {
         Group {
             if loading {
                 ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let err = loadError, accounts.isEmpty {
+                LoadFailedView(message: err) { Task { loading = true; await load() } }
             } else if accounts.isEmpty {
                 Text(L("لا حسابات")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -851,7 +869,8 @@ struct WhatsAppAccountsView: View {
     }
 
     private func load() async {
-        do { accounts = try await Api.shared.whatsappAccounts().items } catch {}
+        do { accounts = try await Api.shared.whatsappAccounts().items; loadError = nil }
+        catch { loadError = error.apiMessage }
         loading = false
     }
 

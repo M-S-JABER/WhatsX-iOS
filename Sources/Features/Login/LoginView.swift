@@ -44,6 +44,7 @@ struct LoginView: View {
             field(icon: .user, placeholder: L("اسم المستخدم")) {
                 TextField(L("اسم المستخدم"), text: $username)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .textContentType(.username)
             }
 
             field(icon: .lock, placeholder: L("كلمة المرور")) {
@@ -52,6 +53,7 @@ struct LoginView: View {
                     else { SecureField(L("كلمة المرور"), text: $password) }
                 }
                 .autocorrectionDisabled()
+                .textContentType(.password)
                 Button { showPassword.toggle() } label: {
                     Image(icon: showPassword ? .eyeOff : .eye).foregroundStyle(Theme.onMuted)
                 }
