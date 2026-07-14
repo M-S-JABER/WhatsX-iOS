@@ -15,6 +15,18 @@ struct AuthUser: Codable, Identifiable, Equatable {
     var avatar: String? = nil
 
     var title: String { (displayName?.isEmpty == false ? displayName! : username) }
+
+    private enum CodingKeys: String, CodingKey { case id, username, displayName, email, role, avatar }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(String.self, forKey: .id, default: "")
+        username = c.lenient(String.self, forKey: .username, default: "")
+        displayName = c.lenient(String.self, forKey: .displayName)
+        email = c.lenient(String.self, forKey: .email)
+        role = c.lenient(String.self, forKey: .role)
+        avatar = c.lenient(String.self, forKey: .avatar)
+    }
 }
 
 struct LoginRequest: Codable {
@@ -36,11 +48,29 @@ struct Instance: Codable, Identifiable, Hashable {
     var isActive: Bool? = nil
 
     var label: String { name ?? displayPhoneNumber ?? id }
+
+    private enum CodingKeys: String, CodingKey { case id, name, displayPhoneNumber, isActive }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(String.self, forKey: .id, default: "")
+        name = c.lenient(String.self, forKey: .name)
+        displayPhoneNumber = c.lenient(String.self, forKey: .displayPhoneNumber)
+        isActive = c.lenient(Bool.self, forKey: .isActive)
+    }
 }
 
 struct InstancesResponse: Codable {
     var items: [Instance] = []
     var defaultInstanceId: String? = nil
+
+    private enum CodingKeys: String, CodingKey { case items, defaultInstanceId }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(Instance.self, forKey: .items)
+        defaultInstanceId = c.lenient(String.self, forKey: .defaultInstanceId)
+    }
 }
 
 // MARK: - Conversations
@@ -90,11 +120,36 @@ struct Conversation: Codable, Identifiable, Hashable {
     var unread: Int { metadata?.unreadCount ?? 0 }
     var preview: String { metadata?.lastMessage ?? "" }
     var isPinned: Bool { pinned ?? false }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, instanceId, phone, displayName, archived, pinned, lastAt, metadata, instance
+    }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(String.self, forKey: .id, default: "")
+        instanceId = c.lenient(String.self, forKey: .instanceId)
+        phone = c.lenient(String.self, forKey: .phone)
+        displayName = c.lenient(String.self, forKey: .displayName)
+        archived = c.lenient(Bool.self, forKey: .archived, default: false)
+        pinned = c.lenient(Bool.self, forKey: .pinned)
+        lastAt = c.lenient(String.self, forKey: .lastAt)
+        metadata = c.lenient(ConvMetadata.self, forKey: .metadata)
+        instance = c.lenient(Instance.self, forKey: .instance)
+    }
 }
 
 struct ConversationsResponse: Codable {
     var items: [Conversation] = []
     var total: Int = 0
+
+    private enum CodingKeys: String, CodingKey { case items, total }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(Conversation.self, forKey: .items)
+        total = c.lenient(Int.self, forKey: .total, default: 0)
+    }
 }
 
 // MARK: - Messages
@@ -232,6 +287,14 @@ struct Message: Codable, Identifiable, Equatable {
 struct MessagesResponse: Codable {
     var items: [Message] = []
     var total: Int = 0
+
+    private enum CodingKeys: String, CodingKey { case items, total }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(Message.self, forKey: .items)
+        total = c.lenient(Int.self, forKey: .total, default: 0)
+    }
 }
 
 struct SendMessageRequest: Codable {
@@ -273,7 +336,16 @@ struct PinnedConversation: Codable, Identifiable {
     var conversationId: String = ""
     var id: String { conversationId }
 }
-struct PinsResponse: Codable { var pins: [PinnedConversation] = [] }
+struct PinsResponse: Codable {
+    var pins: [PinnedConversation] = []
+
+    private enum CodingKeys: String, CodingKey { case pins }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        pins = c.lossy(PinnedConversation.self, forKey: .pins)
+    }
+}
 
 struct CreateConversationRequest: Codable {
     var phone: String
@@ -309,6 +381,29 @@ struct VoiceCall: Codable, Identifiable, Equatable {
     var recordingUrl: String? = nil
     var initiatedByName: String? = nil
 
+    private enum CodingKeys: String, CodingKey {
+        case id, callId, phone, peer, displayName, direction, status, outcome
+        case startedAt, durationSeconds, instance, recording, recordingUrl, initiatedByName
+    }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(String.self, forKey: .id, default: "")
+        callId = c.lenient(String.self, forKey: .callId, default: "")
+        phone = c.lenient(String.self, forKey: .phone)
+        peer = c.lenient(String.self, forKey: .peer)
+        displayName = c.lenient(String.self, forKey: .displayName)
+        direction = c.lenient(String.self, forKey: .direction)
+        status = c.lenient(String.self, forKey: .status)
+        outcome = c.lenient(String.self, forKey: .outcome)
+        startedAt = c.lenient(String.self, forKey: .startedAt)
+        durationSeconds = c.lenient(Int.self, forKey: .durationSeconds, default: 0)
+        instance = c.lenient(VoiceInstance.self, forKey: .instance)
+        recording = c.lenient(String.self, forKey: .recording)
+        recordingUrl = c.lenient(String.self, forKey: .recordingUrl)
+        initiatedByName = c.lenient(String.self, forKey: .initiatedByName)
+    }
+
     var title: String { displayName ?? phone ?? peer ?? "—" }
     var isInbound: Bool { direction == "inbound" }
     var isMissed: Bool { outcome == "missed" || status == "missed" || status == "rejected" }
@@ -323,6 +418,14 @@ struct VoiceCall: Codable, Identifiable, Equatable {
 struct VoiceCallsResponse: Codable {
     var total: Int = 0
     var items: [VoiceCall] = []
+
+    private enum CodingKeys: String, CodingKey { case total, items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        total = c.lenient(Int.self, forKey: .total, default: 0)
+        items = c.lossy(VoiceCall.self, forKey: .items)
+    }
 }
 
 struct RejectCallRequest: Codable {
@@ -345,6 +448,14 @@ struct CallFilterAccount: Codable, Identifiable {
 struct VoiceCallFilters: Codable {
     var accounts: [CallFilterAccount] = []
     var agents: [String] = []
+
+    private enum CodingKeys: String, CodingKey { case accounts, agents }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        accounts = c.lossy(CallFilterAccount.self, forKey: .accounts)
+        agents = c.lossy(String.self, forKey: .agents)
+    }
 }
 
 // MARK: - Statistics
@@ -405,11 +516,31 @@ struct StatsResponse: Codable, Equatable {
     var instanceBreakdown: [StatInstance] = []
     var delivery: Delivery? = nil
     var userStats: [UserStat] = []
+
+    private enum CodingKeys: String, CodingKey { case totals, series, instanceBreakdown, delivery, userStats }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totals = c.lenient(StatTotals.self, forKey: .totals)
+        series = c.lossy(SeriesPoint.self, forKey: .series)
+        instanceBreakdown = c.lossy(StatInstance.self, forKey: .instanceBreakdown)
+        delivery = c.lenient(Delivery.self, forKey: .delivery)
+        userStats = c.lossy(UserStat.self, forKey: .userStats)
+    }
 }
 
 // MARK: - Users & roles
 
-struct UsersResponse: Codable { var items: [AuthUser] = [] }
+struct UsersResponse: Codable {
+    var items: [AuthUser] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(AuthUser.self, forKey: .items)
+    }
+}
 
 struct Role: Codable, Identifiable {
     var id: String = ""
@@ -418,7 +549,16 @@ struct Role: Codable, Identifiable {
     var isSystem: Bool = false
     var permissions: [String] = []
 }
-struct RolesResponse: Codable { var items: [Role] = [] }
+struct RolesResponse: Codable {
+    var items: [Role] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(Role.self, forKey: .items)
+    }
+}
 
 struct UpdateRoleRequest: Codable {
     var name: String? = nil
@@ -438,7 +578,16 @@ struct PermissionCatalogItem: Codable, Identifiable {
     var title: String { label ?? id }
     var groupTitle: String { groupLabel ?? group ?? L("أخرى") }
 }
-struct PermissionCatalogResponse: Codable { var items: [PermissionCatalogItem] = [] }
+struct PermissionCatalogResponse: Codable {
+    var items: [PermissionCatalogItem] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(PermissionCatalogItem.self, forKey: .items)
+    }
+}
 
 // GET /api/users/:id/permissions -> { rolePermissions:[id], overrides:[{permissionId,allowed}], effectivePermissions:[id] }
 struct UserPermissionOverride: Codable { var permissionId: String; var allowed: Bool }
@@ -446,6 +595,15 @@ struct UserPermissions: Codable {
     var rolePermissions: [String] = []
     var overrides: [UserPermissionOverride] = []
     var effectivePermissions: [String] = []
+
+    private enum CodingKeys: String, CodingKey { case rolePermissions, overrides, effectivePermissions }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        rolePermissions = c.lossy(String.self, forKey: .rolePermissions)
+        overrides = c.lossy(UserPermissionOverride.self, forKey: .overrides)
+        effectivePermissions = c.lossy(String.self, forKey: .effectivePermissions)
+    }
 }
 struct UpdateUserPermissionsRequest: Codable { var overrides: [UserPermissionOverride] }
 
@@ -457,7 +615,16 @@ struct ReadyMessage: Codable, Identifiable {
     var body: String = ""
     var isActive: Bool = true
 }
-struct ReadyMessagesResponse: Codable { var items: [ReadyMessage] = [] }
+struct ReadyMessagesResponse: Codable {
+    var items: [ReadyMessage] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(ReadyMessage.self, forKey: .items)
+    }
+}
 
 struct TemplateComponent: Codable { var type: String? = nil; var text: String? = nil }
 
@@ -473,7 +640,16 @@ struct Template: Codable {
     var stableId: String { id ?? name }
     var bodyText: String? { components?.first { $0.type?.uppercased() == "BODY" }?.text }
 }
-struct TemplatesResponse: Codable { var items: [Template] = [] }
+struct TemplatesResponse: Codable {
+    var items: [Template] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(Template.self, forKey: .items)
+    }
+}
 
 // Admin template CRUD (POST /api/admin/templates, /sync).
 struct CreateTemplateRequest: Codable {
@@ -511,6 +687,14 @@ struct IntegrationsHealth: Codable {
 struct IntegrationsOverview: Codable {
     var summary: IntegrationsSummary? = nil
     var health: IntegrationsHealth? = nil
+
+    private enum CodingKeys: String, CodingKey { case summary, health }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        summary = c.lenient(IntegrationsSummary.self, forKey: .summary)
+        health = c.lenient(IntegrationsHealth.self, forKey: .health)
+    }
 }
 
 // GET /api/admin/integrations/messages — template messages pushed by
@@ -541,6 +725,13 @@ struct IntegrationMonitorItem: Codable, Identifiable {
 
 struct IntegrationMonitorResponse: Codable {
     var items: [IntegrationMonitorItem] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(IntegrationMonitorItem.self, forKey: .items)
+    }
 }
 struct PublicIntegration: Codable, Identifiable {
     var id: String = ""
@@ -554,7 +745,16 @@ struct PublicIntegration: Codable, Identifiable {
     var isEnabled: Bool = true
     var lastErrorMessage: String? = nil
 }
-struct IntegrationsListResponse: Codable { var items: [PublicIntegration] = [] }
+struct IntegrationsListResponse: Codable {
+    var items: [PublicIntegration] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(PublicIntegration.self, forKey: .items)
+    }
+}
 struct IntegrationLog: Codable, Identifiable {
     var id: String = ""
     var timestamp: String? = nil
@@ -563,7 +763,16 @@ struct IntegrationLog: Codable, Identifiable {
     var summary: String = ""
     var correlationId: String? = nil
 }
-struct IntegrationLogsResponse: Codable { var items: [IntegrationLog] = [] }
+struct IntegrationLogsResponse: Codable {
+    var items: [IntegrationLog] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(IntegrationLog.self, forKey: .items)
+    }
+}
 
 // GET /api/integrations/message-flow -> { items:[event] }. Only scalar fields decoded
 // (Codable ignores the variant-typed payloadSummary/requestPayload/headers/retryHistory).
@@ -581,7 +790,16 @@ struct MessageFlowEvent: Codable, Identifiable {
     var retryable: Bool? = nil
     var isRetryable: Bool { retryable ?? false }
 }
-struct MessageFlowResponse: Codable { var items: [MessageFlowEvent] = [] }
+struct MessageFlowResponse: Codable {
+    var items: [MessageFlowEvent] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(MessageFlowEvent.self, forKey: .items)
+    }
+}
 struct RetryResult: Codable { var ok: Bool = false; var retried: Bool = false; var status: String? = nil; var message: String? = nil }
 
 // MARK: - WhatsApp accounts (health)
@@ -600,7 +818,16 @@ struct WhatsAppAccount: Codable, Identifiable {
     var isDefault: Bool = false
     var webhookBehavior: String? = nil  // auto | accept | reject (call-permission requests)
 }
-struct WhatsAppAccountsResponse: Codable { var items: [WhatsAppAccount] = [] }
+struct WhatsAppAccountsResponse: Codable {
+    var items: [WhatsAppAccount] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(WhatsAppAccount.self, forKey: .items)
+    }
+}
 struct WhatsAppAccountResponse: Codable { var account: WhatsAppAccount? = nil }
 
 // WhatsApp account CRUD + registration request bodies.
@@ -680,7 +907,16 @@ struct StatCustomer: Codable, Identifiable {
     var messageCount: Int = 0
     var title: String { (displayName?.isEmpty == false ? displayName! : (phone ?? "—")) }
 }
-struct StatCustomersResponse: Codable { var items: [StatCustomer] = [] }
+struct StatCustomersResponse: Codable {
+    var items: [StatCustomer] = []
+
+    private enum CodingKeys: String, CodingKey { case items }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = c.lossy(StatCustomer.self, forKey: .items)
+    }
+}
 
 // MARK: - Customer report (GET /api/statistics/customer-report?conversationId=&range=)
 
@@ -729,6 +965,20 @@ struct CustomerReport: Codable {
     var agents: [CustomerReportAgent] = []
     var responseStats: CustomerReportResponseStats? = nil
     var timeline: [CustomerReportTimelineItem] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case conversation, totals, statusBreakdown, agents, responseStats, timeline
+    }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        conversation = c.lenient(CustomerReportConversation.self, forKey: .conversation)
+        totals = c.lenient(CustomerReportTotals.self, forKey: .totals)
+        statusBreakdown = c.lenient([String: Int].self, forKey: .statusBreakdown)
+        agents = c.lossy(CustomerReportAgent.self, forKey: .agents)
+        responseStats = c.lenient(CustomerReportResponseStats.self, forKey: .responseStats)
+        timeline = c.lossy(CustomerReportTimelineItem.self, forKey: .timeline)
+    }
 }
 
 // MARK: - Change password (POST /api/user/password)

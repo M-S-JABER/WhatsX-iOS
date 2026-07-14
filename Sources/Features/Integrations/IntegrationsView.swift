@@ -22,9 +22,16 @@ final class IntegrationsViewModel: ObservableObject {
     @Published var webhookPath = ""
     @Published var webhookToken = ""
     @Published var loading = false
+    /// Failure message of the current tab's last load (nil = loaded fine).
+    @Published var loadError: String?
 
     func loadWebhook() async {
-        webhook = try? await Api.shared.webhookCenter()
+        do {
+            webhook = try await Api.shared.webhookCenter()
+            loadError = nil
+        } catch {
+            loadError = error.apiMessage
+        }
         if let config = try? await Api.shared.webhookConfig() {
             webhookPath = config.path ?? webhook?.metaWebhookPath ?? ""
             webhookToken = config.verifyToken ?? ""
@@ -42,20 +49,31 @@ final class IntegrationsViewModel: ObservableObject {
             await loadWebhook()
             return nil
         } catch {
-            return (error as? ApiError)?.message ?? error.localizedDescription
+            return error.apiMessage
         }
     }
 
     func loadOverview() async {
-        do { overview = try await Api.shared.integrationsOverview() } catch {}
+        do { overview = try await Api.shared.integrationsOverview(); loadError = nil }
+        catch { loadError = error.apiMessage }
         await loadMonitor()
     }
+    /// Secondary list on the overview tab — its own empty state covers it.
     func loadMonitor() async {
         do { monitor = try await Api.shared.integrationMonitorMessages().items } catch {}
     }
-    func loadIntegrations() async { do { integrations = try await Api.shared.integrations().items } catch {} }
-    func loadLogs() async { do { logs = try await Api.shared.integrationLogs().items } catch {} }
-    func loadFlow() async { do { flow = try await Api.shared.messageFlow().items } catch {} }
+    func loadIntegrations() async {
+        do { integrations = try await Api.shared.integrations().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
+    func loadLogs() async {
+        do { logs = try await Api.shared.integrationLogs().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
+    func loadFlow() async {
+        do { flow = try await Api.shared.messageFlow().items; loadError = nil }
+        catch { loadError = error.apiMessage }
+    }
     func retry(_ id: String) async {
         _ = try? await Api.shared.retryMessageFlow(id)
         await loadFlow()
@@ -70,6 +88,18 @@ final class IntegrationsViewModel: ObservableObject {
     func delete(_ id: String) async {
         try? await Api.shared.deleteIntegration(id)
         await loadIntegrations()
+    }
+
+    /// Tab switching only fetches when that tab has nothing yet — already
+    /// loaded tabs render instantly (the refresh button still forces it).
+    func needsLoad(_ tab: IntegTab) -> Bool {
+        switch tab {
+        case .overview: return overview == nil
+        case .external: return integrations.isEmpty
+        case .flow: return flow.isEmpty
+        case .webhook: return webhook == nil
+        case .logs: return logs.isEmpty
+        }
     }
 }
 
@@ -87,11 +117,17 @@ struct IntegrationsView: View {
                 Text(L("التكاملات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
                 Spacer()
                 if tab == .external {
-                    Image(icon: .add).font(.wx(20)).foregroundStyle(Theme.primary)
-                        .onTapGesture { editing = nil; showForm = true }
+                    Button { editing = nil; showForm = true } label: {
+                        Image(icon: .add).font(.wx(20)).foregroundStyle(Theme.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L("نظام جديد"))
                 }
-                Image(icon: .refresh).font(.wx(20)).foregroundStyle(Theme.onMuted)
-                    .onTapGesture { Task { await reload() } }
+                Button { Task { await reload() } } label: {
+                    Image(icon: .refresh).font(.wx(20)).foregroundStyle(Theme.onMuted)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("تحديث"))
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
 
@@ -131,7 +167,10 @@ struct IntegrationsView: View {
         HStack(spacing: 4) {
             ForEach(IntegTab.allCases, id: \.self) { t in
                 let active = tab == t
-                Button { tab = t; Task { await reload() } } label: {
+                Button {
+                    tab = t
+                    if vm.needsLoad(t) { Task { await reload() } }
+                } label: {
                     VStack(spacing: 6) {
                         Text(t.title).font(.wx(14, .semibold))
                             .foregroundStyle(active ? Theme.onSurface : Theme.onMuted)
@@ -200,7 +239,7 @@ struct IntegrationsView: View {
                     .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
                     .padding(10)
                     .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 10))
-                TextField("Verify Token", text: $vm.webhookToken)
+                SecureField("Verify Token", text: $vm.webhookToken)
                     .autocorrectionDisabled().textInputAutocapitalization(.never)
                     .font(.wx(13)).environment(\.layoutDirection, .leftToRight)
                     .padding(10)
@@ -222,6 +261,8 @@ struct IntegrationsView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard(16)
+        } else if let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadWebhook() } }
         } else {
             ProgressView().tint(Theme.primary).padding(.top, 40)
         }
@@ -247,7 +288,13 @@ struct IntegrationsView: View {
                 healthTile(L("فاشلة"), h.failed, Theme.danger)
             }
         }
-        if vm.overview == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+        if vm.overview == nil {
+            if let err = vm.loadError {
+                LoadFailedView(message: err) { Task { await vm.loadOverview() } }
+            } else {
+                ProgressView().tint(Theme.primary).padding(.top, 40)
+            }
+        }
 
         // Template sends pushed by external systems (web parity: the
         // integration monitor list on the Overview tab).
@@ -345,7 +392,7 @@ struct IntegrationsView: View {
                 try await Api.shared.requestCallPermission(to: phone.filter { $0.isNumber }, instanceId: instanceId)
                 notice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
             } catch {
-                notice = (error as? ApiError)?.message ?? error.localizedDescription
+                notice = error.apiMessage
             }
         }
     }
@@ -356,26 +403,13 @@ struct IntegrationsView: View {
             : s.contains("read") ? Theme.info
             : s.contains("deliver") || s.contains("sent") || s.contains("accept") ? Theme.success
             : Theme.warning
-        return Text(status ?? "—")
-            .font(.wx(11, .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(color.opacity(0.13), in: Capsule())
+        return StatusCapsule(text: status ?? "—", color: color)
     }
 
-    private func monitorTime(_ iso: String?) -> String {
-        guard let date = parseISODate(iso) else { return "" }
-        let f = DateFormatter(); f.dateFormat = "d/M HH:mm"
-        return f.string(from: date)
-    }
+    private func monitorTime(_ iso: String?) -> String { dayClockTime(iso) }
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
-            Text(value).font(.wx(26, .bold)).foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 14)
-        .glassCard(20)
+        MetricTile(label: label, value: value, color: color)
     }
 
     private func healthTile(_ label: String, _ value: Int, _ color: Color) -> some View {
@@ -392,7 +426,9 @@ struct IntegrationsView: View {
 
     // MARK: External
     @ViewBuilder private var externalTab: some View {
-        if vm.integrations.isEmpty {
+        if vm.integrations.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadIntegrations() } }
+        } else if vm.integrations.isEmpty {
             Text(L("لا أنظمة خارجية")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.integrations) { item in
@@ -420,12 +456,14 @@ struct IntegrationsView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.onSurface)
                         }.buttonStyle(.plain)
+                            .accessibilityLabel(L("تعديل"))
                         Button { Task { await vm.delete(item.id) } } label: {
                             Image(icon: .trash).font(.wx(15))
                                 .frame(width: 36, height: 36)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.outline, lineWidth: 1))
                                 .foregroundStyle(Theme.danger)
                         }.buttonStyle(.plain)
+                            .accessibilityLabel(L("حذف"))
                         Button { Task { await vm.test(item.id) } } label: {
                             Text(L("اختبار")).font(.wx(13, .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 9)
@@ -456,18 +494,14 @@ struct IntegrationsView: View {
             default: return (L("تهيئة"), Theme.onMuted)
             }
         }()
-        return HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).font(.wx(11, .semibold))
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 9).padding(.vertical, 3)
-        .background(color.opacity(0.14), in: Capsule())
+        return StatusCapsule(text: label, color: color, showDot: true)
     }
 
     // MARK: Message flow
     @ViewBuilder private var flowTab: some View {
-        if vm.flow.isEmpty {
+        if vm.flow.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadFlow() } }
+        } else if vm.flow.isEmpty {
             Text(L("لا أحداث تدفّق")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             ForEach(vm.flow) { e in
@@ -522,15 +556,14 @@ struct IntegrationsView: View {
             default: return (status ?? "—", Theme.info)
             }
         }()
-        return Text(label.isEmpty ? "—" : label)
-            .font(.wx(11, .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 9).padding(.vertical, 3)
-            .background(color.opacity(0.14), in: Capsule())
+        return StatusCapsule(text: label, color: color)
     }
 
     // MARK: Logs
     @ViewBuilder private var logsTab: some View {
-        if vm.logs.isEmpty {
+        if vm.logs.isEmpty, let err = vm.loadError {
+            LoadFailedView(message: err) { Task { await vm.loadLogs() } }
+        } else if vm.logs.isEmpty {
             Text(L("لا سجلّات")).foregroundStyle(Theme.onMuted).padding(.top, 40)
         } else {
             VStack(spacing: 0) {
@@ -643,7 +676,7 @@ struct IntegrationFormSheet: View {
             await onSaved()
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         saving = false
     }

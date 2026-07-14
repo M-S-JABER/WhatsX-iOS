@@ -48,7 +48,8 @@ enum WIcon {
         case .callEnd: return "phone.down.fill"
         case .callIn: return "phone.arrow.down.left"
         case .callOut: return "phone.arrow.up.right"
-        case .callMissed: return "phone.arrow.down.left"
+        // Distinct from .callIn — a missed call must not read as answered-incoming.
+        case .callMissed: return "phone.down"
         case .mute: return "mic.slash.fill"
         case .speaker: return "speaker.wave.2.fill"
         case .user: return "person.fill"

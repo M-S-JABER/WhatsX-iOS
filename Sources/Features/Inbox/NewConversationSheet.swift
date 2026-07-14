@@ -5,6 +5,8 @@ struct NewConversationSheet: View {
     @State private var phone = ""
     @State private var instances: [Instance] = []
     @State private var selectedId: String?
+    @State private var loadingInstances = true
+    @State private var instancesError: String?
     @State private var creating = false
     @State private var error: String?
 
@@ -26,6 +28,18 @@ struct NewConversationSheet: View {
                     Text(L("الرقم المُرسِل")).font(.wx(16, .semibold)).foregroundStyle(Theme.onMuted)
                     ForEach(instances) { inst in
                         accountCard(inst)
+                    }
+                } else if loadingInstances {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(Theme.primary)
+                        Text(L("جارٍ تحميل الأرقام المُرسِلة…")).font(.wx(13)).foregroundStyle(Theme.onMuted)
+                    }
+                } else if let instancesError {
+                    HStack(spacing: 8) {
+                        Text(instancesError).font(.wx(13)).foregroundStyle(Theme.danger)
+                        Spacer()
+                        Button(L("إعادة المحاولة")) { Task { await loadInstances() } }
+                            .font(.wx(13, .semibold)).foregroundStyle(Theme.primary)
                     }
                 }
 
@@ -70,11 +84,14 @@ struct NewConversationSheet: View {
     }
 
     private func loadInstances() async {
+        loadingInstances = true
         do {
             let resp = try await Api.shared.instances()
             instances = resp.items
             selectedId = resp.defaultInstanceId ?? resp.items.first?.id
-        } catch { }
+            instancesError = nil
+        } catch { instancesError = error.apiMessage }
+        loadingInstances = false
     }
 
     private func create() async {
@@ -84,7 +101,7 @@ struct NewConversationSheet: View {
                 CreateConversationRequest(phone: phone.trimmingCharacters(in: .whitespaces), displayName: nil, instanceId: selectedId))
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         creating = false
     }

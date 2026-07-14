@@ -11,9 +11,6 @@ struct CustomerReportDetailView: View {
     @State private var loading = true
     @State private var range: String? = nil
 
-    private let ranges: [(String?, String)] = [
-        (nil, L("الكل")), ("24h", L("24س")), ("7d", L("7 أيام")), ("30d", L("30 يومًا")), ("90d", L("90 يومًا")),
-    ]
 
     var body: some View {
         ScrollView {
@@ -52,19 +49,7 @@ struct CustomerReportDetailView: View {
     // MARK: - Sections
 
     private var rangeChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                ForEach(ranges, id: \.1) { key, label in
-                    let active = range == key
-                    Button { apply(key) } label: {
-                        Text(label).font(.wx(15, .semibold))
-                            .foregroundStyle(active ? Theme.background : Theme.onMuted)
-                            .padding(.horizontal, 14).padding(.vertical, 7)
-                            .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
-                    }.buttonStyle(.plain)
-                }
-            }
-        }
+        RangeChipsRow(selected: range) { apply($0) }
     }
 
     private func header(_ r: CustomerReport) -> some View {
@@ -176,13 +161,7 @@ struct CustomerReportDetailView: View {
     // MARK: - Tiles
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
-            Text(value).font(.wx(24, .bold)).foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14).padding(.vertical, 14)
-        .glassCard(18)
+        MetricTile(label: label, value: value, color: color)
     }
 
     private func statTile(_ label: String, _ value: String, _ color: Color) -> some View {
@@ -217,20 +196,10 @@ struct CustomerReportDetailView: View {
     }
 
     private func relTime(_ iso: String?) -> String {
-        guard let date = parseISO(iso) else { return "—" }
+        guard let date = parseISODate(iso) else { return "—" }
         let f = DateFormatter(); f.locale = L10n.dateLocale; f.dateFormat = "dd/MM/yyyy"
         return f.string(from: date)
     }
 
-    private func hm(_ iso: String?) -> String {
-        guard let date = parseISO(iso) else { return "" }
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
-        return f.string(from: date)
-    }
-
-    private func parseISO(_ iso: String?) -> Date? {
-        guard let iso else { return nil }
-        let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return parser.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
-    }
+    private func hm(_ iso: String?) -> String { clockTime(iso) }
 }

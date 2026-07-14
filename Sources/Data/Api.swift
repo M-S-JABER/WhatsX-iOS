@@ -14,8 +14,23 @@ enum AppConfig {
     static let defaultBaseURL = "https://your-server.example.com"
 
     static var baseURL: String {
-        get { UserDefaults.standard.string(forKey: key) ?? defaultBaseURL }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
+        get { normalized(UserDefaults.standard.string(forKey: key) ?? defaultBaseURL) }
+        set { UserDefaults.standard.set(normalized(newValue), forKey: key) }
+    }
+
+    /// Enforces an https origin: trims whitespace and trailing slashes, adds
+    /// the scheme when missing, and upgrades plain http — credentials and
+    /// customer data must never travel unencrypted.
+    static func normalized(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while s.hasSuffix("/") { s.removeLast() }
+        if s.isEmpty { return s }
+        if s.lowercased().hasPrefix("http://") {
+            s = "https://" + s.dropFirst("http://".count)
+        } else if !s.lowercased().hasPrefix("https://") {
+            s = "https://" + s
+        }
+        return s
     }
 }
 
@@ -61,14 +76,34 @@ final class Api {
         return URL(string: AppConfig.baseURL.trimmed() + (path.hasPrefix("/") ? path : "/" + path))
     }
 
-    private func makeURL(_ path: String, query: [String: String?] = [:]) -> URL {
-        var comps = URLComponents(string: AppConfig.baseURL.trimmed() + "/" + path)!
+    private func makeURL(_ path: String, query: [String: String?] = [:]) throws -> URL {
+        guard var comps = URLComponents(string: AppConfig.baseURL.trimmed() + "/" + path) else {
+            throw ApiError(message: L("رابط الخادم غير صالح — راجع إعدادات الخادم"), status: nil)
+        }
         let items = query.compactMap { key, value -> URLQueryItem? in
             guard let value else { return nil }
             return URLQueryItem(name: key, value: value)
         }
         if !items.isEmpty { comps.queryItems = items }
-        return comps.url!
+        guard let url = comps.url, url.scheme == "https" else {
+            throw ApiError(message: L("رابط الخادم غير صالح — راجع إعدادات الخادم"), status: nil)
+        }
+        return url
+    }
+
+    /// Best-effort extraction of the server's error text from a non-2xx body
+    /// (the backend replies with `{message}` or `{error}` on failures).
+    private struct ServerErrorBody: Decodable {
+        var message: String? = nil
+        var error: String? = nil
+    }
+
+    private func errorMessage(from data: Data, status: Int) -> String {
+        if let body = try? decoder.decode(ServerErrorBody.self, from: data),
+           let text = body.message ?? body.error, !text.isEmpty {
+            return text
+        }
+        return "HTTP \(status)"
     }
 
     @discardableResult
@@ -79,7 +114,7 @@ final class Api {
         body: Encodable? = nil,
         as type: T.Type = T.self
     ) async throws -> T {
-        var req = URLRequest(url: makeURL(path, query: query))
+        var req = URLRequest(url: try makeURL(path, query: query))
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body {
@@ -91,7 +126,14 @@ final class Api {
             throw ApiError(message: "No HTTP response", status: nil)
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw ApiError(message: "HTTP \(http.statusCode)", status: http.statusCode)
+            // An expired/invalid session answers 401 on any authenticated
+            // call — flip the app back to the login screen (the login
+            // endpoint itself 401s on wrong credentials; leave that to its
+            // caller).
+            if http.statusCode == 401, path != "api/login" {
+                Task { @MainActor in Session.shared.handleUnauthorized() }
+            }
+            throw ApiError(message: errorMessage(from: data, status: http.statusCode), status: http.statusCode)
         }
         if T.self == EmptyResponse.self { return EmptyResponse() as! T }
         do { return try decoder.decode(T.self, from: data) }
@@ -138,7 +180,7 @@ final class Api {
     /// Upload a file to /api/upload (multipart field "file"); returns the signed media path in `url`.
     func uploadMedia(data: Data, filename: String, mimeType: String) async throws -> MediaUploadResponse {
         let boundary = "Boundary-\(UUID().uuidString)"
-        var req = URLRequest(url: makeURL("api/upload"))
+        var req = URLRequest(url: try makeURL("api/upload"))
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         var b = Data()
@@ -150,7 +192,8 @@ final class Api {
         req.httpBody = b
         let (respData, resp) = try await session.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw ApiError(message: "Upload failed", status: (resp as? HTTPURLResponse)?.statusCode)
+            let status = (resp as? HTTPURLResponse)?.statusCode
+            throw ApiError(message: errorMessage(from: respData, status: status ?? 0), status: status)
         }
         return try decoder.decode(MediaUploadResponse.self, from: respData)
     }
@@ -297,7 +340,7 @@ final class Api {
     }
     func uploadAvatar(imageData: Data) async throws -> AuthUser {
         let boundary = "Boundary-\(UUID().uuidString)"
-        var req = URLRequest(url: makeURL("api/user/avatar"))
+        var req = URLRequest(url: try makeURL("api/user/avatar"))
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         var body = Data()
@@ -309,7 +352,8 @@ final class Api {
         req.httpBody = body
         let (data, resp) = try await session.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw ApiError(message: "Upload failed", status: (resp as? HTTPURLResponse)?.statusCode)
+            let status = (resp as? HTTPURLResponse)?.statusCode
+            throw ApiError(message: errorMessage(from: data, status: status ?? 0), status: status)
         }
         return try decoder.decode(AuthUser.self, from: data)
     }

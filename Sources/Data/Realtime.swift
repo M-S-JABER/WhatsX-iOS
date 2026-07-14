@@ -111,9 +111,10 @@ final class Realtime: ObservableObject {
     }
 
     private func wsURL() -> URL? {
+        // https only (AppConfig normalizes to it) — never downgrade to ws://.
         var base = AppConfig.baseURL.trimmed()
-        if base.hasPrefix("https://") { base = "wss://" + base.dropFirst("https://".count) }
-        else if base.hasPrefix("http://") { base = "ws://" + base.dropFirst("http://".count) }
+        guard base.hasPrefix("https://") else { return nil }
+        base = "wss://" + base.dropFirst("https://".count)
         return URL(string: base + "/ws")
     }
 
