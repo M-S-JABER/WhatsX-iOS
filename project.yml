@@ -18,6 +18,7 @@ targets:
       configVariants: []
     sources:
       - path: Sources
+      - path: Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
