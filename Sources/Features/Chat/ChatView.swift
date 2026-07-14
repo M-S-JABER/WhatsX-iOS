@@ -70,6 +70,9 @@ struct ChatView: View {
         }
         .background(chatBackground)
         .navigationBarHidden(true)
+        // The custom top bar hides the system one — bring the edge-swipe
+        // back gesture along explicitly.
+        .swipeBackEnabled()
         .task { await vm.load() }
         .onAppear { Notifier.shared.activeConversationId = vm.conversation.id }
         .onDisappear {
