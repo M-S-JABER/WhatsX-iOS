@@ -277,7 +277,7 @@ struct ChangePasswordSheet: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         saving = false
     }

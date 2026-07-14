@@ -101,7 +101,7 @@ struct NewConversationSheet: View {
                 CreateConversationRequest(phone: phone.trimmingCharacters(in: .whitespaces), displayName: nil, instanceId: selectedId))
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         creating = false
     }

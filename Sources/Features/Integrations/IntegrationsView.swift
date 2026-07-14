@@ -49,7 +49,7 @@ final class IntegrationsViewModel: ObservableObject {
             await loadWebhook()
             return nil
         } catch {
-            return (error as? ApiError)?.message ?? error.localizedDescription
+            return error.apiMessage
         }
     }
 
@@ -392,7 +392,7 @@ struct IntegrationsView: View {
                 try await Api.shared.requestCallPermission(to: phone.filter { $0.isNumber }, instanceId: instanceId)
                 notice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
             } catch {
-                notice = (error as? ApiError)?.message ?? error.localizedDescription
+                notice = error.apiMessage
             }
         }
     }
@@ -403,26 +403,13 @@ struct IntegrationsView: View {
             : s.contains("read") ? Theme.info
             : s.contains("deliver") || s.contains("sent") || s.contains("accept") ? Theme.success
             : Theme.warning
-        return Text(status ?? "—")
-            .font(.wx(11, .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(color.opacity(0.13), in: Capsule())
+        return StatusCapsule(text: status ?? "—", color: color)
     }
 
-    private func monitorTime(_ iso: String?) -> String {
-        guard let date = parseISODate(iso) else { return "" }
-        let f = DateFormatter(); f.dateFormat = "d/M HH:mm"
-        return f.string(from: date)
-    }
+    private func monitorTime(_ iso: String?) -> String { dayClockTime(iso) }
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
-            Text(value).font(.wx(26, .bold)).foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 14)
-        .glassCard(20)
+        MetricTile(label: label, value: value, color: color)
     }
 
     private func healthTile(_ label: String, _ value: Int, _ color: Color) -> some View {
@@ -507,13 +494,7 @@ struct IntegrationsView: View {
             default: return (L("تهيئة"), Theme.onMuted)
             }
         }()
-        return HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).font(.wx(11, .semibold))
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 9).padding(.vertical, 3)
-        .background(color.opacity(0.14), in: Capsule())
+        return StatusCapsule(text: label, color: color, showDot: true)
     }
 
     // MARK: Message flow
@@ -575,10 +556,7 @@ struct IntegrationsView: View {
             default: return (status ?? "—", Theme.info)
             }
         }()
-        return Text(label.isEmpty ? "—" : label)
-            .font(.wx(11, .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 9).padding(.vertical, 3)
-            .background(color.opacity(0.14), in: Capsule())
+        return StatusCapsule(text: label, color: color)
     }
 
     // MARK: Logs
@@ -698,7 +676,7 @@ struct IntegrationFormSheet: View {
             await onSaved()
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         saving = false
     }

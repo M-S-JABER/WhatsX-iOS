@@ -87,7 +87,7 @@ final class InboxViewModel: ObservableObject {
                 UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
             }
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         loading = false
     }
@@ -484,18 +484,3 @@ struct ConversationRow: View {
     }
 }
 
-// Very small relative-time formatter for list rows.
-func shortTime(_ iso: String?) -> String {
-    guard let iso, let date = ISO8601DateFormatter().date(from: iso) ?? flexibleDate(iso) else { return "" }
-    let cal = Calendar.current
-    if cal.isDateInToday(date) {
-        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
-    }
-    if cal.isDateInYesterday(date) { return L("أمس") }
-    let f = DateFormatter(); f.dateFormat = "dd/MM"; return f.string(from: date)
-}
-
-private func flexibleDate(_ s: String) -> Date? {
-    let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f.date(from: s)
-}

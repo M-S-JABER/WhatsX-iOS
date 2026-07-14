@@ -26,7 +26,7 @@ final class Session: ObservableObject {
             user = try await Api.shared.login(username: username, password: password)
             startLiveServices()
         } catch {
-            loginError = (error as? ApiError)?.message ?? error.localizedDescription
+            loginError = error.apiMessage
         }
         isLoggingIn = false
     }
