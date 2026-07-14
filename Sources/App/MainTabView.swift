@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum MainTab: Hashable { case integrations, chats, reports, settings }
+enum MainTab: Hashable { case integrations, chats, search, reports, settings }
 
 /// Tiny event bus between the tab bar and the inbox: re-tapping the chats
 /// tab (a second press while already on it) flips active ⇄ archive.
@@ -123,6 +123,9 @@ struct MainTabView: View {
                 InboxView()
             }
             .badge(unread.total)
+            Tab(L("بحث"), systemImage: "magnifyingglass", value: MainTab.search) {
+                GlobalSearchView()
+            }
             Tab(L("التقارير"), systemImage: "chart.bar.xaxis", value: MainTab.reports) {
                 NavigationStack { StatsView() }
             }
@@ -145,6 +148,9 @@ struct MainTabView: View {
                 .tabItem { Label(L("المحادثات"), systemImage: "bubble.left.and.bubble.right") }
                 .tag(MainTab.chats)
                 .badge(unread.total)
+            GlobalSearchView()
+                .tabItem { Label(L("بحث"), systemImage: "magnifyingglass") }
+                .tag(MainTab.search)
             NavigationStack { StatsView() }
                 .tabItem { Label(L("التقارير"), systemImage: "chart.bar.xaxis") }
                 .tag(MainTab.reports)

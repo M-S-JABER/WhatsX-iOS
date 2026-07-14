@@ -39,6 +39,25 @@ struct StatusCapsule: View {
     }
 }
 
+/// Three pulsing dots — the classic "typing…" indicator.
+struct TypingDots: View {
+    @State private var animate = false
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle().fill(Theme.success).frame(width: 5, height: 5)
+                    .scaleEffect(animate ? 1 : 0.55)
+                    .opacity(animate ? 1 : 0.6)
+                    .animation(
+                        .easeInOut(duration: 0.5).repeatForever(autoreverses: true).delay(Double(i) * 0.15),
+                        value: animate)
+            }
+        }
+        .onAppear { animate = true }
+    }
+}
+
 /// Time-range chips shared by Statistics and Customer reports.
 struct RangeChipsRow: View {
     let selected: String?

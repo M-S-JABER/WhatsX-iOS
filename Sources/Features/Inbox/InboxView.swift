@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum InboxSegment: String, CaseIterable {
     case active, unread, archived
@@ -174,6 +175,8 @@ struct InboxView: View {
     @State private var showNew = false
     @State private var searchOpen = false
     @State private var searchText = ""
+    /// iPad split mode: the conversation open in the detail pane.
+    @State private var selectedConv: Conversation?
     @FocusState private var searchFocused: Bool
 
     /// Conversations after the in-place bottom search filter.
@@ -188,26 +191,13 @@ struct InboxView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                header
-                content
-            }
-            .background(Theme.background.ignoresSafeArea())
-            .navigationBarHidden(true)
-            .overlay(alignment: .bottom) {
-                bottomBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-            }
-            // RTL: trailing = the visual top-LEFT corner.
-            .overlay(alignment: .topTrailing) {
-                HStack(spacing: 10) {
-                    accountsButton
-                    archiveButton
-                }
-                .padding(.trailing, 16)
-                .padding(.top, 6)
+        GeometryReader { geo in
+            // iPad with room for two panes: chat list + open conversation
+            // side by side (like Mail/Messages). Phones keep the push flow.
+            if UIDevice.current.userInterfaceIdiom == .pad && geo.size.width >= 700 {
+                splitBody
+            } else {
+                phoneBody
             }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
@@ -230,6 +220,80 @@ struct InboxView: View {
         // active ⇄ archive.
         .onReceive(InboxBus.shared.toggleArchive) { _ in
             withAnimation { vm.toggleArchived() }
+        }
+    }
+
+    private var phoneBody: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                header
+                listContent(split: false)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationBarHidden(true)
+            .overlay(alignment: .bottom) {
+                bottomBar
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+            }
+            // RTL: trailing = the visual top-LEFT corner.
+            .overlay(alignment: .topTrailing) {
+                HStack(spacing: 10) {
+                    accountsButton
+                    archiveButton
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 6)
+            }
+        }
+    }
+
+    private var splitBody: some View {
+        NavigationStack {
+            HStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    header
+                    listContent(split: true)
+                }
+                .frame(width: 380)
+                .background(Theme.surface1.ignoresSafeArea())
+                .overlay(alignment: .bottom) {
+                    bottomBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+                .overlay(alignment: .topTrailing) {
+                    HStack(spacing: 10) {
+                        accountsButton
+                        archiveButton
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.top, 6)
+                }
+
+                Rectangle().fill(Theme.outline).frame(width: 1).ignoresSafeArea()
+
+                detailPane
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationBarHidden(true)
+        }
+    }
+
+    /// Right pane on iPad: the selected conversation, or a friendly empty state.
+    @ViewBuilder
+    private var detailPane: some View {
+        if let conv = selectedConv {
+            // .id restarts the ChatView (VM and all) when switching rows.
+            ChatView(conversation: conv).id(conv.id)
+        } else {
+            VStack(spacing: 14) {
+                BrandMark(size: 72)
+                Text(L("اختر محادثة")).font(.wx(19, .bold)).foregroundStyle(Theme.onSurface)
+                Text(L("اختر محادثة من القائمة لعرضها هنا"))
+                    .font(.wx(13)).foregroundStyle(Theme.onMuted)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -383,7 +447,7 @@ struct InboxView: View {
         .glassCircle()
     }
 
-    private var content: some View {
+    private func listContent(split: Bool) -> some View {
         Group {
             if vm.loading && vm.items.isEmpty {
                 Spacer(); ProgressView().tint(Theme.primary); Spacer()
@@ -402,8 +466,19 @@ struct InboxView: View {
                 List {
                     ForEach(displayed) { conv in
                         ZStack {
-                            NavigationLink(value: conv) { EmptyView() }.opacity(0)
-                            ConversationRow(conv: conv)
+                            if split {
+                                // Selection drives the detail pane; no push.
+                                ConversationRow(conv: conv)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        Haptics.tap()
+                                        selectedConv = conv
+                                    }
+                                    .background(selectedConv?.id == conv.id ? Theme.primarySoft : .clear)
+                            } else {
+                                NavigationLink(value: conv) { EmptyView() }.opacity(0)
+                                ConversationRow(conv: conv)
+                            }
                         }
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Theme.background)

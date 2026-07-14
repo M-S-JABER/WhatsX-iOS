@@ -28,6 +28,10 @@ struct ChatView: View {
     /// Whether the view is scrolled to the newest message — auto-scroll on
     /// new messages must not yank the operator out of reading history.
     @State private var atBottom = true
+    /// Live "customer is typing…" flag, driven by realtime typing events
+    /// (activates whenever the backend broadcasts them for this conversation).
+    @State private var customerTyping = false
+    @State private var typingHideTask: Task<Void, Never>?
 
     init(conversation: Conversation) {
         _vm = StateObject(wrappedValue: ChatViewModel(conversation: conversation))
@@ -75,9 +79,15 @@ struct ChatView: View {
             }
         }
         .onReceive(Realtime.shared.events) { event in
-            guard RealtimeEvent.chatEvents.contains(event.name),
-                  event.conversationId == nil || event.conversationId == vm.conversation.id
-            else { return }
+            guard event.conversationId == nil || event.conversationId == vm.conversation.id else { return }
+            // Typing events light the indicator for a beat; a new incoming
+            // message clears it (the "typing" turned into a message).
+            if event.name.lowercased().contains("typing") {
+                showTypingIndicator()
+                return
+            }
+            guard RealtimeEvent.chatEvents.contains(event.name) else { return }
+            if event.name == "message_incoming" { hideTypingIndicator() }
             vm.scheduleRealtimeReload()
         }
         .confirmationDialog(L("الاتصال"), isPresented: $showCallMenu, titleVisibility: .visible) {
@@ -140,6 +150,21 @@ struct ChatView: View {
         } message: { Text(vm.attachError ?? "") }
     }
 
+    private func showTypingIndicator() {
+        withAnimation(.easeOut(duration: 0.2)) { customerTyping = true }
+        typingHideTask?.cancel()
+        typingHideTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.25)) { customerTyping = false }
+        }
+    }
+
+    private func hideTypingIndicator() {
+        typingHideTask?.cancel()
+        withAnimation(.easeOut(duration: 0.2)) { customerTyping = false }
+    }
+
     private var topBar: some View {
         HStack(spacing: 6) {
             Button { dismiss() } label: { Image(icon: .back).font(.wx(20)).foregroundStyle(Theme.onMuted) }
@@ -147,7 +172,13 @@ struct ChatView: View {
             Avatar(name: vm.conversation.title, size: 40)
             VStack(alignment: .leading, spacing: 1) {
                 Text(vm.conversation.title).font(.wx(16, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
-                if let acct = vm.conversation.instance?.label {
+                if customerTyping {
+                    HStack(spacing: 4) {
+                        TypingDots()
+                        Text(L("يكتب الآن…")).font(.wx(11, .semibold)).foregroundStyle(Theme.success)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                } else if let acct = vm.conversation.instance?.label {
                     Text(acct).font(.wx(11)).foregroundStyle(Theme.onMuted)
                 }
             }
@@ -194,11 +225,13 @@ struct ChatView: View {
                 ForEach(vm.timeline) { entry in
                     switch entry {
                     case .message(let msg):
-                        MessageBubble(msg: msg,
-                                      onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil,
-                                      highlighted: highlightedMessageId == msg.id,
-                                      onImageTap: { lightboxItem = MediaItem(url: $0) },
-                                      onDocTap: { docItem = MediaItem(url: $0) })
+                        SwipeToReply(onReply: { vm.replyTarget = msg }) {
+                            MessageBubble(msg: msg,
+                                          onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil,
+                                          highlighted: highlightedMessageId == msg.id,
+                                          onImageTap: { lightboxItem = MediaItem(url: $0) },
+                                          onDocTap: { docItem = MediaItem(url: $0) })
+                        }
                             .contextMenu {
                                 Button { vm.replyTarget = msg } label: {
                                     Label(L("رد"), systemImage: "arrowshape.turn.up.left")
