@@ -7,11 +7,25 @@ import CoreText
 enum WXFont {
     private static var registered = false
 
+    /// The bundle carrying the .ttf files: the SwiftPM resource bundle when
+    /// built as a package (Playgrounds), the app bundle when built as an app
+    /// target (XcodeGen), where resources are copied flat into the root.
+    private static var fontBundle: Bundle {
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
+        return Bundle.main
+        #endif
+    }
+
     /// Registers the bundled faces with Core Text (idempotent).
     static func registerIfNeeded() {
         guard !registered else { return }
         registered = true
-        guard let urls = Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") else { return }
+        var urls = fontBundle.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+        if urls.isEmpty {
+            urls = fontBundle.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+        }
         for url in urls {
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
