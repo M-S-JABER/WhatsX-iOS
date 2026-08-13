@@ -1,0 +1,86 @@
+# بناء + تحقق على كل دفعة — لا يحتاج أي سر ولا حساب مطوّر مفعّلاً.
+#
+# ينتج .ipa غير موقّع يمكنك تنزيله من قسم Artifacts في صفحة التشغيل، ثم
+# إعادة توقيعه بـ AltStore أو Sideloadly لتجربته على جهاز حقيقي. هذه هي
+# طريقتك الوحيدة للتجربة على جهاز قبل تفعيل حساب المطوّر.
+name: ios-build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# يلغي البناء القديم تلقائياً عند دفع جديد على نفس الفرع — يوفّر دقائق runner.
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: بيئة البناء
+        run: |
+          xcodebuild -version
+          echo "--- Xcode المتاحة ---"
+          ls /Applications | grep -i xcode || true
+
+      - name: تثبيت XcodeGen
+        run: brew install xcodegen
+
+      - name: تهيئة Ruby و fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: توليد مشروع Xcode من project.yml
+        run: |
+          xcodegen generate
+          echo "--- الأهداف والمخططات ---"
+          xcodebuild -list -project WhatsX.xcodeproj
+
+      - name: بناء غير موقّع + تغليف IPA
+        run: bundle exec fastlane build
+
+      # WhatsX لا يحتوي حالياً أي هدف اختبارات. الخطوة تبقى موجودة وتتخطّى
+      # نفسها بصمت، فما إن تُضاف Tests/ حتى تعمل بلا تعديل على الـ workflow.
+      - name: تشغيل الاختبارات إن وُجدت
+        run: |
+          if [ -d "Tests" ]; then
+            xcodebuild test \
+              -project WhatsX.xcodeproj \
+              -scheme WhatsX \
+              -destination "platform=iOS Simulator,name=$(xcrun simctl list devices available \
+                | grep -oE 'iPhone [0-9]+( Pro| Plus| Pro Max)?' | head -1)" \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            echo "::notice::لا يوجد مجلد Tests — تم تخطّي الاختبارات."
+          fi
+
+      - name: رفع الـ IPA غير الموقّع كـ artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhatsX-unsigned-ipa
+          path: build/WhatsX-unsigned.ipa
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: رفع سجلّ البناء عند الفشل
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            ~/Library/Logs/gym/**
+            fastlane/report.xml
+          retention-days: 7
+          if-no-files-found: ignore

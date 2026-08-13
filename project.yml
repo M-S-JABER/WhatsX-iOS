@@ -1,15 +1,22 @@
-# XcodeGen spec. On a Mac: `brew install xcodegen` then `xcodegen generate`
-# creates WhatsX.xcodeproj from this spec + the Sources/ tree.
+# مواصفة XcodeGen — تولّد WhatsX.xcodeproj من هذا الملف + شجرة Sources/
+#
+# لا تحتاج Mac: ملف المشروع يُولَّد داخل runner الخاص بـ GitHub Actions
+# في كل بناء (راجع .github/workflows/ios-build.yml). لذلك لا يُرفع
+# WhatsX.xcodeproj إلى المستودع أبداً — وهو مستثنى في .gitignore.
+#
+# ملاحظة توقيع: DEVELOPMENT_TEAM و CODE_SIGN_STYLE غير مذكورَين هنا عمداً.
+# يضبطهما fastlane وقت البناء الموقّع عبر update_code_signing_settings،
+# اعتماداً على TEAM_ID والملفات التي يجلبها match. هكذا يبقى البناء غير
+# الموقّع (للتحقق السريع والـ sideload) شغّالاً بلا أي سر.
 name: WhatsX
 options:
-  bundleIdPrefix: net.alnokhba.whatsx
+  bundleIdPrefix: net.alnokhba
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: ""          # set your Apple Developer Team ID
 targets:
   WhatsX:
     type: application
@@ -22,10 +29,18 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
-        MARKETING_VERSION: "1.1"
+        # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
+        # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.10.0.
+        MARKETING_VERSION: "1.10.0"
+        # CURRENT_PROJECT_VERSION هو رقم البناء (build number). يعيد fastlane
+        # كتابته في كل رفع إلى TestFlight برقم تشغيل الـ workflow، لأن Apple
+        # ترفض بناءً برقم مكرّر تحت نفس MARKETING_VERSION.
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: NO
+        # 1 = iPhone فقط. الكود يدعم iPad split view بعد دمج PR #26،
+        # لكن توسيعه إلى "1,2" يستلزم لقطات شاشة iPad في App Store Connect
+        # ويوسّع نطاق المراجعة — قرار منفصل، راجع SETUP.md.
         TARGETED_DEVICE_FAMILY: 1
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
