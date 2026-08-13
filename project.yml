@@ -30,8 +30,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
         # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
-        # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.10.0.
-        MARKETING_VERSION: "1.10.0"
+        # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.12.0.
+        MARKETING_VERSION: "1.13.0"
         # CURRENT_PROJECT_VERSION هو رقم البناء (build number). يعيد fastlane
         # كتابته في كل رفع إلى TestFlight برقم تشغيل الـ workflow، لأن Apple
         # ترفض بناءً برقم مكرّر تحت نفس MARKETING_VERSION.
