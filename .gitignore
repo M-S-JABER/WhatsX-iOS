@@ -42,3 +42,15 @@ Secrets.xcconfig
 .AppleDouble
 .LSOverride
 Icon
+
+# fastlane — مخرجات مولَّدة
+fastlane/README.md
+fastlane/Appfile.lock
+build/
+*.xcarchive
+Payload/
+
+# ملفات توقيع مؤقتة داخل CI (لا تُكتب محلياً أصلاً، مذكورة للأمان)
+*.p8
+*.keychain
+*.keychain-db

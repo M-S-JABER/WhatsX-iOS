@@ -1,0 +1,25 @@
+# إعدادات fastlane match — إدارة شهادات وملفات التزويد عبر مستودع git مشفّر.
+#
+# الفكرة: match ينشئ الشهادات وملفات التزويد مرة واحدة، يشفّرها بـ
+# MATCH_PASSWORD، ويخزّنها في مستودع certificates الخاص. بعدها كل بناء في
+# CI يسحبها فقط (readonly) بدل أن ينشئ شهادة جديدة — فلا تصطدم بحد
+# Apple (شهادتا توزيع كحد أقصى لكل حساب).
+
+# مستودع الشهادات الخاص. يُقرأ من سر MATCH_GIT_URL إن وُجد، وإلا يستخدم
+# المسار الافتراضي المذكور في خطتك.
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/M-S-JABER/certificates")
+
+# التخزين عبر git (وليس S3 أو Google Cloud).
+storage_mode("git")
+
+# الفرع داخل مستودع الشهادات.
+git_branch("main")
+
+# نوع الشهادة الافتراضي: توزيع App Store / TestFlight.
+type("appstore")
+
+app_identifier(["net.alnokhba.whatsx"])
+
+# readonly هو الوضع الافتراضي الآمن: يسحب ولا ينشئ ولا يعدّل.
+# lane :bootstrap_signing وحده يتجاوزه (readonly: false) عند التشغيل الأول.
+readonly(true)
