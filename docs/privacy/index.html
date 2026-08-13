@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsX — سياسة الخصوصية / Privacy Policy</title>
+<style>
+  :root{
+    --bg:#F5F1EB; --card:#ffffff; --text:#2A2724; --muted:#6B635A;
+    --border:#E5DED4; --accent:#C96442;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1A1815; --card:#232019; --text:#EDE7DF; --muted:#A79C8E;
+      --border:#332E26; --accent:#E0805E; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+      "Helvetica Neue",Arial,"Noto Sans Arabic",sans-serif;
+    line-height:1.75; padding:24px 16px;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:8px;flex-wrap:wrap}
+  .mark{
+    width:56px;height:56px;border-radius:15px;flex:0 0 auto;
+    background:linear-gradient(135deg,#C96442,#E08A63);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:26px;font-weight:700;
+  }
+  h1{font-size:1.5rem;margin:0}
+  .sub{color:var(--muted);font-size:.95rem;margin-top:2px}
+  .toggle{margin-inline-start:auto;display:flex;gap:6px}
+  .toggle button{
+    border:1px solid var(--border);background:var(--card);color:var(--text);
+    padding:6px 14px;border-radius:999px;cursor:pointer;
+    font-size:.9rem;font-weight:600;font-family:inherit;
+  }
+  .toggle button.active{background:var(--accent);color:#fff;border-color:transparent}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:20px 22px;margin:18px 0;
+  }
+  h2{font-size:1.15rem;margin:0 0 10px;color:var(--accent)}
+  ul{margin:8px 0;padding-inline-start:22px}
+  li{margin:6px 0}
+  .pill{
+    display:inline-block;background:var(--accent);color:#fff;
+    padding:3px 12px;border-radius:999px;font-size:.82rem;font-weight:700;
+  }
+  footer{color:var(--muted);font-size:.85rem;text-align:center;margin-top:26px}
+  section[hidden]{display:none}
+  #en{direction:ltr;text-align:left}
+  #en ul{padding-inline-start:22px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.92rem}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:start}
+  th{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  code{background:var(--bg);padding:2px 6px;border-radius:5px;font-size:.88em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark">X</div>
+    <div>
+      <h1>WhatsX</h1>
+      <div class="sub">سياسة الخصوصية · Privacy Policy</div>
+    </div>
+    <div class="toggle">
+      <button id="btn-ar" class="active" onclick="show('ar')">العربية</button>
+      <button id="btn-en" onclick="show('en')">English</button>
+    </div>
+  </header>
+
+  <!-- ══════════════ العربية ══════════════ -->
+  <section id="ar">
+    <div class="card">
+      <span class="pill">لا نجمع أي بيانات</span>
+      <h2 style="margin-top:14px">الخلاصة</h2>
+      <p>
+        WhatsX تطبيق <strong>يُستضاف ذاتياً</strong>. يتصل التطبيق بخادم
+        تملكه مؤسستك أنت وتديره أنت، ولا يوجد خادم مركزي يديره مطوّر
+        التطبيق. لذلك <strong>لا يجمع المطوّر أي بيانات عنك أو عن عملائك</strong>،
+        ولا يستطيع الوصول إليها.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>ما يبقى على جهازك</h2>
+      <p>يحفظ التطبيق التالي محلياً فقط، ولا يغادر جهازك:</p>
+      <ul>
+        <li>عنوان خادم مؤسستك</li>
+        <li>تفضيلات العرض: اللغة، المظهر الفاتح/الداكن</li>
+        <li>إعداد قفل التطبيق ببصمة الوجه</li>
+        <li>مفتاح تفعيل الإشعارات</li>
+        <li>ملفات مؤقتة للوسائط أثناء الإرسال، تُحذف بعده</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>ما يُرسل إلى خادم مؤسستك</h2>
+      <p>
+        محادثاتك وبيانات عملائك تُرسل إلى الخادم الذي أدخلت عنوانه، وهو
+        خادم <strong>مؤسستك</strong>. تخضع هذه البيانات لسياسة الخصوصية
+        الخاصة بمؤسستك، لا لهذه السياسة.
+      </p>
+      <p>
+        كل الاتصالات تجري عبر <code>https</code> حصراً — يرفض التطبيق
+        الاتصال غير المشفّر ويرفّع أي عنوان <code>http</code> تلقائياً.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>ما لا يفعله التطبيق</h2>
+      <ul>
+        <li>لا يتتبّعك عبر التطبيقات أو المواقع الأخرى</li>
+        <li>لا يحتوي أي أداة تحليلات أو قياس</li>
+        <li>لا يحتوي أي مكتبة طرف ثالث إطلاقاً</li>
+        <li>لا يستخدم أي معرّف إعلاني</li>
+        <li>لا يبيع بياناتك ولا يشاركها مع أحد</li>
+        <li>الإشعارات محلية بالكامل — لا تمرّ بخوادم إشعارات خارجية</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>الصلاحيات</h2>
+      <table>
+        <tr><th>الصلاحية</th><th>سبب الطلب</th></tr>
+        <tr><td>الميكروفون</td><td>المكالمات الصوتية وتسجيل الرسائل الصوتية</td></tr>
+        <tr><td>الكاميرا</td><td>التقاط صورة الملف الشخصي والوسائط</td></tr>
+        <tr><td>الصور</td><td>إرسال الصور وتعيين صورة الملف الشخصي</td></tr>
+        <tr><td>بصمة الوجه</td><td>قفل التطبيق لحماية محادثات العملاء</td></tr>
+      </table>
+      <p>
+        كل صلاحية تُطلب عند أول استخدام لميزتها فقط، لا عند تشغيل التطبيق،
+        ويمكنك رفضها ومتابعة استخدام بقية الميزات.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>حقوقك وحذف بياناتك</h2>
+      <p>
+        بما أن بياناتك على خادم مؤسستك، فطلبات الاطلاع أو التصحيح أو الحذف
+        تُوجَّه إلى مسؤول النظام في مؤسستك. حذف التطبيق من جهازك يمحو كل ما
+        هو محفوظ محلياً.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>التواصل</h2>
+      <p>لأي استفسار عن هذه السياسة: <strong>info@aswaralmudun.com</strong></p>
+    </div>
+  </section>
+
+  <!-- ══════════════ English ══════════════ -->
+  <section id="en" hidden>
+    <div class="card">
+      <span class="pill">No data collected</span>
+      <h2 style="margin-top:14px">Summary</h2>
+      <p>
+        WhatsX is a <strong>self-hosted</strong> application. It connects to a
+        server owned and operated by your own organisation; there is no central
+        server run by the app's developer. The developer therefore
+        <strong>collects no data</strong> about you or your customers and has no
+        means of accessing it.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>What stays on your device</h2>
+      <p>The app stores the following locally only. None of it leaves your device:</p>
+      <ul>
+        <li>Your organisation's server address</li>
+        <li>Display preferences: language, light/dark appearance</li>
+        <li>The app-lock (Face ID) setting</li>
+        <li>The notifications toggle</li>
+        <li>Temporary media files while sending, deleted afterwards</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>What is sent to your organisation's server</h2>
+      <p>
+        Your conversations and customer data are sent to the server whose
+        address you entered — <strong>your organisation's</strong> server. That
+        data is governed by your organisation's privacy policy, not by this one.
+      </p>
+      <p>
+        All traffic uses <code>https</code> exclusively. The app refuses
+        unencrypted connections and upgrades any <code>http</code> address
+        automatically.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>What the app does not do</h2>
+      <ul>
+        <li>No tracking across other apps or websites</li>
+        <li>No analytics or measurement tooling of any kind</li>
+        <li>No third-party libraries whatsoever</li>
+        <li>No advertising identifier</li>
+        <li>Your data is never sold or shared</li>
+        <li>Notifications are entirely local — they never pass through an
+            external push service</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Permissions</h2>
+      <table>
+        <tr><th>Permission</th><th>Why it is requested</th></tr>
+        <tr><td>Microphone</td><td>Voice calls and recording voice messages</td></tr>
+        <tr><td>Camera</td><td>Capturing a profile picture and media</td></tr>
+        <tr><td>Photos</td><td>Sending images and setting a profile picture</td></tr>
+        <tr><td>Face ID</td><td>Locking the app to protect customer conversations</td></tr>
+      </table>
+      <p>
+        Each permission is requested the first time its feature is used — never
+        at launch — and declining one leaves every other feature usable.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Your rights and data deletion</h2>
+      <p>
+        Because your data resides on your organisation's server, requests to
+        access, correct or delete it should be directed to your organisation's
+        system administrator. Deleting the app from your device erases
+        everything stored locally.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Contact</h2>
+      <p>Questions about this policy: <strong>info@aswaralmudun.com</strong></p>
+    </div>
+  </section>
+
+  <footer>
+    آخر تحديث · Last updated: 2026-08-13
+  </footer>
+</div>
+
+<script>
+  function show(lang){
+    const ar = lang === 'ar';
+    document.getElementById('ar').hidden = !ar;
+    document.getElementById('en').hidden = ar;
+    document.getElementById('btn-ar').classList.toggle('active', ar);
+    document.getElementById('btn-en').classList.toggle('active', !ar);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = ar ? 'rtl' : 'ltr';
+  }
+  // يفتح بالإنجليزية إن كان متصفح الزائر غير عربي.
+  if (!(navigator.language || '').toLowerCase().startsWith('ar')) show('en');
+</script>
+</body>
+</html>

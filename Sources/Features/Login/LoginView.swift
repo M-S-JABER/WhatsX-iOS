@@ -9,7 +9,9 @@ struct LoginView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var showPassword = false
-    @State private var showServer = false
+    /// مفتوح تلقائياً عند أول تشغيل: لا عنوان خادم محفوظاً بعد، والمستخدم
+    /// لا يستطيع الدخول قبل إدخاله — فإخفاؤه خلف زرّ كان سيبدو كعطل.
+    @State private var showServer = !AppConfig.hasServer
     @State private var serverURL = AppConfig.baseURL
     @State private var appeared = false
     @FocusState private var focused: Field?
@@ -123,9 +125,9 @@ struct LoginView: View {
                 .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
             }
             .buttonStyle(.pressable)
-            .disabled(session.isLoggingIn || username.isEmpty || password.isEmpty)
-            .opacity(username.isEmpty || password.isEmpty ? 0.55 : 1)
-            .animation(.easeOut(duration: 0.2), value: username.isEmpty || password.isEmpty)
+            .disabled(session.isLoggingIn || !canSubmit)
+            .opacity(canSubmit ? 1 : 0.55)
+            .animation(.easeOut(duration: 0.2), value: canSubmit)
 
             DisclosureGroup(isExpanded: $showServer.animation(.spring(response: 0.35, dampingFraction: 0.85))) {
                 field(icon: .cloud, active: focused == .server) {
@@ -135,7 +137,15 @@ struct LoginView: View {
                         .focused($focused, equals: .server)
                         .environment(\.layoutDirection, .leftToRight)
                 }
-                .padding(.top, 8)
+                // عند أول تشغيل لا يوجد عنوان خادم محفوظ، فنوضّح للمستخدم
+                // سبب تعطّل زر الدخول بدل أن يبدو معطّلاً بلا سبب.
+                if serverURL.trimmed().isEmpty {
+                    Text(L("أدخل عنوان خادم WhatsX الخاص بك للمتابعة."))
+                        .font(.wx(12))
+                        .foregroundStyle(Theme.onMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 6)
+                }
             } label: {
                 Label(L("إعدادات الخادم"), systemImage: WIcon.settings.symbol())
                     .font(.wx(14)).foregroundStyle(Theme.onMuted)
@@ -148,8 +158,15 @@ struct LoginView: View {
         .shadow(color: .black.opacity(0.09), radius: 22, y: 10)
     }
 
+    /// عنوان الخادم شرط للدخول: WhatsX يُستضاف ذاتياً، فلا يوجد عنوان
+    /// افتراضي يمكن للتطبيق أن يفترضه. بدون هذا الشرط كان الزر يرسل الطلب
+    /// إلى عنوان فارغ فيفشل برسالة غامضة.
+    private var canSubmit: Bool {
+        !username.isEmpty && !password.isEmpty && !serverURL.trimmed().isEmpty
+    }
+
     private func logIn() {
-        guard !username.isEmpty, !password.isEmpty, !session.isLoggingIn else { return }
+        guard canSubmit, !session.isLoggingIn else { return }
         Haptics.action()
         AppConfig.baseURL = serverURL
         Task { await session.login(username: username, password: password) }
