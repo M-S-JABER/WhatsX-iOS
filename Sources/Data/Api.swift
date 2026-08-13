@@ -10,13 +10,28 @@ import Foundation
 
 enum AppConfig {
     private static let key = "whatsx.baseURL"
-    /// Set this to your production server (a STABLE public https domain).
-    static let defaultBaseURL = "https://your-server.example.com"
+
+    /// Empty on purpose. WhatsX is self-hosted: each customer runs their own
+    /// server, so there is no address the app could sensibly ship with.
+    ///
+    /// It previously defaulted to `https://your-server.example.com`, which is
+    /// worse than empty — the app would silently attempt requests against a
+    /// domain that does not exist. An App Review tester opening the app would
+    /// see nothing but connection failures, which is a routine rejection under
+    /// Guideline 2.1 (App Completeness).
+    ///
+    /// With no default, `hasServer` is false on first launch and the login
+    /// screen requires the address before it will submit — see LoginView.
+    static let defaultBaseURL = ""
 
     static var baseURL: String {
         get { normalized(UserDefaults.standard.string(forKey: key) ?? defaultBaseURL) }
         set { UserDefaults.standard.set(normalized(newValue), forKey: key) }
     }
+
+    /// Whether a server address has been configured. The login screen uses
+    /// this to expand its server field and block submission until it is set.
+    static var hasServer: Bool { !baseURL.isEmpty }
 
     /// Enforces an https origin: trims whitespace and trailing slashes, adds
     /// the scheme when missing, and upgrades plain http — credentials and

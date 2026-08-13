@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  بيان الخصوصية (Privacy Manifest) — إلزامي من Apple.
+  بدونه يُرفض الرفع إلى App Store Connect.
+
+  ══ ملاحظة جوهرية على NSPrivacyCollectedDataTypes ══════════════════════
+  هذا البيان يعلن أن التطبيق لا يجمع أي بيانات، وهذا صحيح بشرط واحد:
+  أن يكون **كل عميل يستضيف خادم WhatsX الخاص به**، فلا يصل المطوّر إلى
+  بيانات أي عميل. التطبيق عندها مجرد عميل (client) يتصل بخادم يملكه
+  المستخدم — كما هي حال تطبيقات Nextcloud و Home Assistant.
+
+  ⚠️ إن كنت تستضيف خادماً مركزياً يتصل به كل العملاء، فالبيانات تُعدّ
+  **مجموعة منك** ويجب تعديل هذا الملف لإعلان الأنواع التالية:
+     - NSPrivacyCollectedDataTypeName          (اسم المستخدم)
+     - NSPrivacyCollectedDataTypePhoneNumber   (أرقام هواتف العملاء)
+     - NSPrivacyCollectedDataTypeMessages      (نصوص المحادثات)
+     - NSPrivacyCollectedDataTypePhotosorVideos (الوسائط المرسلة)
+     - NSPrivacyCollectedDataTypeAudioData     (الرسائل الصوتية)
+  مع Linked=true و Tracking=false لكل نوع.
+  راجع APPSTORE.md — القسم "قرار الاستضافة" قبل أول رفع.
+
+  ══ ما جرى التحقق منه فعلياً في الشيفرة ════════════════════════════════
+  - لا SDK طرف ثالث إطلاقاً، ولا تبعيات خارجية في Package.swift
+  - لا تحليلات ولا Firebase ولا Crashlytics ولا أي معرّف إعلاني
+  - الإشعارات محلية عبر UNUserNotificationCenter — لا APNs ولا رموز أجهزة
+  - FileManager مستخدم فقط في temporaryDirectory و removeItem، وهما
+    ليسا ضمن واجهات السبب المصرَّح، فلا يحتاجان إعلاناً
+-->
+<plist version="1.0">
+<dict>
+    <!-- التطبيق لا يتتبّع المستخدمين عبر تطبيقات أو مواقع أطراف أخرى،
+         فلا يحتاج إذن App Tracking Transparency. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- راجع الملاحظة الجوهرية أعلاه قبل تعديل هذا المصفوف. -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <!-- واجهات "السبب المصرَّح" التي يستخدمها التطبيق -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <!-- UserDefaults: تفضيلات المستخدم فقط — اللغة، المظهر، قفل
+                 Face ID، مفتاح الإشعارات، وعنوان الخادم. لا تغادر الجهاز
+                 ولا يصل إليها إلا التطبيق نفسه. -->
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
