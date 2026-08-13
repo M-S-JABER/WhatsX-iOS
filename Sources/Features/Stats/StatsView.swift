@@ -4,6 +4,7 @@ import SwiftUI
 final class StatsViewModel: ObservableObject {
     @Published var data: StatsResponse?
     @Published var loading = false
+    @Published var loadError: String?
     @Published var range: String? = nil
     @Published var instanceId: String? = nil
     @Published var accounts: [Instance] = []
@@ -13,7 +14,10 @@ final class StatsViewModel: ObservableObject {
 
     func load() async {
         loading = data == nil
-        do { data = try await Api.shared.statistics(range: range, instanceId: instanceId) } catch { }
+        do {
+            data = try await Api.shared.statistics(range: range, instanceId: instanceId)
+            loadError = nil
+        } catch { loadError = error.apiMessage }
         loading = false
     }
 
@@ -25,7 +29,6 @@ final class StatsViewModel: ObservableObject {
 struct StatsView: View {
     @StateObject private var vm = StatsViewModel()
     @State private var exportURL: MediaItem?
-    private let ranges: [(String?, String)] = [(nil, L("الكل")), ("24h", L("24س")), ("7d", L("7 أيام")), ("30d", L("30 يومًا")), ("90d", L("90 يومًا"))]
 
     // Pushed inside the Settings navigation stack (no NavigationStack of its
     // own) — its NavigationLinks resolve against the enclosing stack.
@@ -66,6 +69,9 @@ struct StatsView: View {
             if let b = vm.data?.instanceBreakdown, b.count > 1 { instanceBreakdownCard(b) }
             if let u = vm.data?.userStats, !u.isEmpty { userStatsCard(u) }
             if vm.loading && vm.data == nil { ProgressView().tint(Theme.primary).padding(.top, 40) }
+            if !vm.loading, vm.data == nil, let err = vm.loadError {
+                LoadFailedView(message: err) { Task { await vm.load() } }
+            }
             reportsLink
         }
     }
@@ -103,19 +109,7 @@ struct StatsView: View {
     }
 
     private var rangeChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                ForEach(ranges, id: \.1) { key, label in
-                    let active = vm.range == key
-                    Button { vm.apply(key) } label: {
-                        Text(label).font(.wx(15, .semibold))
-                            .foregroundStyle(active ? Theme.background : Theme.onMuted)
-                            .padding(.horizontal, 14).padding(.vertical, 7)
-                            .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
-                    }.buttonStyle(.plain)
-                }
-            }
-        }
+        RangeChipsRow(selected: vm.range) { vm.apply($0) }
     }
 
     private var accountChips: some View {
@@ -154,13 +148,7 @@ struct StatsView: View {
     }
 
     private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.wx(12)).foregroundStyle(Theme.onMuted)
-            Text(value).font(.wx(28, .bold)).foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 15)
-        .glassCard(20)
+        MetricTile(label: label, value: value, color: color)
     }
 
     // MARK: - Time series (hand-rolled bar chart)
@@ -296,10 +284,7 @@ struct StatsView: View {
     }
 
     private func bucketLabel(_ iso: String?) -> String {
-        guard let iso else { return "" }
-        let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = parser.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
-        guard let date else { return "" }
+        guard let date = parseISODate(iso) else { return "" }
         let f = DateFormatter(); f.dateFormat = "d/M"
         return f.string(from: date)
     }

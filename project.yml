@@ -14,8 +14,11 @@ targets:
   WhatsX:
     type: application
     platform: iOS
+    scheme:
+      configVariants: []
     sources:
       - path: Sources
+      - path: Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx

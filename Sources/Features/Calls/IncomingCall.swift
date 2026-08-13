@@ -54,7 +54,7 @@ final class CallCenter: ObservableObject {
         guard let call = incoming else { return }
         incoming = nil
         do { try await Api.shared.rejectCall(callId: call.callId) }
-        catch { actionError = (error as? ApiError)?.message ?? error.localizedDescription }
+        catch { actionError = error.apiMessage }
     }
 
     func dismiss() { incoming = nil }

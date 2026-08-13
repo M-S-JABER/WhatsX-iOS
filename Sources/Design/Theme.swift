@@ -56,6 +56,25 @@ enum Theme {
     static let warning = Color(light: 0xC17915, dark: 0xE4A944)
     static let danger = Color(light: 0xD44A35, dark: 0xD46554)
     static let dangerBg = Color(light: 0xF9E9E7, dark: 0x391D18)
+    /// The web's purple accent (--chart-5); dark-mode aware — screens must
+    /// use this token, never a raw hex.
+    static let accentPurple = Color(light: 0x89639C, dark: 0xAC88BF)
+
+    // Layout tokens — one scale instead of per-screen magic numbers. New code
+    // should draw radii/spacing from here; existing screens migrate as touched.
+    enum Radius {
+        static let chip: CGFloat = 10
+        static let field: CGFloat = 14
+        static let card: CGFloat = 18
+        static let panel: CGFloat = 22
+    }
+    enum Space {
+        static let xs: CGFloat = 4
+        static let s: CGFloat = 8
+        static let m: CGFloat = 12
+        static let l: CGFloat = 16
+        static let xl: CGFloat = 24
+    }
 
     // Login hero gradient — the web's amber hero.
     static let heroGradient = LinearGradient(

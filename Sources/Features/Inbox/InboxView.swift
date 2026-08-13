@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum InboxSegment: String, CaseIterable {
     case active, unread, archived
@@ -21,12 +22,17 @@ final class InboxViewModel: ObservableObject {
     private var total = 0
     private let pageSize = 50
     private var pins: Set<String> = []
+    private var realtimeRefreshTask: Task<Void, Never>?
 
     var showArchived: Bool { segment == .archived }
 
-    var shown: [Conversation] {
-        // Pinned conversations float to the top, preserving the backend order otherwise.
-        items.enumerated().sorted { a, b in
+    /// Pinned conversations float to the top, preserving the backend order
+    /// otherwise. Stored (not computed) — sorting the whole list on every
+    /// body evaluation showed up in scrolling.
+    @Published private(set) var shown: [Conversation] = []
+
+    private func updateShown() {
+        shown = items.enumerated().sorted { a, b in
             if a.element.isPinned != b.element.isPinned { return a.element.isPinned }
             return a.offset < b.offset
         }.map { $0.element }
@@ -76,14 +82,51 @@ final class InboxViewModel: ObservableObject {
             page = 1
             total = resp.total
             items = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
+            updateShown()
             // Active inbox feeds the tab badge (archived view must not clobber it).
             if !showArchived {
                 UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
             }
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         loading = false
+    }
+
+    /// Realtime message events: refetch page 1 and MERGE it over the loaded
+    /// list instead of resetting to page 1 — the old full reload threw away
+    /// every extra page (and the scroll position) on each incoming message.
+    /// Bursts are coalesced into one refetch.
+    func scheduleRealtimeRefresh() {
+        realtimeRefreshTask?.cancel()
+        realtimeRefreshTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.refreshFirstPage()
+        }
+    }
+
+    func cancelRealtimeRefresh() {
+        realtimeRefreshTask?.cancel()
+        realtimeRefreshTask = nil
+    }
+
+    private func refreshFirstPage() async {
+        do {
+            async let convTask = Api.shared.conversations(
+                archived: showArchived, page: 1, pageSize: pageSize, instanceIds: instanceFilter)
+            async let pinsTask = Api.shared.pinnedConversationIds()
+            let resp = try await convTask
+            pins = Set((try? await pinsTask) ?? [])
+            total = resp.total
+            let fresh = resp.items.map { var c = $0; c.pinned = pins.contains(c.id); return c }
+            let freshIds = Set(fresh.map { $0.id })
+            items = fresh + items.filter { !freshIds.contains($0.id) }
+            updateShown()
+            if !showArchived {
+                UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
+            }
+        } catch {}
     }
 
     /// Infinite scroll: pull the next page once the given row is near the end
@@ -104,6 +147,7 @@ final class InboxViewModel: ObservableObject {
                     .filter { !existing.contains($0.id) }
                     .map { var c = $0; c.pinned = pins.contains(c.id); return c }
                 items += fresh
+                updateShown()
                 if !showArchived {
                     UnreadCenter.shared.total = items.reduce(0) { $0 + $1.unread }
                 }
@@ -131,6 +175,8 @@ struct InboxView: View {
     @State private var showNew = false
     @State private var searchOpen = false
     @State private var searchText = ""
+    /// iPad split mode: the conversation open in the detail pane.
+    @State private var selectedConv: Conversation?
     @FocusState private var searchFocused: Bool
 
     /// Conversations after the in-place bottom search filter.
@@ -145,10 +191,43 @@ struct InboxView: View {
     }
 
     var body: some View {
+        GeometryReader { geo in
+            // iPad with room for two panes: chat list + open conversation
+            // side by side (like Mail/Messages). Phones keep the push flow.
+            if UIDevice.current.userInterfaceIdiom == .pad && geo.size.width >= 700 {
+                splitBody
+            } else {
+                phoneBody
+            }
+        }
+        .sheet(isPresented: $showNew) { NewConversationSheet() }
+        .task {
+            await vm.loadInstances()
+            await vm.load()
+        }
+        .onReceive(Realtime.shared.events) { event in
+            guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
+            // Pin/archive change the list's membership — do a full reload.
+            // Message traffic just reorders/updates rows — merge page 1 in.
+            if event.name.hasPrefix("conversation_") {
+                Task { await vm.load() }
+            } else {
+                vm.scheduleRealtimeRefresh()
+            }
+        }
+        .onDisappear { vm.cancelRealtimeRefresh() }
+        // Second press on the chats tab (while already on it) flips
+        // active ⇄ archive.
+        .onReceive(InboxBus.shared.toggleArchive) { _ in
+            withAnimation { vm.toggleArchived() }
+        }
+    }
+
+    private var phoneBody: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
-                content
+                listContent(split: false)
             }
             .background(Theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
@@ -167,19 +246,54 @@ struct InboxView: View {
                 .padding(.top, 6)
             }
         }
-        .sheet(isPresented: $showNew) { NewConversationSheet() }
-        .task {
-            await vm.loadInstances()
-            await vm.load()
+    }
+
+    private var splitBody: some View {
+        NavigationStack {
+            HStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    header
+                    listContent(split: true)
+                }
+                .frame(width: 380)
+                .background(Theme.surface1.ignoresSafeArea())
+                .overlay(alignment: .bottom) {
+                    bottomBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+                .overlay(alignment: .topTrailing) {
+                    HStack(spacing: 10) {
+                        accountsButton
+                        archiveButton
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.top, 6)
+                }
+
+                Rectangle().fill(Theme.outline).frame(width: 1).ignoresSafeArea()
+
+                detailPane
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationBarHidden(true)
         }
-        .onReceive(Realtime.shared.events) { event in
-            guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
-            Task { await vm.load() }
-        }
-        // Second press on the chats tab (while already on it) flips
-        // active ⇄ archive.
-        .onReceive(InboxBus.shared.toggleArchive) { _ in
-            withAnimation { vm.toggleArchived() }
+    }
+
+    /// Right pane on iPad: the selected conversation, or a friendly empty state.
+    @ViewBuilder
+    private var detailPane: some View {
+        if let conv = selectedConv {
+            // .id restarts the ChatView (VM and all) when switching rows.
+            ChatView(conversation: conv).id(conv.id)
+        } else {
+            VStack(spacing: 14) {
+                BrandMark(size: 72)
+                Text(L("اختر محادثة")).font(.wx(19, .bold)).foregroundStyle(Theme.onSurface)
+                Text(L("اختر محادثة من القائمة لعرضها هنا"))
+                    .font(.wx(13)).foregroundStyle(Theme.onMuted)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -207,6 +321,7 @@ struct InboxView: View {
         }
         .buttonStyle(.plain)
         .glassCircle()
+        .accessibilityLabel(vm.showArchived ? L("عودة للمحادثات النشطة") : L("الأرشيف"))
     }
 
     /// Bottom floating row: the search circle that EXPANDS in place into a
@@ -242,6 +357,7 @@ struct InboxView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 6)
+                .accessibilityLabel(L("إغلاق البحث"))
             }
         }
         .frame(maxWidth: searchOpen ? .infinity : Self.floatingButtonSide)
@@ -249,6 +365,8 @@ struct InboxView: View {
         .glassCapsule(interactive: true)
         .contentShape(Capsule())
         .onTapGesture { if !searchOpen { openSearch() } }
+        .accessibilityLabel(L("ابحث في المحادثات"))
+        .accessibilityAddTraits(.isButton)
     }
 
     private func openSearch() {
@@ -274,6 +392,7 @@ struct InboxView: View {
         }
         .buttonStyle(.plain)
         .glassCircle()
+        .accessibilityLabel(L("محادثة جديدة"))
     }
 
     /// Top account picker (next to the archive button): multi-select menu;
@@ -328,7 +447,7 @@ struct InboxView: View {
         .glassCircle()
     }
 
-    private var content: some View {
+    private func listContent(split: Bool) -> some View {
         Group {
             if vm.loading && vm.items.isEmpty {
                 Spacer(); ProgressView().tint(Theme.primary); Spacer()
@@ -347,8 +466,19 @@ struct InboxView: View {
                 List {
                     ForEach(displayed) { conv in
                         ZStack {
-                            NavigationLink(value: conv) { EmptyView() }.opacity(0)
-                            ConversationRow(conv: conv)
+                            if split {
+                                // Selection drives the detail pane; no push.
+                                ConversationRow(conv: conv)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        Haptics.tap()
+                                        selectedConv = conv
+                                    }
+                                    .background(selectedConv?.id == conv.id ? Theme.primarySoft : .clear)
+                            } else {
+                                NavigationLink(value: conv) { EmptyView() }.opacity(0)
+                                ConversationRow(conv: conv)
+                            }
                         }
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Theme.background)
@@ -356,15 +486,15 @@ struct InboxView: View {
                         .listRowSeparator(.hidden, edges: .top)
                         .onAppear { if searchText.isEmpty { vm.loadMoreIfNeeded(after: conv) } }
                         .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { Task { await vm.delete(conv) } } label: {
+                            Button(role: .destructive) { Haptics.action(); Task { await vm.delete(conv) } } label: {
                                 Label(L("حذف"), systemImage: "trash")
                             }
-                            Button { Task { await vm.archive(conv) } } label: {
+                            Button { Haptics.action(); Task { await vm.archive(conv) } } label: {
                                 Label(vm.showArchived ? L("إلغاء الأرشفة") : L("أرشفة"), systemImage: "archivebox")
                             }.tint(Theme.success)
                         }
                         .swipeActions(edge: .leading) {
-                            Button { Task { await vm.pin(conv) } } label: {
+                            Button { Haptics.action(); Task { await vm.pin(conv) } } label: {
                                 Label(conv.isPinned ? L("إلغاء التثبيت") : L("تثبيت"), systemImage: conv.isPinned ? "pin.slash" : "pin")
                             }.tint(Theme.primary)
                         }
@@ -429,18 +559,3 @@ struct ConversationRow: View {
     }
 }
 
-// Very small relative-time formatter for list rows.
-func shortTime(_ iso: String?) -> String {
-    guard let iso, let date = ISO8601DateFormatter().date(from: iso) ?? flexibleDate(iso) else { return "" }
-    let cal = Calendar.current
-    if cal.isDateInToday(date) {
-        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
-    }
-    if cal.isDateInYesterday(date) { return L("أمس") }
-    let f = DateFormatter(); f.dateFormat = "dd/MM"; return f.string(from: date)
-}
-
-private func flexibleDate(_ s: String) -> Date? {
-    let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f.date(from: s)
-}

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var uploading = false
     @AppStorage(Notifier.messagesEnabledKey) private var notifyMessages = true
+    @StateObject private var settings = AppSettings.shared
 
     var body: some View {
         NavigationStack {
@@ -29,9 +30,43 @@ struct SettingsView: View {
                         NavigationLink { CallsView() } label: {
                             SettingRow(icon: .call, title: L("سجل المكالمات"), subtitle: L("الواردة والصادرة والتسجيلات"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        NavigationLink { StatsView() } label: {
-                            SettingRow(icon: .chart, title: L("الإحصاءات"), subtitle: L("المؤشرات وتقارير العملاء"), trailingChevron: true, tint: Theme.info)
-                        }.buttonStyle(.plain)
+                    }
+
+                    section(L("التخصيص"))
+                    group {
+                        HStack {
+                            SettingRow(icon: .sun, title: L("المظهر"), tint: Theme.warning)
+                            Picker("", selection: $settings.appearance) {
+                                Text(L("تلقائي")).tag("system")
+                                Text(L("فاتح")).tag("light")
+                                Text(L("داكن")).tag("dark")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.onMuted)
+                            .padding(.trailing, 8)
+                            .onChange(of: settings.appearance) { _ in Haptics.tap() }
+                        }
+                        HStack {
+                            SettingRow(icon: .lang, title: L("اللغة"), tint: Theme.info)
+                            Picker("", selection: $settings.language) {
+                                Text(L("تلقائي")).tag("system")
+                                Text(L("العربية")).tag("ar")
+                                Text("English").tag("en")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.onMuted)
+                            .padding(.trailing, 8)
+                            .onChange(of: settings.language) { _ in Haptics.tap() }
+                        }
+                        HStack {
+                            SettingRow(icon: .lock, title: L("قفل بالوجه (Face ID)"),
+                                       subtitle: L("يُقفل التطبيق عند مغادرته"), tint: Theme.accentPurple)
+                            Toggle("", isOn: $settings.faceIDLock)
+                                .labelsHidden()
+                                .tint(Theme.primary)
+                                .padding(.trailing, 14)
+                                .onChange(of: settings.faceIDLock) { _ in Haptics.tap() }
+                        }
                     }
 
                     section(L("الإشعارات"))
@@ -52,10 +87,10 @@ struct SettingsView: View {
                             SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true, tint: Theme.info)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Color(rgb: 0x89639C))
+                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Theme.accentPurple)
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Color(rgb: 0x4D8970))
+                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
                             SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
@@ -74,7 +109,8 @@ struct SettingsView: View {
                         NavigationLink { VoiceSettingsView() } label: {
                             SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true, tint: Theme.success)
                         }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: L("الإصدار"), subtitle: "v1.12.0 · " + L("أسوار المدن"))
+                        SettingRow(icon: .info, title: L("الإصدار"),
+                                   subtitle: "v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1") + " · " + L("أسوار المدن"))
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
@@ -276,7 +312,7 @@ struct ChangePasswordSheet: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             dismiss()
         } catch {
-            self.error = (error as? ApiError)?.message ?? error.localizedDescription
+            self.error = error.apiMessage
         }
         saving = false
     }

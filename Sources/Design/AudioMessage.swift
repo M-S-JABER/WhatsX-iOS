@@ -33,7 +33,17 @@ struct AudioMessage: View {
             .frame(height: 26)
         }
         .frame(minWidth: 180)
-        .onDisappear { player?.pause(); playing = false }
+        .onDisappear {
+            player?.pause()
+            playing = false
+            // The end-of-play observer captures the player — failing to
+            // remove it leaked a player per voice note viewed.
+            if let observer {
+                NotificationCenter.default.removeObserver(observer)
+                self.observer = nil
+            }
+            player = nil
+        }
     }
 
     private func toggle() {
@@ -47,10 +57,19 @@ struct AudioMessage: View {
             ) { _ in
                 playing = false
                 p.seek(to: .zero)
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             }
             player = p
         }
-        if playing { player?.pause() } else { player?.play() }
+        if playing {
+            player?.pause()
+        } else {
+            // .playback beats the silent switch — a voice note the operator
+            // taps must be audible regardless of the mute toggle.
+            try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.duckOthers])
+            try? AVAudioSession.sharedInstance().setActive(true)
+            player?.play()
+        }
         playing.toggle()
     }
 }

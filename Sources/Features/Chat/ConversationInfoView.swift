@@ -163,11 +163,7 @@ struct ConversationInfoView: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
                     ForEach(imageMessages) { m in
                         if let url = Api.mediaURL(m.media?.url) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Theme.surface2
-                            }
+                            RemoteImage(url: url, targetSize: 120) { Theme.surface2 }
                             .frame(minWidth: 0, maxWidth: .infinity)
                             .frame(height: 110)
                             .clipped()

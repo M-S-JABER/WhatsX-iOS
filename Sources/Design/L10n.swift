@@ -8,13 +8,65 @@ func L(_ arabic: String) -> String {
 }
 
 enum L10n {
-    /// Resolved once at launch from the user's preferred language.
-    static let isArabic: Bool = Locale.preferredLanguages.first?.hasPrefix("ar") ?? true
+    /// The device language, resolved once at launch.
+    static let systemIsArabic: Bool = Locale.preferredLanguages.first?.hasPrefix("ar") ?? true
+
+    /// In-app language override ("system" | "ar" | "en") — kept in sync by
+    /// AppSettings so the app can switch language live, without a relaunch.
+    static var override: String = UserDefaults.standard.string(forKey: "whatsx.language") ?? "system"
+
+    static var isArabic: Bool {
+        switch override {
+        case "ar": return true
+        case "en": return false
+        default: return systemIsArabic
+        }
+    }
 
     /// Locale for user-facing date formatting.
     static var dateLocale: Locale { Locale(identifier: isArabic ? "ar" : "en") }
 
     static let en: [String: String] = [
+        // Personalization / lock / status (phase 5)
+        "التقارير": "Reports",
+        "التخصيص": "Personalization",
+        "المظهر": "Appearance",
+        "اللغة": "Language",
+        "فاتح": "Light",
+        "داكن": "Dark",
+        "العربية": "Arabic",
+        "قفل بالوجه (Face ID)": "Face ID lock",
+        "يُقفل التطبيق عند مغادرته": "Locks the app when you leave it",
+        "افتح WhatsX": "Unlock WhatsX",
+        "التطبيق مقفل": "WhatsX is locked",
+        "اضغط للفتح": "Tap to unlock",
+        "تعذّر التحميل": "Couldn't load",
+        "أُرسلت": "Sent",
+        "وصلت": "Delivered",
+        "قُرئت": "Read",
+        "فشل الإرسال": "Send failed",
+        "انتهت الجلسة — سجّل الدخول من جديد": "Session expired — sign in again",
+        "رابط الخادم غير صالح — راجع إعدادات الخادم": "Invalid server URL — check the server settings",
+        "تعذّر الاتصال بالخادم": "Couldn't reach the server",
+        "جارٍ تحميل الأرقام المُرسِلة…": "Loading sender numbers…",
+        "بحث في المحادثة": "Search in conversation",
+        "معلومات المحادثة": "Conversation info",
+        "تسجيل رسالة صوتية": "Record a voice note",
+        "إرسال الرسالة الصوتية": "Send the voice note",
+        "إلغاء التسجيل": "Cancel recording",
+        "عودة للمحادثات النشطة": "Back to active chats",
+        "إغلاق البحث": "Close search",
+        "تحديث": "Refresh",
+        "سجّل دخولك للمتابعة": "Sign in to continue",
+        "إظهار كلمة المرور": "Show password",
+        "إخفاء كلمة المرور": "Hide password",
+        "البحث الشامل": "Search",
+        "ابحث عن محادثة أو عميل أو مكالمة": "Search conversations, customers and calls",
+        "العملاء": "Customers",
+        "لا نتائج": "No results",
+        "يكتب الآن…": "typing…",
+        "اختر محادثة": "Select a conversation",
+        "اختر محادثة من القائمة لعرضها هنا": "Pick a conversation from the list to view it here",
         "24س": "24h",
         "30 يومًا": "30 days",
         "7 أيام": "7 days",

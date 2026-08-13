@@ -11,8 +11,20 @@ final class CallsViewModel: ObservableObject {
     @Published var hasRecording: Bool? = nil
     @Published var filters = VoiceCallFilters()
 
+    private var realtimeReloadTask: Task<Void, Never>?
+
     func apply(_ f: String) { filter = f; Task { await load() } }
     func reload() { Task { await load() } }
+
+    /// Coalesce realtime call-event bursts into a single refetch.
+    func scheduleRealtimeReload() {
+        realtimeReloadTask?.cancel()
+        realtimeReloadTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.load()
+        }
+    }
 
     var advancedCount: Int {
         [instanceId != nil, agent != nil, hasRecording != nil].filter { $0 }.count
@@ -59,7 +71,7 @@ struct CallsView: View {
         }
         .onReceive(Realtime.shared.events) { event in
             guard RealtimeEvent.callEvents.contains(event.name) else { return }
-            vm.reload()
+            vm.scheduleRealtimeReload()
         }
     }
 
@@ -77,9 +89,11 @@ struct CallsView: View {
                     }
                 }
             }
+            .accessibilityLabel(L("تصفية المكالمات"))
             Button { withAnimation { showSearch.toggle() }; if !showSearch { vm.search = ""; vm.reload() } } label: {
                 Image(icon: showSearch ? .close : .search).font(.wx(20)).foregroundStyle(Theme.onMuted)
             }
+            .accessibilityLabel(showSearch ? L("إغلاق البحث") : L("بحث"))
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
     }

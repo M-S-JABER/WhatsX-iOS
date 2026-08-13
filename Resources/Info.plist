@@ -4,6 +4,14 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>ar</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
     <key>CFBundleDisplayName</key>
     <string>WhatsX</string>
     <key>CFBundleName</key>
@@ -29,5 +37,7 @@
     <string>تُستخدم الكاميرا لالتقاط صورة الملف الشخصي والوسائط.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>يُستخدم للوصول إلى الصور لإرسالها أو تعيين صورة الملف الشخصي.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>يُستخدم Face ID لقفل التطبيق وحماية محادثات العملاء.</string>
 </dict>
 </plist>

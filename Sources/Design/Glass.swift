@@ -16,7 +16,9 @@ extension View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
-            glassEffect(.regular, in: shape)
+            // Tinted with the Luxe surface so iOS 26 glass carries the same
+            // warm palette (and dark-mode contrast) as the pre-26 fallback.
+            glassEffect(.regular.tint(Theme.surface.opacity(0.5)), in: shape)
         } else {
             luxeSurface(in: shape)
         }
@@ -30,7 +32,10 @@ extension View {
     func glassCapsule(interactive: Bool = false) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
-            glassEffect(interactive ? .regular.interactive() : .regular, in: Capsule())
+            glassEffect(
+                interactive ? .regular.tint(Theme.surface2.opacity(0.5)).interactive()
+                            : .regular.tint(Theme.surface2.opacity(0.5)),
+                in: Capsule())
         } else {
             luxeChip(in: Capsule())
         }
@@ -44,7 +49,10 @@ extension View {
     func glassCircle(interactive: Bool = true) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
-            glassEffect(interactive ? .regular.interactive() : .regular, in: Circle())
+            glassEffect(
+                interactive ? .regular.tint(Theme.surface2.opacity(0.5)).interactive()
+                            : .regular.tint(Theme.surface2.opacity(0.5)),
+                in: Circle())
         } else {
             luxeChip(in: Circle())
         }

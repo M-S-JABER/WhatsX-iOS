@@ -4,6 +4,7 @@ struct CustomerReportsView: View {
     @State private var customers: [StatCustomer] = []
     @State private var query = ""
     @State private var loading = true
+    @State private var loadError: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,6 +12,9 @@ struct CustomerReportsView: View {
             Group {
                 if loading {
                     ProgressView().tint(Theme.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let err = loadError, customers.isEmpty {
+                    LoadFailedView(message: err) { Task { loading = true; await load() } }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if customers.isEmpty {
                     Text(L("لا عملاء")).foregroundStyle(Theme.onMuted).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -82,7 +86,10 @@ struct CustomerReportsView: View {
 
     private func load() async {
         let q = query.trimmingCharacters(in: .whitespaces)
-        do { customers = try await Api.shared.statisticsCustomers(search: q.isEmpty ? nil : q).items } catch {}
+        do {
+            customers = try await Api.shared.statisticsCustomers(search: q.isEmpty ? nil : q).items
+            loadError = nil
+        } catch { loadError = error.apiMessage }
         loading = false
     }
 }

@@ -1,0 +1,52 @@
+# Builds an UNSIGNED .ipa of WhatsX on a macOS runner and uploads it as a
+# workflow artifact. Run from: Actions → build-ipa → Run workflow.
+#
+# The IPA is unsigned (no Apple Developer certificates are stored in this
+# repo), so install it by re-signing on-device tools such as AltStore,
+# Sideloadly or eSign, or with your own Apple Developer account in Xcode.
+name: build-ipa
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/ipa-app-export-cbd4br
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Archive (Release, unsigned)
+        run: |
+          xcodebuild archive \
+            -project WhatsX.xcodeproj \
+            -scheme WhatsX \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/WhatsX.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R "build/WhatsX.xcarchive/Products/Applications/WhatsX.app" build/Payload/
+          cd build
+          zip -qry WhatsX-unsigned.ipa Payload
+          ls -lh WhatsX-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhatsX-unsigned-ipa
+          path: build/WhatsX-unsigned.ipa
+          if-no-files-found: error

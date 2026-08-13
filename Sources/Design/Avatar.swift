@@ -17,9 +17,9 @@ struct Avatar: View {
         ZStack {
             AccountColor.color(name)
             if let imageURL {
-                AsyncImage(url: imageURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
+                // Downsampled to the avatar's size — a list of 4K profile
+                // photos must not decode at full resolution.
+                RemoteImage(url: imageURL, targetSize: size) {
                     Text(initials).font(.wx(size * 0.38, .semibold)).foregroundStyle(.white)
                 }
             } else {

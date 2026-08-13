@@ -1,6 +1,8 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AVKit
+import AVFoundation
 
 // Rich media viewers (web parity: MessageBubble lightbox / OfficePreview).
 
@@ -159,14 +161,42 @@ struct LinkPreviewCard: View {
     }
 }
 
+/// Built once — creating an NSDataDetector per bubble per render is costly.
+private let linkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+
 /// Extract the first http(s) URL from a message body.
 func firstURL(in body: String?) -> URL? {
-    guard let body, !body.isEmpty,
-          let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    guard let body, !body.isEmpty, let detector = linkDetector
     else { return nil }
     let range = NSRange(body.startIndex..., in: body)
     for match in detector.matches(in: body, options: [], range: range) {
         if let url = match.url, url.scheme?.hasPrefix("http") == true { return url }
     }
     return nil
+}
+
+/// Video bubble that OWNS its player. Building `AVPlayer(url:)` inline in a
+/// bubble's body allocated a fresh player + network stack on every re-render
+/// (every keystroke, every realtime event) and never tore them down.
+struct VideoBubble: View {
+    let url: URL
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        VideoPlayer(player: player)
+            .frame(width: 230, height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .onAppear {
+                guard player == nil else { return }
+                // Same cookie pass-through as AudioMessage — media is behind
+                // the session auth.
+                let cookies = HTTPCookieStorage.shared.cookies ?? []
+                let asset = AVURLAsset(url: url, options: [AVURLAssetHTTPCookiesKey: cookies])
+                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            }
+            .onDisappear {
+                player?.pause()
+                player = nil
+            }
+    }
 }
