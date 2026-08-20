@@ -2,8 +2,9 @@ import SwiftUI
 import AVFoundation
 
 // Voice-note player for chat bubbles: round primary play button + a static bar
-// waveform + duration. Plays authenticated media by passing the session cookies
-// to AVURLAsset (AsyncImage already uses the shared cookie storage automatically).
+// waveform + duration. Plays authenticated media by passing the session
+// cookies (SessionCookies.store) to AVURLAsset explicitly — AVFoundation
+// does not see the app's cookie store on its own.
 struct AudioMessage: View {
     let url: URL
     let tint: Color
@@ -48,8 +49,7 @@ struct AudioMessage: View {
 
     private func toggle() {
         if player == nil {
-            let cookies = HTTPCookieStorage.shared.cookies ?? []
-            let asset = AVURLAsset(url: url, options: [AVURLAssetHTTPCookiesKey: cookies])
+            let asset = AVURLAsset(url: url, options: [AVURLAssetHTTPCookiesKey: SessionCookies.all])
             let item = AVPlayerItem(asset: asset)
             let p = AVPlayer(playerItem: item)
             observer = NotificationCenter.default.addObserver(

@@ -46,7 +46,12 @@ public struct WhatsXRoot: View {
                 // into the switcher. The shield covers .inactive; the real
                 // lock still engages on .background.
                 isObscured = phase != .active && settings.faceIDLock && session.isAuthenticated
-                if phase == .background { lock.lockIfEnabled() }
+                if phase == .background {
+                    lock.lockIfEnabled()
+                    // The server may roll the session cookie mid-use; the
+                    // Keychain snapshot must not go stale across launches.
+                    session.persistSessionCookies()
+                }
             }
     }
 }

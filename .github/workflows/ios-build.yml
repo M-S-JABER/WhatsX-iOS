@@ -56,12 +56,17 @@ jobs:
       - name: تشغيل الاختبارات إن وُجدت
         run: |
           if [ -d "Tests" ]; then
+            # Ad-hoc signing (identity "-") needs no certificates on the
+            # simulator, but it gives the test host an application
+            # identifier — without one, securityd rejects every Keychain
+            # call (errSecMissingEntitlement) and the shared cookie store
+            # goes dead, which is exactly what CookieVaultTests exercise.
             xcodebuild test \
               -project WhatsX.xcodeproj \
               -scheme WhatsX \
               -destination "platform=iOS Simulator,name=$(xcrun simctl list devices available \
                 | grep -oE 'iPhone [0-9]+( Pro| Plus| Pro Max)?' | head -1)" \
-              CODE_SIGNING_ALLOWED=NO
+              CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
           else
             echo "::notice::لا يوجد مجلد Tests — تم تخطّي الاختبارات."
           fi

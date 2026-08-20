@@ -31,8 +31,9 @@ final class TabAvatar: ObservableObject {
         }
         let key = user.id + "|" + avatar
         guard key != loadedKey else { return }
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let source = UIImage(data: data) else { return }
+        // URLSession.shared only sees the legacy shared cookie store — go
+        // through ImageCache, which authenticates via the session store.
+        guard let source = await ImageCache.shared.load(url: url, maxPixel: 81) else { return }
         loadedKey = key
         image = Self.circularIcon(source, side: 27)
     }

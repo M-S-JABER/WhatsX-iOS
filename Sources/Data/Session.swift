@@ -14,9 +14,18 @@ final class Session: ObservableObject {
 
     /// On launch, try to restore an existing session from the stored cookie.
     func bootstrap() async {
+        // Bring the session cookie back from the Keychain (and migrate
+        // whatever older versions left in the file-backed store) before
+        // the first request goes out.
+        CookieVault.restore()
+        CookieVault.migrateLegacyStore()
         do { user = try await Api.shared.me() } catch { user = nil }
         isBootstrapping = false
-        if isAuthenticated { startLiveServices() }
+        if isAuthenticated {
+            // me() may have rolled the cookie — persist the fresh one.
+            CookieVault.save()
+            startLiveServices()
+        }
     }
 
     func login(username: String, password: String) async {
@@ -24,11 +33,19 @@ final class Session: ObservableObject {
         loginError = nil
         do {
             user = try await Api.shared.login(username: username, password: password)
+            CookieVault.save()
             startLiveServices()
         } catch {
             loginError = error.apiMessage
         }
         isLoggingIn = false
+    }
+
+    /// Snapshots the current cookies into the Keychain — called when the app
+    /// backgrounds, because the server may roll the session cookie mid-use.
+    func persistSessionCookies() {
+        guard isAuthenticated else { return }
+        CookieVault.save()
     }
 
     func logout() async {
@@ -52,6 +69,9 @@ final class Session: ObservableObject {
     /// server logout call never succeeded (offline logout must still forget
     /// the credentials on this device).
     private func clearLocalSession() {
+        SessionCookies.removeAll()
+        CookieVault.clear()
+        // Also purge leftovers from versions that used the shared store.
         if let cookies = HTTPCookieStorage.shared.cookies {
             for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
         }

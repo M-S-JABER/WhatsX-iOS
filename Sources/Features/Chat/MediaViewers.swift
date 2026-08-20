@@ -190,8 +190,7 @@ struct VideoBubble: View {
                 guard player == nil else { return }
                 // Same cookie pass-through as AudioMessage — media is behind
                 // the session auth.
-                let cookies = HTTPCookieStorage.shared.cookies ?? []
-                let asset = AVURLAsset(url: url, options: [AVURLAssetHTTPCookiesKey: cookies])
+                let asset = AVURLAsset(url: url, options: [AVURLAssetHTTPCookiesKey: SessionCookies.all])
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             }
             .onDisappear {
