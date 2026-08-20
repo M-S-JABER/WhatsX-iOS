@@ -201,10 +201,12 @@ git push origin v1.9.1     # يُطلق ios-release تلقائياً
 افتراضية، ويمكن تغييره من داخل التطبيق. قبل توزيع TestFlight على عملاء
 حقيقيين، غيّر القيمة الافتراضية إلى خادمك الفعلي.
 
-### دعم iPad
-`TARGETED_DEVICE_FAMILY` مضبوط على `1` (iPhone فقط)، رغم أن الكود صار يدعم
-split view على iPad. توسيعه إلى `"1,2"` يستلزم لقطات شاشة iPad في
-App Store Connect ويوسّع نطاق المراجعة. قرار منفصل متى ما أردت.
+### iPad support — ENABLED
+`TARGETED_DEVICE_FAMILY` is `"1,2"` (native iPhone + iPad) as of 1.15.0.
+The inbox shows a two-pane split on iPads at least 700pt wide, and iPads
+support all four orientations (a multitasking requirement); iPhones stay
+portrait-only. TestFlight needs nothing extra. Reminder for a future App
+Store submission: iPad screenshots become mandatory in App Store Connect.
 
 ### نموذج النشر
 مجاني + دفع خارج التطبيق وفق Guideline **3.1.3(b)**. عملياً هذا يعني:

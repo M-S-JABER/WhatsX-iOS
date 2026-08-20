@@ -28,6 +28,15 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
+    <!-- iPad multitasking (Split View / Slide Over) requires all four
+         orientations; iPhone stays portrait-only above. -->
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
     <!-- Permissions used by the app -->
