@@ -67,6 +67,8 @@ enum L10n {
         "إلغاء كتم الصوت": "Unmute",
         "مكبر الصوت": "Speaker",
         "إنهاء المكالمة": "End call",
+        "إذن الاتصال ممنوح مسبقاً من هذا العميل — يمكنك بدء المكالمة مباشرة ✓": "This customer has already granted call permission — you can start the call right away ✓",
+        "تعذّر إرسال طلب إذن الاتصال — حاول لاحقاً": "Couldn't send the call-permission request — try again later",
         "جارٍ تحميل الأرقام المُرسِلة…": "Loading sender numbers…",
         "بحث في المحادثة": "Search in conversation",
         "معلومات المحادثة": "Conversation info",

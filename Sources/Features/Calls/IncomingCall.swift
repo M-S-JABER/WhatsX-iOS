@@ -236,6 +236,25 @@ final class CallCenter: ObservableObject {
     }
 }
 
+/// Maps Meta's raw call-permission errors to human copy. #138017 in
+/// particular means the customer ALREADY granted permanent permission —
+/// good news, not an error — yet the backend relays Meta's whole JSON
+/// blob, which used to land verbatim in the alert.
+enum CallPermissionNotice {
+    static func friendly(_ raw: String) -> String {
+        if raw.contains("138017")
+            || raw.contains("already been approved")
+            || raw.contains("can already call") {
+            return L("إذن الاتصال ممنوح مسبقاً من هذا العميل — يمكنك بدء المكالمة مباشرة ✓")
+        }
+        // Raw Meta payloads are JSON dumps; keep alerts readable.
+        if raw.count > 160 || raw.contains("{\"") {
+            return L("تعذّر إرسال طلب إذن الاتصال — حاول لاحقاً")
+        }
+        return raw
+    }
+}
+
 /// Top-of-screen banner shown app-wide while a WhatsApp call is ringing.
 struct IncomingCallBanner: View {
     @StateObject private var center = CallCenter.shared

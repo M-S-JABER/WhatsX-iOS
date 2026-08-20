@@ -110,7 +110,7 @@ struct ChatView: View {
                         try await Api.shared.requestCallPermission(to: digits, instanceId: vm.conversation.instanceId)
                         callNotice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
                     } catch {
-                        callNotice = error.apiMessage
+                        callNotice = CallPermissionNotice.friendly(error.apiMessage)
                     }
                 }
             }

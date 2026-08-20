@@ -33,6 +33,23 @@ final class CallSDPTests: XCTestCase {
         XCTAssertEqual(json?["instanceId"] as? String, "inst1")
     }
 
+    func testPermissionNoticeTurns138017IntoGoodNews() {
+        let raw = #"Meta permission request failed: {"error":{"message":"(#138017) Unable to send call permission request as the business account can already call this consumer","code":138017}}"#
+        let friendly = CallPermissionNotice.friendly(raw)
+        XCTAssertFalse(friendly.contains("138017"))
+        XCTAssertFalse(friendly.contains("{"))
+        XCTAssertTrue(friendly.contains("✓"))
+    }
+
+    func testPermissionNoticeHidesRawJSONDumps() {
+        let raw = #"{"error":{"message":"something else entirely","code":1}}"#
+        XCTAssertFalse(CallPermissionNotice.friendly(raw).contains("{"))
+    }
+
+    func testPermissionNoticeKeepsShortHumanMessages() {
+        XCTAssertEqual(CallPermissionNotice.friendly("Server unavailable"), "Server unavailable")
+    }
+
     func testCallResponseToleratesPartialPayloads() throws {
         let full = try JSONDecoder().decode(WhatsAppCallResponse.self,
                                             from: Data(#"{"callId": "c1", "answer": "v=0"}"#.utf8))
