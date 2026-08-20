@@ -10,7 +10,7 @@
 # الموقّع (للتحقق السريع والـ sideload) شغّالاً بلا أي سر.
 name: WhatsX
 options:
-  bundleIdPrefix: net.alnokhba
+  bundleIdPrefix: com.m-s-jaber
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -34,7 +34,7 @@ targets:
       - path: Resources/PrivacyInfo.xcprivacy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
+        PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
         # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
         # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.12.0.
         MARKETING_VERSION: "1.13.0"
@@ -62,7 +62,7 @@ targets:
       - target: WhatsX
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx.tests
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhatsX.app/WhatsX"
         BUNDLE_LOADER: "$(TEST_HOST)"

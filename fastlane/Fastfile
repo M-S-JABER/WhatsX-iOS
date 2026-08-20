@@ -25,7 +25,7 @@
 require "base64"
 require "fileutils"
 
-APP_IDENTIFIER = "net.alnokhba.whatsx"
+APP_IDENTIFIER = "com.m-s-jaber.whatsx"
 SCHEME         = "WhatsX"
 APP_NAME       = "WhatsX"
 
@@ -155,17 +155,21 @@ platform :ios do
   # ولا تعده بعد نجاحه — الشهادات تُخزَّن وتُعاد للأبد عبر setup_certificates.
   desc "تشغيل أولي: تسجيل التطبيق في البوابة + توليد الشهادات وتخزينها"
   lane :bootstrap_signing do
+    # produce لا يملك معامل api_key — يقرأ المفتاح من سياق الـ lane الذي
+    # تملؤه app_store_connect_api_key. استدعاء الدالة هنا يضمن ذلك قبله.
+    appstore_api_key
+
     # 1) تسجيل معرّف الحزمة في بوابة المطورين وإنشاء سجل التطبيق في
     #    App Store Connect. match لا ينشئ معرّف الحزمة بنفسه.
     begin
       produce(
         app_identifier: APP_IDENTIFIER,
         app_name: APP_NAME,
-        language: "Arabic",
-        app_version: "1.9.0",
+        # صيغة اللغة عند produce هي رمز locale لا اسم اللغة.
+        language: "ar-SA",
+        app_version: "1.13.0",
         sku: "whatsx-ios-#{APP_IDENTIFIER.gsub('.', '-')}",
         team_id: ENV["TEAM_ID"],
-        api_key: appstore_api_key,
         # التطبيق مجاني ويُنشر بنموذج B2B — لا حاجة لاتفاقية Paid Apps.
         skip_itc: false,
         skip_devcenter: false
@@ -221,8 +225,12 @@ platform :ios do
     end
   end
 
+  # سر MATCH_GIT_URL اختياري، لكن الـ workflow يمرره دائماً — فإن لم يُضف
+  # يصل نصاً فارغاً لا nil، والفارغ في Ruby قيمة صادقة تتجاوز || وتجعل
+  # match ينفّذ git clone '' فيفشل. الفحص الصريح للفراغ يعيد الافتراضي.
   def match_git_url
-    ENV["MATCH_GIT_URL"] || "https://github.com/M-S-JABER/certificates"
+    url = ENV["MATCH_GIT_URL"].to_s.strip
+    url.empty? ? "https://github.com/M-S-JABER/certificates" : url
   end
 
   # مصادقة HTTPS لمستودع الشهادات الخاص. نستخدم PAT بدل مفتاح SSH لأن

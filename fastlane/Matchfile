@@ -18,7 +18,7 @@ git_branch("main")
 # نوع الشهادة الافتراضي: توزيع App Store / TestFlight.
 type("appstore")
 
-app_identifier(["net.alnokhba.whatsx"])
+app_identifier(["com.m-s-jaber.whatsx"])
 
 # readonly هو الوضع الافتراضي الآمن: يسحب ولا ينشئ ولا يعدّل.
 # lane :bootstrap_signing وحده يتجاوزه (readonly: false) عند التشغيل الأول.

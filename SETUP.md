@@ -147,7 +147,7 @@ gh secret list
 > - `confirm` = **`CREATE`**
 
 هذا هو الـ workflow الذي يحل مشكلة عدم امتلاكك Mac. ينفّذ داخل الرنر:
-1. تسجيل `net.alnokhba.whatsx` في بوابة المطورين
+1. تسجيل `com.m-s-jaber.whatsx` في بوابة المطورين
 2. إنشاء سجل التطبيق في App Store Connect
 3. توليد شهادة التوزيع وملف التزويد
 4. تشفيرهما ورفعهما إلى مستودع `certificates`
@@ -225,7 +225,7 @@ App Store Connect ويوسّع نطاق المراجعة. قرار منفصل م
 | `The request expects other terms to be agreed` | اتفاقية Free Apps غير موقّعة. راجع الخطوة 2. |
 | `Could not decrypt` في match | `MATCH_PASSWORD` خاطئة أو تغيّرت. يجب أن تطابق ما استُخدم وقت `bootstrap`. |
 | `Authentication failed` لمستودع الشهادات | `MATCH_GIT_TOKEN` منتهٍ أو بلا صلاحية `repo`. |
-| `No profiles for 'net.alnokhba.whatsx'` | لم تشغّل `bootstrap` بعد، أو معرّف الحزمة في `project.yml` لا يطابق `Matchfile`. |
+| `No profiles for 'com.m-s-jaber.whatsx'` | لم تشغّل `bootstrap` بعد، أو معرّف الحزمة في `project.yml` لا يطابق `Matchfile`. |
 | `bundle version must be higher` | رقم بناء مكرر. أعد التشغيل — رقم التشغيل الجديد يحلّها تلقائياً. |
 | فشل `ios-build` بعد تحديث runner | ثبّت إصدار Xcode بإضافة خطوة `maxim-lobanov/setup-xcode` في الـ workflow. |
 
