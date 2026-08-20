@@ -8,7 +8,7 @@
 
 - **الاسم:** WhatsX
 - **Bundle ID:** `com.m-s-jaber.whatsx`
-- **النسخة:** 1.15.0 (تطابق `MARKETING_VERSION` في `project.yml`)
+- **النسخة:** 1.16.0 (تطابق `MARKETING_VERSION` في `project.yml`)
 - **التصنيف:** Business (ثانوي: Productivity)
 - **الأجهزة:** iPhone + iPad (native)، iOS 16.0+
 - **اللغات:** العربية (الأساسية، RTL)، الإنجليزية
