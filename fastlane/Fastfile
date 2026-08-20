@@ -155,28 +155,39 @@ platform :ios do
   # ولا تعده بعد نجاحه — الشهادات تُخزَّن وتُعاد للأبد عبر setup_certificates.
   desc "تشغيل أولي: تسجيل التطبيق في البوابة + توليد الشهادات وتخزينها"
   lane :bootstrap_signing do
-    # produce لا يملك معامل api_key — يقرأ المفتاح من سياق الـ lane الذي
-    # تملؤه app_store_connect_api_key. استدعاء الدالة هنا يضمن ذلك قبله.
-    appstore_api_key
+    # produce لا يعمل بمفتاح App Store Connect API — يشترط Apple ID
+    # (يفشل بـ "No value found for 'username'")، وهذا غير ممكن في CI بلا
+    # تدخل بشري. نستدعي Spaceship — مكتبة fastlane نفسها — مباشرة، وهي
+    # تدعم التوكن لتسجيل معرّف الحزمة وإنشاء سجل التطبيق معاً.
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: appstore_api_key)
 
-    # 1) تسجيل معرّف الحزمة في بوابة المطورين وإنشاء سجل التطبيق في
-    #    App Store Connect. match لا ينشئ معرّف الحزمة بنفسه.
-    begin
-      produce(
-        app_identifier: APP_IDENTIFIER,
-        app_name: APP_NAME,
-        # صيغة اللغة عند produce هي رمز locale لا اسم اللغة.
-        language: "ar-SA",
-        app_version: "1.13.0",
-        sku: "whatsx-ios-#{APP_IDENTIFIER.gsub('.', '-')}",
-        team_id: ENV["TEAM_ID"],
-        # التطبيق مجاني ويُنشر بنموذج B2B — لا حاجة لاتفاقية Paid Apps.
-        skip_itc: false,
-        skip_devcenter: false
-      )
-    rescue => e
-      # إن كان التطبيق مسجّلاً مسبقاً فهذا ليس خطأ — نكمل إلى توليد الشهادات.
-      UI.important("تخطّي produce: #{e.message}")
+    # 1) تسجيل معرّف الحزمة في بوابة المطورين. match لا ينشئه بنفسه.
+    if Spaceship::ConnectAPI::BundleId.all.any? { |b| b.identifier == APP_IDENTIFIER }
+      UI.message("App ID موجود مسبقاً: #{APP_IDENTIFIER}")
+    else
+      Spaceship::ConnectAPI::BundleId.create(name: APP_NAME, identifier: APP_IDENTIFIER, platform: "IOS")
+      UI.success("سُجّل App ID في بوابة المطورين: #{APP_IDENTIFIER}")
+    end
+
+    # 2) إنشاء سجل التطبيق في App Store Connect (يلزم للرفع إلى TestFlight).
+    if Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+      UI.message("سجل التطبيق موجود مسبقاً في App Store Connect")
+    else
+      begin
+        Spaceship::ConnectAPI::App.create(
+          name: APP_NAME,
+          version_string: "1.13.0",
+          sku: "whatsx-ios-#{APP_IDENTIFIER.gsub('.', '-')}",
+          primary_locale: "ar-SA",
+          bundle_id: APP_IDENTIFIER,
+          platforms: ["IOS"]
+        )
+        UI.success("أُنشئ سجل التطبيق «#{APP_NAME}» في App Store Connect")
+      rescue => e
+        # فشل إنشاء السجل لا يمنع توليد الشهادات — لكنه شرط للرفع لاحقاً.
+        UI.important("تعذّر إنشاء سجل التطبيق آلياً: #{e.message}")
+        UI.important("أنشئه يدوياً: App Store Connect → My Apps → + → New App (Bundle ID: #{APP_IDENTIFIER})")
+      end
     end
 
     # 2) توليد شهادة التوزيع وملف التزويد وتخزينهما مشفَّرَين في مستودع
