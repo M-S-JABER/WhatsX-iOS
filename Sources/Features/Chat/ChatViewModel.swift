@@ -6,14 +6,19 @@ import AVFoundation
 final class VoiceRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var elapsed: TimeInterval = 0
+    /// Set when the user denied microphone access — the record button used to
+    /// silently do nothing; the chat screen alerts and links to Settings.
+    @Published var permissionDenied = false
     private var recorder: AVAudioRecorder?
     private var timer: Timer?
     private var fileURL: URL?
 
     func start() {
         AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
-            guard granted else { return }
-            Task { @MainActor in self?.beginRecording() }
+            Task { @MainActor in
+                guard let self else { return }
+                if granted { self.beginRecording() } else { self.permissionDenied = true }
+            }
         }
     }
 
@@ -44,6 +49,12 @@ final class VoiceRecorder: NSObject, ObservableObject {
         recorder?.stop(); recorder = nil
         isRecording = false
         try? AVAudioSession.sharedInstance().setActive(false)
+        // The temp file must not outlive this read — only cancel() used to
+        // delete it, so every sent note leaked its .m4a in tmp/.
+        defer {
+            if let url = fileURL { try? FileManager.default.removeItem(at: url) }
+            fileURL = nil
+        }
         guard elapsed >= 1, let url = fileURL, let data = try? Data(contentsOf: url) else { return nil }
         return data
     }
@@ -53,6 +64,7 @@ final class VoiceRecorder: NSObject, ObservableObject {
         recorder?.stop(); recorder = nil
         isRecording = false
         if let url = fileURL { try? FileManager.default.removeItem(at: url) }
+        fileURL = nil
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 }

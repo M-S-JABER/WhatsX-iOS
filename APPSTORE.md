@@ -7,7 +7,7 @@
 ## الهوية
 
 - **الاسم:** WhatsX
-- **Bundle ID:** `net.alnokhba.whatsx`
+- **Bundle ID:** `com.m-s-jaber.whatsx`
 - **النسخة:** 1.13.0 (تطابق `MARKETING_VERSION` في `project.yml`)
 - **التصنيف:** Business (ثانوي: Productivity)
 - **الأجهزة:** iPhone، iOS 16.0+

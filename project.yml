@@ -10,7 +10,7 @@
 # الموقّع (للتحقق السريع والـ sideload) شغّالاً بلا أي سر.
 name: WhatsX
 options:
-  bundleIdPrefix: net.alnokhba
+  bundleIdPrefix: com.m-s-jaber
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -23,6 +23,8 @@ targets:
     platform: iOS
     scheme:
       configVariants: []
+      testTargets:
+        - WhatsXTests
     sources:
       - path: Sources
       - path: Resources/Assets.xcassets
@@ -32,7 +34,7 @@ targets:
       - path: Resources/PrivacyInfo.xcprivacy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx
+        PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
         # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
         # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.12.0.
         MARKETING_VERSION: "1.13.0"
@@ -48,3 +50,20 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  # اختبارات وحدات مستضافة داخل التطبيق (@testable import WhatsX).
+  # تعمل في CI تلقائياً: خطوة الاختبار في ios-build.yml تكتشف مجلد Tests/.
+  WhatsXTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: WhatsX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhatsX.app/WhatsX"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"

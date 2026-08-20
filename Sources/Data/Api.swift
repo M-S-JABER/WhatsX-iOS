@@ -150,7 +150,7 @@ final class Api {
             }
             throw ApiError(message: errorMessage(from: data, status: http.statusCode), status: http.statusCode)
         }
-        if T.self == EmptyResponse.self { return EmptyResponse() as! T }
+        if let empty = EmptyResponse() as? T { return empty }
         do { return try decoder.decode(T.self, from: data) }
         catch { throw ApiError(message: "Decode failed: \(error.localizedDescription)", status: http.statusCode) }
     }
@@ -192,25 +192,45 @@ final class Api {
             body: SendMessageRequest(conversationId: conversationId, body: body,
                                      replyToMessageId: replyToMessageId))
     }
-    /// Upload a file to /api/upload (multipart field "file"); returns the signed media path in `url`.
-    func uploadMedia(data: Data, filename: String, mimeType: String) async throws -> MediaUploadResponse {
+    /// Shared guts of every multipart upload. Funnels the response through the
+    /// same 401-logout hook and `ApiError` wrapping as `request` — the
+    /// hand-rolled checks the two upload paths used to carry skipped both.
+    private func uploadMultipart<T: Decodable>(
+        path: String, data: Data, filename: String, mimeType: String
+    ) async throws -> T {
         let boundary = "Boundary-\(UUID().uuidString)"
-        var req = URLRequest(url: try makeURL("api/upload"))
+        var req = URLRequest(url: try makeURL(path))
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        // The filename lands inside a quoted header value; picker-provided
+        // names can carry quotes or newlines that would break out of it.
+        let safeName = filename
+            .components(separatedBy: .newlines).joined(separator: " ")
+            .replacingOccurrences(of: "\"", with: "_")
         var b = Data()
-        b.append("--\(boundary)\r\n".data(using: .utf8)!)
-        b.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        b.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        b.append(Data("--\(boundary)\r\n".utf8))
+        b.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"\(safeName)\"\r\n".utf8))
+        b.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
         b.append(data)
-        b.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        b.append(Data("\r\n--\(boundary)--\r\n".utf8))
         req.httpBody = b
         let (respData, resp) = try await session.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let status = (resp as? HTTPURLResponse)?.statusCode
-            throw ApiError(message: errorMessage(from: respData, status: status ?? 0), status: status)
+        guard let http = resp as? HTTPURLResponse else {
+            throw ApiError(message: "No HTTP response", status: nil)
         }
-        return try decoder.decode(MediaUploadResponse.self, from: respData)
+        guard (200..<300).contains(http.statusCode) else {
+            if http.statusCode == 401 {
+                Task { @MainActor in Session.shared.handleUnauthorized() }
+            }
+            throw ApiError(message: errorMessage(from: respData, status: http.statusCode), status: http.statusCode)
+        }
+        do { return try decoder.decode(T.self, from: respData) }
+        catch { throw ApiError(message: "Decode failed: \(error.localizedDescription)", status: http.statusCode) }
+    }
+
+    /// Upload a file to /api/upload (multipart field "file"); returns the signed media path in `url`.
+    func uploadMedia(data: Data, filename: String, mimeType: String) async throws -> MediaUploadResponse {
+        try await uploadMultipart(path: "api/upload", data: data, filename: filename, mimeType: mimeType)
     }
     /// Send a previously-uploaded media URL as a message (optionally with a caption).
     func sendMedia(conversationId: String, mediaUrl: String, caption: String?, replyToMessageId: String? = nil) async throws {
@@ -354,23 +374,8 @@ final class Api {
                           body: UpdateProfileRequest(displayName: displayName, email: email))
     }
     func uploadAvatar(imageData: Data) async throws -> AuthUser {
-        let boundary = "Boundary-\(UUID().uuidString)"
-        var req = URLRequest(url: try makeURL("api/user/avatar"))
-        req.httpMethod = "POST"
-        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
-        body.append(imageData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        req.httpBody = body
-        let (data, resp) = try await session.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let status = (resp as? HTTPURLResponse)?.statusCode
-            throw ApiError(message: errorMessage(from: data, status: status ?? 0), status: status)
-        }
-        return try decoder.decode(AuthUser.self, from: data)
+        try await uploadMultipart(path: "api/user/avatar", data: imageData,
+                                  filename: "avatar.jpg", mimeType: "image/jpeg")
     }
 
     // MARK: - Integration actions

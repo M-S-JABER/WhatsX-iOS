@@ -61,6 +61,12 @@ final class ImageCache: @unchecked Sendable {
         cache.object(forKey: key(url, maxPixel))
     }
 
+    /// Drops every decoded thumbnail — called on logout so customer imagery
+    /// doesn't survive the session in memory.
+    func removeAll() {
+        cache.removeAllObjects()
+    }
+
     /// Runs off the main actor (nonisolated async): network + decode never
     /// block the UI.
     func load(url: URL, maxPixel: CGFloat) async -> UIImage? {

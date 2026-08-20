@@ -39,5 +39,9 @@
     <string>يُستخدم للوصول إلى الصور لإرسالها أو تعيين صورة الملف الشخصي.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>يُستخدم Face ID لقفل التطبيق وحماية محادثات العملاء.</string>
+    <!-- HTTPS/TLS only — exempt encryption. Without this key every TestFlight
+         build stalls in "Missing Compliance" until answered manually. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>

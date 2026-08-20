@@ -10,6 +10,9 @@ public struct WhatsXRoot: View {
     @StateObject private var settings = AppSettings.shared
     @StateObject private var lock = AppLock.shared
     @Environment(\.scenePhase) private var scenePhase
+    /// Covers the UI while the scene is inactive (app switcher, system
+    /// overlays) — snapshots are taken before .background arrives.
+    @State private var isObscured = false
 
     public init() {
         // Register the bundled web-parity typeface before any text renders.
@@ -27,17 +30,37 @@ public struct WhatsXRoot: View {
             .preferredColorScheme(settings.colorScheme)
             .tint(Theme.primary)
             .overlay {
-                if lock.isLocked { LockScreenView(lock: lock) }
+                if lock.isLocked {
+                    LockScreenView(lock: lock)
+                } else if isObscured {
+                    PrivacyShield()
+                }
             }
             .task {
                 lock.lockIfEnabled()
                 await session.bootstrap()
             }
             .onChange(of: scenePhase) { phase in
-                // Cover the UI the moment the app leaves the foreground so
-                // chats never show in the app switcher.
+                // The app-switcher snapshot is taken while the scene is
+                // .inactive — locking only on .background let chats flash
+                // into the switcher. The shield covers .inactive; the real
+                // lock still engages on .background.
+                isObscured = phase != .active && settings.faceIDLock && session.isAuthenticated
                 if phase == .background { lock.lockIfEnabled() }
             }
+    }
+}
+
+/// Opaque cover shown while the app is inactive so chat content never
+/// appears in the app switcher's snapshot. Purely visual — no unlock UI.
+private struct PrivacyShield: View {
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            Image(systemName: "lock.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Theme.primary)
+        }
     }
 }
 

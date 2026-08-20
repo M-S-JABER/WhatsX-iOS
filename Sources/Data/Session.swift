@@ -55,6 +55,10 @@ final class Session: ObservableObject {
         if let cookies = HTTPCookieStorage.shared.cookies {
             for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
         }
+        // Customer media (avatars, chat images) must not outlive the session:
+        // ImageCache writes through URLCache to disk, so both are purged.
+        URLCache.shared.removeAllCachedResponses()
+        ImageCache.shared.removeAll()
         user = nil
     }
 
