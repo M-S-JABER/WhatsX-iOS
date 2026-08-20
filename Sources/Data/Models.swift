@@ -438,6 +438,34 @@ struct CallPermissionRequest: Codable {
     var instanceId: String?
 }
 
+// POST /api/voice/whatsapp/call — outbound call with the local SDP offer.
+struct WhatsAppCallRequest: Codable {
+    var to: String
+    var sdp: String
+    var displayName: String?
+    var instanceId: String?
+}
+
+// Response: callId plus, when Meta answers synchronously, the answer SDP.
+struct WhatsAppCallResponse: Codable {
+    var callId: String? = nil
+    var answer: String? = nil
+
+    private enum CodingKeys: String, CodingKey { case callId, answer }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        callId = c.lenient(String.self, forKey: .callId)
+        answer = c.lenient(String.self, forKey: .answer)
+    }
+}
+
+// POST /api/voice/whatsapp/answer — accept a ringing call with the answer SDP.
+struct AnswerCallRequest: Codable {
+    var callId: String
+    var sdp: String
+}
+
 // GET /api/voice/calls/filters -> { accounts:[{id,name,displayPhoneNumber}], agents:[username] }
 struct CallFilterAccount: Codable, Identifiable {
     var id: String = ""

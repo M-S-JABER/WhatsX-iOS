@@ -94,6 +94,15 @@ struct ChatView: View {
             vm.scheduleRealtimeReload()
         }
         .confirmationDialog(L("الاتصال"), isPresented: $showCallMenu, titleVisibility: .visible) {
+            if CallCenter.shared.canCarryAudio {
+                Button(L("بدء مكالمة صوتية")) {
+                    let digits = (vm.conversation.phone ?? "").filter { $0.isNumber }
+                    CallCenter.shared.startOutbound(
+                        to: digits,
+                        displayName: vm.conversation.displayName,
+                        instanceId: vm.conversation.instanceId)
+                }
+            }
             Button(L("طلب إذن الاتصال عبر واتساب")) {
                 Task {
                     let digits = (vm.conversation.phone ?? "").filter { $0.isNumber }
@@ -101,13 +110,15 @@ struct ChatView: View {
                         try await Api.shared.requestCallPermission(to: digits, instanceId: vm.conversation.instanceId)
                         callNotice = L("أُرسل طلب إذن الاتصال إلى العميل ✓")
                     } catch {
-                        callNotice = error.apiMessage
+                        callNotice = CallPermissionNotice.friendly(error.apiMessage)
                     }
                 }
             }
             Button(L("إلغاء"), role: .cancel) {}
         } message: {
-            Text(L("المكالمات الصوتية الحية متاحة من نسخة الويب؛ من هنا يمكن إرسال طلب إذن الاتصال للعميل."))
+            Text(CallCenter.shared.canCarryAudio
+                 ? L("المكالمة تتطلب إذن اتصال مسبقاً من العميل؛ أرسل الطلب أولاً إن لم يكن ممنوحاً.")
+                 : L("المكالمات الصوتية الحية متاحة من نسخة الويب؛ من هنا يمكن إرسال طلب إذن الاتصال للعميل."))
         }
         .alert(L("الاتصال"), isPresented: Binding(get: { callNotice != nil }, set: { if !$0 { callNotice = nil } })) {
             Button(L("حسنًا"), role: .cancel) {}

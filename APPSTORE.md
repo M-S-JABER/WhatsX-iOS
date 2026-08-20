@@ -86,6 +86,10 @@
 ولا Push Notifications ولا Network Extension. هذا مقصود ليبقى **App Transfer**
 إلى حساب "مختبرات النخبة" ممكناً بلا عوائق.
 
+> Note (1.16.0): live call audio adds `UIBackgroundModes: audio` — an
+> Info.plist capability, NOT a signed entitlement, so App Transfer is
+> unaffected. Mention in-app WhatsApp calling in the review notes.
+
 ---
 
 ## 🔑 حساب المراجعة — سبب الرفض الأول الأكثر شيوعاً

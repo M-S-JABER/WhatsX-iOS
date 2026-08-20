@@ -21,6 +21,10 @@ new ones.
 - Unit tests live in `Tests/`, hosted in the app target
   (`@testable import WhatsX`). The `ios-build` workflow runs them
   automatically on the simulator.
+- The WebRTC binary package (stasel/WebRTC) is linked into the XcodeGen
+  app target ONLY. `Package.swift` must stay dependency-free so Swift
+  Playgrounds keeps loading — gate any WebRTC-touching code on
+  `#if canImport(WebRTC)` (see `CallAudioEngine.swift`).
 
 ## Release pipeline (no Mac required)
 
