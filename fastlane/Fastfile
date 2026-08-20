@@ -99,10 +99,14 @@ platform :ios do
 
     # رقم البناء يجب أن يكون فريداً ومتصاعداً تحت نفس MARKETING_VERSION،
     # وإلا ترفض Apple الرفع. رقم تشغيل الـ workflow يضمن ذلك تلقائياً.
-    increment_build_number(
-      xcodeproj: PROJECT,
-      build_number: ENV["BUILD_NUMBER"] || ENV["GITHUB_RUN_NUMBER"] || "1"
-    )
+    # يُمرَّر كإعداد بناء إلى gym مباشرة بدل increment_build_number: الأخير
+    # يشترط تفعيل Apple Generic Versioning في المشروع (غير مفعّل في مشروع
+    # XcodeGen)، كما أن إدخال الـ workflow غير المعبأ يصل نصاً فارغاً لا
+    # nil فيتجاوز || — الفحص الصريح للفراغ يعالج الحالتين.
+    build_number = ENV["BUILD_NUMBER"].to_s.strip
+    build_number = ENV["GITHUB_RUN_NUMBER"].to_s.strip if build_number.empty?
+    build_number = "1" if build_number.empty?
+    UI.message("رقم البناء: #{build_number}")
 
     # توقيع يدوي صريح: نمنع Xcode من محاولة التوقيع التلقائي، الذي يفشل
     # داخل CI لأنه يتطلب حساباً مسجّلاً في Xcode.
@@ -124,6 +128,8 @@ platform :ios do
       output_directory: BUILD_DIR,
       output_name: "#{SCHEME}.ipa",
       destination: "generic/platform=iOS",
+      # يتدفق إلى CFBundleVersion لأن Info.plist يستخدم $(CURRENT_PROJECT_VERSION).
+      xcargs: "CURRENT_PROJECT_VERSION=#{build_number}",
       export_options: {
         provisioningProfiles: {
           APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}"
