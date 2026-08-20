@@ -12,6 +12,7 @@ import Foundation
 
 #if canImport(WebRTC)
 import WebRTC
+import AVFAudio
 
 final class CallAudioEngine {
     static let isSupported = true
@@ -20,6 +21,30 @@ final class CallAudioEngine {
         RTCInitializeSSL()
         return RTCPeerConnectionFactory()
     }()
+
+    // MARK: - CallKit audio handoff
+
+    /// With CallKit the SYSTEM owns audio-session activation: WebRTC must
+    /// not start audio on its own, or answers from the lock screen end up
+    /// silent. CallKitBridge switches the engine to manual audio once at
+    /// startup and forwards the provider's (de)activation callbacks here.
+    static func prepareManualAudio() {
+        let session = RTCAudioSession.sharedInstance()
+        session.useManualAudio = true
+        session.isAudioEnabled = false
+    }
+
+    static func audioSessionDidActivate(_ audioSession: AVAudioSession) {
+        let session = RTCAudioSession.sharedInstance()
+        session.audioSessionDidActivate(audioSession)
+        session.isAudioEnabled = true
+    }
+
+    static func audioSessionDidDeactivate(_ audioSession: AVAudioSession) {
+        let session = RTCAudioSession.sharedInstance()
+        session.isAudioEnabled = false
+        session.audioSessionDidDeactivate(audioSession)
+    }
 
     private var connection: RTCPeerConnection?
     private var localAudio: RTCAudioTrack?
@@ -138,10 +163,19 @@ private final class Locked {
 
 #else
 
+#if canImport(AVFAudio)
+import AVFAudio
+#endif
+
 /// Package (Swift Playgrounds) fallback: calls are not supported, the UI
 /// keeps the reject-only banner, and every method is inert.
 final class CallAudioEngine {
     static let isSupported = false
+    static func prepareManualAudio() {}
+    #if canImport(AVFAudio)
+    static func audioSessionDidActivate(_ audioSession: AVAudioSession) {}
+    static func audioSessionDidDeactivate(_ audioSession: AVAudioSession) {}
+    #endif
     func createOffer() async -> String? { nil }
     func answerOffer(_ offerSdp: String) async -> String? { nil }
     func setRemoteAnswer(_ answerSdp: String) {}

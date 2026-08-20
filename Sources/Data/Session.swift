@@ -87,5 +87,8 @@ final class Session: ObservableObject {
         Realtime.shared.connect()
         CallCenter.shared.start()
         Notifier.shared.start()
+        // Registration itself happened at launch (VoIPPush.activate); this
+        // uploads the token now that the session cookie can authenticate it.
+        VoIPPush.shared.syncToken()
     }
 }

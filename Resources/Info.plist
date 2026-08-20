@@ -52,12 +52,15 @@
          build stalls in "Missing Compliance" until answered manually. -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
-    <!-- Keeps live call audio running when the screen locks or the app
-         backgrounds mid-call. An Info.plist capability, not a signed
-         entitlement — App Transfer stays unaffected. -->
+    <!-- audio: keeps live call audio running when the screen locks or the
+         app backgrounds mid-call. voip: lets a VoIP push launch the app in
+         the background so incoming calls ring (CallKit) while it is closed.
+         voip pairs with the aps-environment entitlement in
+         WhatsX.entitlements + the Push Notifications App ID capability. -->
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>
+        <string>voip</string>
     </array>
 </dict>
 </plist>

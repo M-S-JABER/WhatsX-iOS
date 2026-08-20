@@ -49,7 +49,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
         # MARKETING_VERSION is the user-facing App Store version. Bump it
         # by hand for every public release.
-        MARKETING_VERSION: "1.17.0"
+        MARKETING_VERSION: "1.18.0"
+        # aps-environment for VoIP (PushKit) call pushes. The App ID needs
+        # the Push Notifications capability and a regenerated match profile
+        # (ios-certificates → refresh-profiles) or signing fails.
+        CODE_SIGN_ENTITLEMENTS: Resources/WhatsX.entitlements
         # CURRENT_PROJECT_VERSION is the build number. fastlane rewrites it
         # on every TestFlight upload with the workflow run number, because
         # Apple rejects a duplicate build number under one MARKETING_VERSION.

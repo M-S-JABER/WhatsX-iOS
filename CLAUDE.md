@@ -25,11 +25,22 @@ new ones.
   app target ONLY. `Package.swift` must stay dependency-free so Swift
   Playgrounds keeps loading — gate any WebRTC-touching code on
   `#if canImport(WebRTC)` (see `CallAudioEngine.swift`).
+- Calls ring through CallKit (`CallKitBridge.swift`); WebRTC runs in
+  manual-audio mode, started only from the provider's `didActivate`.
+  Apple's hard rule: EVERY VoIP push must surface a CallKit call before
+  the PushKit callback returns — never add an early return to
+  `VoIPPush.didReceiveIncomingPush`/`CallCenter.handleVoipPush` that
+  skips the report. The server contract is `docs/VOIP_PUSH.md`.
 
 ## Release pipeline (no Mac required)
 
 - `ios-build`: every push/PR — unsigned build + tests.
-- `ios-certificates`: one-time bootstrap already done; `verify` mode only.
+- `ios-certificates`: bootstrap already done — routine use is `verify`.
+  `refresh-profiles` mode (CREATE-gated) exists for App ID capability
+  changes: it enables the capability via Spaceship and regenerates the
+  match profile (`force: true`, certificate reused). Run it once after
+  merging any change to `Resources/WhatsX.entitlements`, BEFORE the next
+  `ios-release`, or signing fails.
 - `ios-release`: manual dispatch (or `v*` tag) — signed build + upload to
   TestFlight. Build number = workflow run number, passed to gym via
   `CURRENT_PROJECT_VERSION` (do NOT reintroduce `increment_build_number`;

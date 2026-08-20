@@ -213,6 +213,57 @@ platform :ios do
   end
 
   # ══════════════════════════════════════════════════════════════════════
+  # Capability change → profile refresh (run once per capability change)
+  # ══════════════════════════════════════════════════════════════════════
+  # Adding an entitlement (here: aps-environment for VoIP call pushes) needs
+  # two portal-side changes the stored profile predates: the capability on
+  # the App ID, and a provisioning profile regenerated to include it.
+  # Run from: Actions → ios-certificates → mode "refresh-profiles".
+  desc "Enable the Push Notifications capability and regenerate the profile"
+  lane :refresh_profiles do
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: appstore_api_key)
+
+    bundle_id = Spaceship::ConnectAPI::BundleId.all.find { |b| b.identifier == APP_IDENTIFIER }
+    UI.user_error!("App ID not found in the developer portal: #{APP_IDENTIFIER}") unless bundle_id
+
+    begin
+      capabilities = bundle_id.get_capabilities.map(&:capability_type)
+    rescue => e
+      UI.important("Could not list capabilities (#{e.message}) — attempting to enable anyway")
+      capabilities = []
+    end
+    if capabilities.include?("PUSH_NOTIFICATIONS")
+      UI.message("Push Notifications capability already enabled")
+    else
+      begin
+        bundle_id.create_capability(Spaceship::ConnectAPI::BundleIdCapability::Type::PUSH_NOTIFICATIONS)
+        UI.success("Enabled Push Notifications on #{APP_IDENTIFIER}")
+      rescue => e
+        # Racing an already-enabled capability is fine; anything else is not.
+        raise unless e.message.include?("already") || e.message.include?("ENTITY_ERROR")
+        UI.message("Capability already present: #{e.message}")
+      end
+    end
+
+    # force: true regenerates the provisioning profile so it picks up the
+    # new capability. The distribution certificate is REUSED (not revoked),
+    # so devices carrying existing builds are unaffected.
+    match(
+      type: "appstore",
+      app_identifier: APP_IDENTIFIER,
+      readonly: false,
+      force: true,
+      git_url: match_git_url,
+      git_basic_authorization: match_git_auth,
+      api_key: appstore_api_key,
+      keychain_name: ENV["MATCH_KEYCHAIN_NAME"] || "fastlane_tmp_keychain",
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"] || ""
+    )
+
+    UI.success("Profile regenerated with the push entitlement — ios-release can sign again.")
+  end
+
+  # ══════════════════════════════════════════════════════════════════════
   # دوال مساعدة
   # ══════════════════════════════════════════════════════════════════════
 

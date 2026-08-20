@@ -95,9 +95,15 @@ project.yml  XcodeGen spec (Mac build)
 - **سبب فشل الإرسال** يظهر تحت الرسالة الفاشلة (errorTitle/details من الخادم).
 
 ## Not yet ported
-Only **background push (APNs/FCM)** remains — it needs an entitlement that is
-deliberately deferred until the planned App Transfer (see APPSTORE.md). Local
-notifications while the app runs stand in for it.
+**Message push notifications** (alert pushes for new chat messages while the
+app is closed) — local notifications while the app runs stand in for them.
+
+**Call ringing while the app is closed shipped app-side in 1.18.0**: every
+call now rings through CallKit (the native call UI, lock screen included),
+PushKit registers a VoIP token with the customer's server, and the
+`aps-environment` entitlement is signed in. The pushes themselves need the
+server to implement `docs/VOIP_PUSH.md` — until then calls keep ringing only
+while the app is open, exactly as before.
 
 **Live call audio (WebRTC) shipped in 1.16.0** — answer/place/mute/speaker/
 hang-up, in the XcodeGen app build only: the binary WebRTC framework cannot be
