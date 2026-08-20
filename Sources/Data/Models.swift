@@ -469,10 +469,22 @@ struct StatTotals: Codable, Equatable {
 }
 
 struct SeriesPoint: Codable, Identifiable, Equatable {
-    var id: String { bucket ?? UUID().uuidString }
+    var id: String { bucket ?? fallbackID.uuidString }
     var bucket: String? = nil
     var incoming: Int = 0
     var outgoing: Int = 0
+
+    /// Stable per-instance identity for bucket-less points — the previous
+    /// `UUID().uuidString` fallback minted a NEW id on every access, which
+    /// made SwiftUI re-render the chart rows on each pass.
+    let fallbackID = UUID()
+
+    private enum CodingKeys: String, CodingKey { case bucket, incoming, outgoing }
+
+    // fallbackID is identity, not data — it must not affect equality.
+    static func == (lhs: SeriesPoint, rhs: SeriesPoint) -> Bool {
+        lhs.bucket == rhs.bucket && lhs.incoming == rhs.incoming && lhs.outgoing == rhs.outgoing
+    }
 }
 
 struct InstTotals: Codable, Equatable {

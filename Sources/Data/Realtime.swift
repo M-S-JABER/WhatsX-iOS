@@ -45,7 +45,7 @@ final class Realtime: ObservableObject {
 
     private let session: URLSession = {
         let cfg = URLSessionConfiguration.default
-        cfg.httpCookieStorage = .shared
+        cfg.httpCookieStorage = SessionCookies.store
         cfg.httpShouldSetCookies = true
         return URLSession(configuration: cfg)
     }()
@@ -123,7 +123,20 @@ final class Realtime: ObservableObject {
         let t = session.webSocketTask(with: url)
         task = t
         t.resume()
-        isConnected = true
+        // Don't report "connected" just because resume() was called — an
+        // immediate ping confirms the upgrade actually succeeded (its
+        // completion is queued until the handshake resolves either way).
+        t.sendPing { [weak self] error in
+            Task { @MainActor in
+                guard let self, self.task === t else { return }
+                if error == nil {
+                    self.isConnected = true
+                    self.reconnectAttempt = 0
+                } else {
+                    self.handleDrop()
+                }
+            }
+        }
         listen(on: t)
         startPing()
     }
@@ -137,6 +150,7 @@ final class Realtime: ObservableObject {
                     self.handleDrop()
                 case .success(let message):
                     self.reconnectAttempt = 0
+                    self.isConnected = true
                     self.handle(message)
                     self.listen(on: t)
                 }

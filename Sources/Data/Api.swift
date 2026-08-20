@@ -69,7 +69,9 @@ final class Api {
 
     private let session: URLSession = {
         let cfg = URLSessionConfiguration.default
-        cfg.httpCookieStorage = .shared
+        // Unified in-memory session store — CookieVault keeps it alive
+        // across launches through the Keychain (see CookieVault.swift).
+        cfg.httpCookieStorage = SessionCookies.store
         cfg.httpShouldSetCookies = true
         cfg.httpCookieAcceptPolicy = .always
         cfg.requestCachePolicy = .reloadIgnoringLocalCacheData

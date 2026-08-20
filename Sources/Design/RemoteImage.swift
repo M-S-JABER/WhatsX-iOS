@@ -43,7 +43,7 @@ final class ImageCache: @unchecked Sendable {
 
     private let session: URLSession = {
         let cfg = URLSessionConfiguration.default
-        cfg.httpCookieStorage = .shared
+        cfg.httpCookieStorage = SessionCookies.store
         cfg.httpShouldSetCookies = true
         cfg.urlCache = URLCache.shared
         return URLSession(configuration: cfg)
