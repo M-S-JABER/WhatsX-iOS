@@ -63,8 +63,6 @@ enum L10n {
         "تعذّر تجهيز الصوت للمكالمة": "Couldn't set up call audio",
         "جارٍ الاتصال…": "Calling…",
         "جارٍ التوصيل…": "Connecting…",
-        "متصل": "Connected",
-        "مكالمة": "Call",
         "كتم الصوت": "Mute",
         "إلغاء كتم الصوت": "Unmute",
         "مكبر الصوت": "Speaker",
