@@ -8,7 +8,7 @@
 
 - **الاسم:** WhatsX
 - **Bundle ID:** `com.m-s-jaber.whatsx`
-- **النسخة:** 1.16.0 (تطابق `MARKETING_VERSION` في `project.yml`)
+- **النسخة:** 1.18.0 (تطابق `MARKETING_VERSION` في `project.yml`)
 - **التصنيف:** Business (ثانوي: Productivity)
 - **الأجهزة:** iPhone + iPad (native)، iOS 16.0+
 - **اللغات:** العربية (الأساسية، RTL)، الإنجليزية
@@ -82,13 +82,18 @@
 | `NSPhotoLibraryUsageDescription` | إرسال الصور وتعيين صورة الملف الشخصي |
 | `NSFaceIDUsageDescription` | قفل التطبيق لحماية محادثات العملاء |
 
-**لا entitlements إطلاقاً** — لا Apple Pay ولا Wallet ولا Sign in with Apple
-ولا Push Notifications ولا Network Extension. هذا مقصود ليبقى **App Transfer**
-إلى حساب "مختبرات النخبة" ممكناً بلا عوائق.
+**entitlement واحد فقط**: `aps-environment` (دفعات VoIP لرنين المكالمات
+والتطبيق مغلق — أُضيف في 1.18.0 بقرار المالك). لا Apple Pay ولا Wallet ولا
+Sign in with Apple ولا Network Extension.
 
 > Note (1.16.0): live call audio adds `UIBackgroundModes: audio` — an
-> Info.plist capability, NOT a signed entitlement, so App Transfer is
-> unaffected. Mention in-app WhatsApp calling in the review notes.
+> Info.plist capability. Mention in-app WhatsApp calling in the review notes.
+
+> Note (1.18.0): VoIP call push adds `UIBackgroundModes: voip` + the
+> `aps-environment` entitlement (Push Notifications capability on the App
+> ID). For a future **App Transfer**: push capability does not block a
+> transfer, but APNs auth keys are per-account — the receiving account must
+> create its own `.p8` and the server must switch to it after the transfer.
 
 ---
 

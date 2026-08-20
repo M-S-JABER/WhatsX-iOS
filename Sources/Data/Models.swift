@@ -421,6 +421,29 @@ struct RegenerateAiDraftRequest: Codable {
     var instruction: String
 }
 
+// MARK: - VoIP push (calls ringing while the app is closed)
+
+/// POST api/devices/voip-token — registers this device for VoIP pushes.
+/// `environment` tells the server which APNs host to use; TestFlight and
+/// App Store builds both run against production.
+struct VoipTokenRequest: Codable {
+    var token: String
+    var platform: String = "ios"
+    var environment: String = "production"
+}
+
+/// GET api/voice/whatsapp/calls/{callId}/offer -> { sdpOffer }.
+struct CallOfferResponse: Codable {
+    var sdpOffer: String? = nil
+
+    private enum CodingKeys: String, CodingKey { case sdpOffer }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try? decoder.container(keyedBy: CodingKeys.self)
+        sdpOffer = (try? c?.decodeIfPresent(String.self, forKey: .sdpOffer)) ?? nil
+    }
+}
+
 /// Splits draft text around the anonymization placeholders the lab system
 /// leaves in ({PATIENT_NAME}, {PHONE}, {VISIT_ID}, {REG_NO}). They are
 /// highlighted for the operator to replace BY HAND — never auto-filled from

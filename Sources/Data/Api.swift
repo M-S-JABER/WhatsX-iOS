@@ -321,6 +321,21 @@ final class Api {
             "api/voice/whatsapp/call-permission", method: "POST",
             body: CallPermissionRequest(to: to, instanceId: instanceId))
     }
+    /// Offer SDP of a still-ringing call — the fallback when a VoIP push had
+    /// to omit it for size (docs/VOIP_PUSH.md). 404 until the server ships
+    /// the endpoint; callers treat any failure as "call can't be answered".
+    func callOffer(callId: String) async throws -> String? {
+        let resp: CallOfferResponse = try await request("api/voice/whatsapp/calls/\(callId)/offer")
+        return resp.sdpOffer
+    }
+    /// Register this device's VoIP push token so the server can ring it when
+    /// the app is closed (docs/VOIP_PUSH.md). 404 until the server ships the
+    /// endpoint; call sites stay silent and retry on the next login.
+    func registerVoipToken(_ token: String) async throws {
+        let _: EmptyResponse = try await request(
+            "api/devices/voip-token", method: "POST",
+            body: VoipTokenRequest(token: token))
+    }
 
     // MARK: - Statistics
     func statistics(range: String? = nil, instanceId: String? = nil) async throws -> StatsResponse {

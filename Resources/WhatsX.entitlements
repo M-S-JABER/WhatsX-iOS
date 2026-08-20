@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- VoIP (PushKit) pushes ride the APNs entitlement. App Store /
+         TestFlight distribution always signs for production. Requires the
+         Push Notifications capability on the App ID and a regenerated
+         provisioning profile — see the ios-certificates workflow's
+         refresh-profiles mode. -->
+    <key>aps-environment</key>
+    <string>production</string>
+</dict>
+</plist>

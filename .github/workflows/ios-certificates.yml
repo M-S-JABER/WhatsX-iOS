@@ -24,10 +24,11 @@ on:
         type: choice
         default: verify
         options:
-          - verify        # readonly — يتحقق فقط أن الشهادات موجودة وقابلة للسحب
-          - bootstrap     # كتابة — التوليد الأول للشهادات (مرة واحدة)
+          - verify            # readonly — checks the certificates can be fetched
+          - bootstrap         # write — first-time certificate generation (once)
+          - refresh-profiles  # write — after an App ID capability change (e.g. push)
       confirm:
-        description: "لوضع bootstrap فقط: اكتب  CREATE  للتأكيد"
+        description: "For write modes (bootstrap / refresh-profiles): type CREATE to confirm"
         required: false
         default: ""
 
@@ -67,15 +68,15 @@ jobs:
           fi
           echo "✅ الأسرار مكتملة."
 
-      - name: بوابة التأكيد لوضع bootstrap
-        if: ${{ inputs.mode == 'bootstrap' }}
+      - name: Confirmation gate for write modes
+        if: ${{ inputs.mode != 'verify' }}
         run: |
           if [ "${{ inputs.confirm }}" != "CREATE" ]; then
-            echo "::error::وضع bootstrap يكتب شهادات جديدة في مستودع certificates."
-            echo "أعد التشغيل مع كتابة  CREATE  في حقل confirm إن كنت متأكداً."
+            echo "::error::Mode '${{ inputs.mode }}' writes to the certificates repo."
+            echo "Re-run with CREATE in the confirm field if you are sure."
             exit 1
           fi
-          echo "⚠️ تم التأكيد — سيجري توليد الشهادات وتخزينها."
+          echo "Confirmed — proceeding with mode '${{ inputs.mode }}'."
 
       - uses: actions/checkout@v4
 
@@ -89,6 +90,10 @@ jobs:
         if: ${{ inputs.mode == 'bootstrap' }}
         run: bundle exec fastlane bootstrap_signing
 
+      - name: Refresh profiles after a capability change (refresh-profiles)
+        if: ${{ inputs.mode == 'refresh-profiles' }}
+        run: bundle exec fastlane refresh_profiles
+
       - name: التحقق من إمكانية سحب الشهادات (verify)
         if: ${{ inputs.mode == 'verify' }}
         run: bundle exec fastlane setup_certificates
@@ -101,6 +106,10 @@ jobs:
             echo "مستودع certificates صار يحتوي شهادة التوزيع وملف التزويد مشفَّرَين." >> $GITHUB_STEP_SUMMARY
             echo "الخطوة التالية: شغّل **ios-release** لرفع أول بناء إلى TestFlight." >> $GITHUB_STEP_SUMMARY
             echo "لا تعد تشغيل bootstrap مرة أخرى." >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ inputs.mode }}" = "refresh-profiles" ]; then
+            echo "### ✅ Profiles refreshed" >> $GITHUB_STEP_SUMMARY
+            echo "The provisioning profile now carries the push entitlement." >> $GITHUB_STEP_SUMMARY
+            echo "Next: run **ios-release** to ship a signed build." >> $GITHUB_STEP_SUMMARY
           else
             echo "### ✅ الشهادات سليمة وقابلة للسحب" >> $GITHUB_STEP_SUMMARY
             echo "خط الرفع إلى TestFlight جاهز." >> $GITHUB_STEP_SUMMARY
