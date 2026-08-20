@@ -12,19 +12,106 @@ import Security
 //     older versions stored in the legacy file-backed store.
 
 /// The unified non-persistent cookie store for all networking (REST,
-/// WebSocket, image loading, audio/video players). An ephemeral
-/// configuration's storage never touches disk.
+/// WebSocket, image loading, audio/video players).
 enum SessionCookies {
-    static let store: HTTPCookieStorage = {
-        let s = URLSessionConfiguration.ephemeral.httpCookieStorage ?? HTTPCookieStorage()
-        s.cookieAcceptPolicy = .always
-        return s
-    }()
+    static let store: HTTPCookieStorage = InMemoryCookieStorage()
 
     static var all: [HTTPCookie] { store.cookies ?? [] }
 
     static func removeAll() {
         for cookie in all { store.deleteCookie(cookie) }
+    }
+}
+
+/// A purely in-memory HTTPCookieStorage. Borrowing an ephemeral
+/// configuration's storage does not work — detached from its session,
+/// setCookie silently drops cookies — so this subclass owns the jar
+/// itself. URLSession routes cookie traffic for custom storage subclasses
+/// through storeCookies(_:for:) / getCookiesFor(_:completionHandler:),
+/// both of which resolve to the overrides below, so nothing ever reaches
+/// the on-disk cookie file.
+final class InMemoryCookieStorage: HTTPCookieStorage {
+    private let lock = NSLock()
+    private var jar: [String: HTTPCookie] = [:]
+
+    private func key(_ cookie: HTTPCookie) -> String {
+        "\(cookie.name)|\(cookie.domain.lowercased())|\(cookie.path)"
+    }
+
+    override var cookies: [HTTPCookie]? {
+        lock.lock()
+        defer { lock.unlock() }
+        purgeExpired()
+        return Array(jar.values)
+    }
+
+    override var cookieAcceptPolicy: HTTPCookie.AcceptPolicy {
+        get { .always }
+        set {}
+    }
+
+    override func setCookie(_ cookie: HTTPCookie) {
+        lock.lock()
+        defer { lock.unlock() }
+        jar[key(cookie)] = cookie
+    }
+
+    override func deleteCookie(_ cookie: HTTPCookie) {
+        lock.lock()
+        defer { lock.unlock() }
+        jar.removeValue(forKey: key(cookie))
+    }
+
+    override func removeCookies(since date: Date) {
+        // Creation dates aren't tracked; the only use this app has is a
+        // full wipe, so that is what it does.
+        lock.lock()
+        defer { lock.unlock() }
+        jar = [:]
+    }
+
+    override func cookies(for url: URL) -> [HTTPCookie]? {
+        guard let host = url.host?.lowercased() else { return [] }
+        let path = url.path.isEmpty ? "/" : url.path
+        lock.lock()
+        defer { lock.unlock() }
+        purgeExpired()
+        return jar.values.filter { cookie in
+            domainMatches(cookieDomain: cookie.domain.lowercased(), host: host)
+                && path.hasPrefix(cookie.path.isEmpty ? "/" : cookie.path)
+        }
+    }
+
+    override func setCookies(_ cookies: [HTTPCookie], for url: URL?, mainDocumentURL: URL?) {
+        for cookie in cookies { setCookie(cookie) }
+    }
+
+    override func storeCookies(_ cookies: [HTTPCookie], for task: URLSessionTask) {
+        setCookies(cookies, for: task.currentRequest?.url, mainDocumentURL: nil)
+    }
+
+    override func getCookiesFor(_ task: URLSessionTask, completionHandler: @escaping ([HTTPCookie]?) -> Void) {
+        guard let url = task.currentRequest?.url else {
+            completionHandler([])
+            return
+        }
+        completionHandler(cookies(for: url))
+    }
+
+    /// Caller must hold the lock.
+    private func purgeExpired() {
+        let now = Date()
+        jar = jar.filter { _, cookie in cookie.expiresDate.map { $0 > now } ?? true }
+    }
+
+    private func domainMatches(cookieDomain: String, host: String) -> Bool {
+        // Dotted domains (Set-Cookie with a Domain attribute) cover
+        // subdomains; host-only cookies match that exact host, per RFC 6265.
+        if cookieDomain.hasPrefix(".") {
+            let domain = String(cookieDomain.dropFirst())
+            return host == domain || host.hasSuffix("." + domain)
+        }
+        return host == cookieDomain
     }
 }
 

@@ -61,6 +61,30 @@ final class CookieVaultTests: XCTestCase {
         XCTAssertTrue(SessionCookies.all.isEmpty)
     }
 
+    func testStoreMatchesCookiesByDomainAndPath() {
+        let store = InMemoryCookieStorage()
+        store.setCookie(makeCookie())
+
+        let match = store.cookies(for: URL(string: "https://whatsx.example.com/api/user")!)
+        XCTAssertEqual(match?.count, 1)
+
+        let subdomain = store.cookies(for: URL(string: "https://api.whatsx.example.com/x")!)
+        XCTAssertEqual(subdomain?.count, 0, "host-only cookies must not leak to subdomains")
+
+        let other = store.cookies(for: URL(string: "https://evil.example.com/api")!)
+        XCTAssertEqual(other?.count, 0)
+    }
+
+    func testDottedDomainCookieCoversSubdomains() {
+        let store = InMemoryCookieStorage()
+        let dotted = HTTPCookie(properties: [
+            .name: "p", .value: "v", .domain: ".example.com", .path: "/",
+        ])!
+        store.setCookie(dotted)
+        let sub = store.cookies(for: URL(string: "https://api.example.com/")!)
+        XCTAssertEqual(sub?.count, 1)
+    }
+
     func testMigrationMovesLegacyCookiesAndWipesTheOldStore() {
         let legacy = makeCookie(name: "legacy-passport")
         HTTPCookieStorage.shared.setCookie(legacy)
