@@ -8,9 +8,9 @@
 
 - **الاسم:** WhatsX
 - **Bundle ID:** `com.m-s-jaber.whatsx`
-- **النسخة:** 1.13.0 (تطابق `MARKETING_VERSION` في `project.yml`)
+- **النسخة:** 1.15.0 (تطابق `MARKETING_VERSION` في `project.yml`)
 - **التصنيف:** Business (ثانوي: Productivity)
-- **الأجهزة:** iPhone، iOS 16.0+
+- **الأجهزة:** iPhone + iPad (native)، iOS 16.0+
 - **اللغات:** العربية (الأساسية، RTL)، الإنجليزية
 - **نموذج النشر:** مجاني، بدفع خارج التطبيق وفق Guideline **3.1.3(b)**
 
@@ -161,6 +161,7 @@ WhatsX منصة لإدارة محادثات واتساب لفرق الأعمال
 |---|---|---|
 | 6.9" (1320×2868) | iPhone 16 Pro Max | 3–10 |
 | 6.5" (1242×2688) | iPhone 11 Pro Max | 3–10 |
+| 13" (2064×2752) | iPad Pro 13" — required since 1.15.0 (native iPad) | 3–10 |
 
 اللقطات المقترحة: صندوق الوارد، محادثة مفتوحة، شاشة الإحصاءات، الإعدادات.
 
