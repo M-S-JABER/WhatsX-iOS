@@ -94,15 +94,15 @@ project.yml  XcodeGen spec (Mac build)
 - **طلب إذن الاتصال** من شاشة المحادثة (زر الهاتف) — رسالة Meta تفاعلية للعميل.
 - **سبب فشل الإرسال** يظهر تحت الرسالة الفاشلة (errorTitle/details من الخادم).
 
-## لم يُنقل بعد — Not yet ported
-**صوت المكالمات الحيّة (WebRTC)** و**إشعارات الخلفية (APNs/FCM)** فقط — يتطلبان
-مكتبات ثنائية وصلاحيات native لا تتوفر لتطبيقات Swift Playgrounds، ويُنجزان على الماك.
-(المتوفر بدلًا عنهما داخل الحزمة: لافتة المكالمة الواردة مع الرفض وطلب إذن الاتصال،
-وإشعارات محلية أثناء عمل التطبيق.)
-Only **live call audio (WebRTC)** and **background push (APNs/FCM)** remain — both
-need binary libs/entitlements unavailable to Swift Playgrounds apps (in-package
-stand-ins: the incoming-call banner with reject + call-permission request, and
-local notifications while the app runs).
+## Not yet ported
+Only **background push (APNs/FCM)** remains — it needs an entitlement that is
+deliberately deferred until the planned App Transfer (see APPSTORE.md). Local
+notifications while the app runs stand in for it.
+
+**Live call audio (WebRTC) shipped in 1.16.0** — answer/place/mute/speaker/
+hang-up, in the XcodeGen app build only: the binary WebRTC framework cannot be
+bundled by a Swift Playgrounds package, so all call code is gated on
+`#if canImport(WebRTC)` and the package build keeps the reject-only banner.
 
 ## ملاحظات — Notes
 - **Liquid Glass**: الحزمة تشترط **iOS 16** فقط كي تُحمَّل في Swift Playgrounds؛ على **iOS 26** تُعرض البطاقات والشرائح وشريط التبويبات بزجاج Liquid Glass الأصلي تلقائيًّا، وعلى الأنظمة الأقدم تعود لأسطح Luxe الكلاسيكية (انظر `Sources/Design/Glass.swift`).

@@ -272,6 +272,19 @@ final class Api {
     func voiceCallFilters() async throws -> VoiceCallFilters {
         try await request("api/voice/calls/filters")
     }
+    /// Start an outbound WhatsApp voice call: sends the local SDP offer to
+    /// Meta via the backend; the answer arrives in the response or later
+    /// over the WebSocket (voice_call_incoming with sdpType == "answer").
+    func startWhatsappCall(to: String, sdp: String, displayName: String?, instanceId: String?) async throws -> WhatsAppCallResponse {
+        try await request("api/voice/whatsapp/call", method: "POST",
+                          body: WhatsAppCallRequest(to: to, sdp: sdp, displayName: displayName, instanceId: instanceId))
+    }
+    /// Answer a ringing inbound call with the local SDP answer.
+    func answerWhatsappCall(callId: String, sdp: String) async throws {
+        let _: EmptyResponse = try await request(
+            "api/voice/whatsapp/answer", method: "POST",
+            body: AnswerCallRequest(callId: callId, sdp: sdp))
+    }
     /// Reject a ringing call — or terminate an active one (action: "terminate").
     func rejectCall(callId: String, action: String = "reject") async throws {
         let _: EmptyResponse = try await request(

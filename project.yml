@@ -17,6 +17,15 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
+# Prebuilt Google WebRTC (stasel's SPM packaging of the official binary).
+# Linked into the APP TARGET ONLY — Package.swift stays dependency-free so
+# Swift Playgrounds keeps loading; call code is gated on canImport(WebRTC).
+# Wide version range: stasel tags track Chrome milestones (major bumps often).
+packages:
+  WebRTC:
+    url: https://github.com/stasel/WebRTC
+    minVersion: 120.0.0
+    maxVersion: 200.0.0
 targets:
   WhatsX:
     type: application
@@ -32,12 +41,14 @@ targets:
       # يُشار إليه بالاسم لا بالمجلد، لأن إدراج Resources/ كاملاً كان
       # سيُضيف Info.plist مورداً مكرراً (هو مُشار إليه عبر INFOPLIST_FILE).
       - path: Resources/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: WebRTC
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
         # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
         # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.12.0.
-        MARKETING_VERSION: "1.15.0"
+        MARKETING_VERSION: "1.16.0"
         # CURRENT_PROJECT_VERSION هو رقم البناء (build number). يعيد fastlane
         # كتابته في كل رفع إلى TestFlight برقم تشغيل الـ workflow، لأن Apple
         # ترفض بناءً برقم مكرّر تحت نفس MARKETING_VERSION.

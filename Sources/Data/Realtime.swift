@@ -27,6 +27,11 @@ struct RealtimeEvent {
     var phone: String? = nil
     var displayName: String? = nil
     var status: String? = nil
+    /// Call signaling: the remote SDP. Carries the OFFER on a fresh inbound
+    /// ring, and (with sdpType == "answer") the ANSWER to our outbound offer.
+    var sdpOffer: String? = nil
+    var sdpType: String? = nil
+    var instanceId: String? = nil
 }
 
 @MainActor
@@ -63,9 +68,13 @@ final class Realtime: ObservableObject {
             var phone: String? = nil
             var displayName: String? = nil
             var status: String? = nil
+            var sdpOffer: String? = nil
+            var sdpType: String? = nil
+            var instanceId: String? = nil
 
             private enum CodingKeys: String, CodingKey {
                 case conversationId, body, senderLabel, callId, phone, displayName, status
+                case sdpOffer, sdpType, instanceId
             }
 
             init(from decoder: Decoder) throws {
@@ -77,6 +86,9 @@ final class Realtime: ObservableObject {
                 phone = (try? c.decodeIfPresent(String.self, forKey: .phone)) ?? nil
                 displayName = (try? c.decodeIfPresent(String.self, forKey: .displayName)) ?? nil
                 status = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? nil
+                sdpOffer = (try? c.decodeIfPresent(String.self, forKey: .sdpOffer)) ?? nil
+                sdpType = (try? c.decodeIfPresent(String.self, forKey: .sdpType)) ?? nil
+                instanceId = (try? c.decodeIfPresent(String.self, forKey: .instanceId)) ?? nil
             }
         }
     }
@@ -175,7 +187,10 @@ final class Realtime: ObservableObject {
             callId: envelope.data?.callId,
             phone: envelope.data?.phone,
             displayName: envelope.data?.displayName,
-            status: envelope.data?.status
+            status: envelope.data?.status,
+            sdpOffer: envelope.data?.sdpOffer,
+            sdpType: envelope.data?.sdpType,
+            instanceId: envelope.data?.instanceId
         ))
     }
 
