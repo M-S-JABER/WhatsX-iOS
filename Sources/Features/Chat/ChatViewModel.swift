@@ -79,6 +79,14 @@ final class ChatViewModel: ObservableObject {
     @Published var sending = false
     @Published var attachError: String?
     @Published var replyTarget: Message? = nil
+    /// Current AI draft for this conversation (LIS smart reply). Only
+    /// pending/ready/failed statuses render; see AiDraft.isDisplayable.
+    @Published var draft: AiDraft? = nil
+    /// Set when the user pressed Edit on a draft — the ONLY path that moves
+    /// draft text into the composer. The next send then reports
+    /// `aiDraft: {draftId, action: "edited"}`; a reply typed without pressing
+    /// Edit reports nothing and the server records the draft as ignored.
+    private var editedDraftId: String? = nil
     /// Messages merged chronologically with the conversation's call events —
     /// rebuilt only when messages/calls change, never during body evaluation
     /// (the merge+sort is too heavy to run on every keystroke).
@@ -119,6 +127,84 @@ final class ChatViewModel: ObservableObject {
         calls = (try? await Api.shared.conversationCalls(conversationId: conversation.id).items) ?? []
         rebuildTimeline()
         loading = false
+        await loadDraft()
+    }
+
+    // MARK: - AI draft
+
+    var canViewDrafts: Bool { Session.shared.user?.can("aiDrafts.view") == true }
+    var canUseDrafts: Bool { Session.shared.user?.can("aiDrafts.use") == true }
+    var canRegenerateDrafts: Bool { Session.shared.user?.can("aiDrafts.regenerate") == true }
+
+    /// Initial fetch when the chat opens; afterwards the ai_draft_* socket
+    /// events are the source of truth (handleDraftEvent). A missing draft is
+    /// the normal case, not a failure — trivial messages don't produce one.
+    func loadDraft() async {
+        guard canViewDrafts else { return }
+        draft = (try? await Api.shared.aiDraft(conversationId: conversation.id)) ?? nil
+    }
+
+    /// One open draft per conversation is guaranteed server-side; a resolved
+    /// event may be immediately followed by a scheduled one for the newer
+    /// message, so the latest payload always wins.
+    func handleDraftEvent(_ event: RealtimeEvent) {
+        guard canViewDrafts else { return }
+        if let d = event.draft, d.conversationId == conversation.id {
+            draft = d
+        } else if event.conversationId == conversation.id {
+            // Payload missing/undecodable — fall back to a refetch.
+            Task { await self.loadDraft() }
+        }
+    }
+
+    /// Send the ready draft verbatim. The body must be the draft text
+    /// exactly — the server compares them to referee the sent_as_is claim.
+    func sendDraftAsIs() async {
+        guard let d = draft, d.isReady, canUseDrafts,
+              let text = d.draftText, !text.isEmpty, !sending else { return }
+        sending = true
+        do {
+            try await Api.shared.sendMessage(
+                conversationId: conversation.id, body: text,
+                aiDraft: AiDraftAttribution(draftId: d.id, action: "sent_as_is"))
+            if editedDraftId == d.id { editedDraftId = nil }
+            await loadMessages()
+        } catch { attachError = error.apiMessage }
+        sending = false
+    }
+
+    /// The explicit Edit action — the only way draft text reaches the input.
+    func editDraft() {
+        guard let d = draft, d.isReady, canUseDrafts,
+              let text = d.draftText, !text.isEmpty else { return }
+        input = input.isEmpty ? text : input + "\n" + text
+        editedDraftId = d.id
+    }
+
+    /// Ask the lab system for a different answer. A 409 means a colleague
+    /// already resolved the draft from another device — refetch and show the
+    /// new state instead of surfacing an error.
+    func regenerateDraft(instruction: String) async {
+        let trimmed = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let d = draft, canRegenerateDrafts, !trimmed.isEmpty else { return }
+        do {
+            if let fresh = try await Api.shared.regenerateAiDraft(id: d.id, instruction: String(trimmed.prefix(500))) {
+                draft = fresh
+            } else {
+                await loadDraft()
+            }
+        } catch let err as ApiError where err.status == 409 {
+            await loadDraft()
+        } catch { attachError = error.apiMessage }
+    }
+
+    /// Hide the panel. A ready draft is dismissed server-side; a failed one
+    /// is already terminal there, so it is only hidden locally.
+    func dismissDraft() async {
+        guard let d = draft else { return }
+        draft = nil
+        guard d.isReady, canUseDrafts else { return }
+        try? await Api.shared.dismissAiDraft(id: d.id)
     }
 
     /// Refetch the transcript only — realtime message events don't touch the
@@ -155,10 +241,15 @@ final class ChatViewModel: ObservableObject {
         guard !text.isEmpty, !sending else { return }
         sending = true
         input = ""
+        // Composer sends after an Edit press are "edited" — even when the
+        // text ended up identical (the server referees and reclassifies).
+        let attribution = editedDraftId.map { AiDraftAttribution(draftId: $0, action: "edited") }
         do {
             try await Api.shared.sendMessage(conversationId: conversation.id, body: text,
-                                             replyToMessageId: replyTarget?.id)
+                                             replyToMessageId: replyTarget?.id,
+                                             aiDraft: attribution)
             replyTarget = nil
+            editedDraftId = nil
             await loadMessages()
         } catch {
             // Restore the failed text only if the box is still empty —

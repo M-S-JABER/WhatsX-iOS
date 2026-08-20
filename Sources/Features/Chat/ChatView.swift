@@ -57,6 +57,7 @@ struct ChatView: View {
                 if showChatSearch { chatSearchBar(proxy) }
                 messages
                 if let target = vm.replyTarget { replyBar(target) }
+                AiDraftPanel(vm: vm)
                 composer
             }
             .onChange(of: vm.messages.count) { _ in
@@ -87,6 +88,10 @@ struct ChatView: View {
             // message clears it (the "typing" turned into a message).
             if event.name.lowercased().contains("typing") {
                 showTypingIndicator()
+                return
+            }
+            if RealtimeEvent.aiDraftEvents.contains(event.name) {
+                withAnimation(.easeOut(duration: 0.2)) { vm.handleDraftEvent(event) }
                 return
             }
             guard RealtimeEvent.chatEvents.contains(event.name) else { return }

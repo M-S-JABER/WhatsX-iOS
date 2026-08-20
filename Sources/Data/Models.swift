@@ -13,10 +13,19 @@ struct AuthUser: Codable, Identifiable, Equatable {
     var email: String? = nil
     var role: String? = nil
     var avatar: String? = nil
+    /// Flattened permission ids for THIS user (role + overrides), served with
+    /// the user payload. Feature gating follows the app-wide pattern: hide
+    /// the UI when the permission is absent, never show it disabled.
+    var effectivePermissions: [String] = []
 
     var title: String { (displayName?.isEmpty == false ? displayName! : username) }
 
-    private enum CodingKeys: String, CodingKey { case id, username, displayName, email, role, avatar }
+    /// Whether the user holds a permission id (e.g. "aiDrafts.view"). An
+    /// older server that doesn't send effectivePermissions gates everything
+    /// off — permission-gated features simply don't appear.
+    func can(_ permission: String) -> Bool { effectivePermissions.contains(permission) }
+
+    private enum CodingKeys: String, CodingKey { case id, username, displayName, email, role, avatar, effectivePermissions }
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -26,6 +35,7 @@ struct AuthUser: Codable, Identifiable, Equatable {
         email = c.lenient(String.self, forKey: .email)
         role = c.lenient(String.self, forKey: .role)
         avatar = c.lenient(String.self, forKey: .avatar)
+        effectivePermissions = c.lossy(String.self, forKey: .effectivePermissions)
     }
 }
 
@@ -86,9 +96,13 @@ struct ConvMetadata: Codable, Hashable {
     var website: String? = nil
     var lastSeenAt: String? = nil
     var labels: [String]? = nil
+    /// Set server-side while an AI draft flagged the customer as upset
+    /// (`{ reason: "anger"|"threat", at: ISO }`); cleared automatically when
+    /// the draft is resolved. The inbox marks such conversations.
+    var aiEscalate: AiEscalateInfo? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case lastMessage, unreadCount, status, about, website, lastSeenAt, labels
+        case lastMessage, unreadCount, status, about, website, lastSeenAt, labels, aiEscalate
     }
 
     init() {}
@@ -102,6 +116,20 @@ struct ConvMetadata: Codable, Hashable {
         website = (try? c.decodeIfPresent(String.self, forKey: .website)) ?? nil
         lastSeenAt = (try? c.decodeIfPresent(String.self, forKey: .lastSeenAt)) ?? nil
         labels = (try? c.decodeIfPresent([String].self, forKey: .labels)) ?? nil
+        aiEscalate = (try? c.decodeIfPresent(AiEscalateInfo.self, forKey: .aiEscalate)) ?? nil
+    }
+}
+
+struct AiEscalateInfo: Codable, Hashable {
+    var reason: String? = nil
+    var at: String? = nil
+
+    private enum CodingKeys: String, CodingKey { case reason, at }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        reason = (try? c.decodeIfPresent(String.self, forKey: .reason)) ?? nil
+        at = (try? c.decodeIfPresent(String.self, forKey: .at)) ?? nil
     }
 }
 
@@ -301,6 +329,136 @@ struct SendMessageRequest: Codable {
     var conversationId: String
     var body: String
     var replyToMessageId: String? = nil
+    /// AI-draft attribution. ONLY set when the operator sent the draft as-is
+    /// or edited it (see AiDraftAttribution); a reply typed from scratch must
+    /// omit the field entirely so the server classifies the draft "ignored".
+    var aiDraft: AiDraftAttribution? = nil
+}
+
+// MARK: - AI drafts (LIS smart replies)
+
+/// A reply suggested by the lab system for an incoming patient message.
+/// Two invariants the UI must never break:
+///  1. Nothing is ever sent to the patient automatically — a draft is a
+///     suggestion shown above the composer, not an outgoing message.
+///  2. Draft text enters the composer ONLY through the explicit Edit action;
+///     auto-filling would both risk accidental sends and corrupt the
+///     sent_as_is/edited/ignored training signal on the server.
+struct AiDraft: Codable, Identifiable, Equatable {
+    var id: String = ""
+    var conversationId: String = ""
+    var instanceId: String? = nil
+    /// scheduled | requesting | ready | failed | cancelled | sent_as_is |
+    /// edited | ignored | regenerated | discarded. Kept as a raw string so
+    /// unknown future statuses degrade to "render nothing".
+    var status: String = ""
+    var channel: String? = nil
+    var draftText: String? = nil
+    /// Names of the lab tests the draft was grounded on.
+    var sources: [String] = []
+    var escalate: Bool = false
+    var escalateReason: String? = nil
+    /// Arabic, display-ready failure text from the server.
+    var error: String? = nil
+    var instruction: String? = nil
+    var createdAt: String? = nil
+    var readyAt: String? = nil
+    var expiresAt: String? = nil
+
+    /// Being prepared — show a light "preparing a suggestion…" hint.
+    var isPending: Bool { status == "scheduled" || status == "requesting" }
+    var isReady: Bool { status == "ready" }
+    var isFailed: Bool { status == "failed" }
+    /// Every other status means the draft's lifecycle is over: render nothing.
+    var isDisplayable: Bool { isPending || isReady || isFailed }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, conversationId, instanceId, status, channel, draftText, sources
+        case escalate, escalateReason, error, instruction, createdAt, readyAt, expiresAt
+    }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(String.self, forKey: .id, default: "")
+        conversationId = c.lenient(String.self, forKey: .conversationId, default: "")
+        instanceId = c.lenient(String.self, forKey: .instanceId)
+        status = c.lenient(String.self, forKey: .status, default: "")
+        channel = c.lenient(String.self, forKey: .channel)
+        draftText = c.lenient(String.self, forKey: .draftText)
+        sources = c.lossy(String.self, forKey: .sources)
+        escalate = c.lenient(Bool.self, forKey: .escalate, default: false)
+        escalateReason = c.lenient(String.self, forKey: .escalateReason)
+        error = c.lenient(String.self, forKey: .error)
+        instruction = c.lenient(String.self, forKey: .instruction)
+        createdAt = c.lenient(String.self, forKey: .createdAt)
+        readyAt = c.lenient(String.self, forKey: .readyAt)
+        expiresAt = c.lenient(String.self, forKey: .expiresAt)
+    }
+}
+
+/// GET …/ai-draft and POST …/regenerate both answer `{ draft: … | null }`.
+struct AiDraftEnvelope: Codable {
+    var draft: AiDraft? = nil
+
+    private enum CodingKeys: String, CodingKey { case draft }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try? decoder.container(keyedBy: CodingKeys.self)
+        draft = (try? c?.decodeIfPresent(AiDraft.self, forKey: .draft)) ?? nil
+    }
+}
+
+/// Attribution attached to POST api/message/send. The server is the referee:
+/// a "sent_as_is" claim with a different body is corrected to "edited", and
+/// an omitted field is recorded as "ignored".
+struct AiDraftAttribution: Codable, Equatable {
+    var draftId: String
+    var action: String // "sent_as_is" | "edited"
+}
+
+struct RegenerateAiDraftRequest: Codable {
+    /// Required by the server; colloquial Arabic, at most 500 characters.
+    var instruction: String
+}
+
+/// Splits draft text around the anonymization placeholders the lab system
+/// leaves in ({PATIENT_NAME}, {PHONE}, {VISIT_ID}, {REG_NO}). They are
+/// highlighted for the operator to replace BY HAND — never auto-filled from
+/// contacts: one phone number can belong to several patients, and guessing
+/// wrong means addressing the wrong person.
+enum AiDraftPlaceholders {
+    static let tokens = ["{PATIENT_NAME}", "{PHONE}", "{VISIT_ID}", "{REG_NO}"]
+
+    struct Segment: Equatable {
+        let text: String
+        let isPlaceholder: Bool
+    }
+
+    static func contains(_ text: String) -> Bool {
+        tokens.contains { text.contains($0) }
+    }
+
+    /// Ordered literal/placeholder segments covering the whole string.
+    static func segments(of text: String) -> [Segment] {
+        var out: [Segment] = []
+        var rest = Substring(text)
+        while !rest.isEmpty {
+            // Earliest occurrence of any known token from the current position.
+            let hit = tokens
+                .compactMap { token in rest.range(of: token).map { (token: token, range: $0) } }
+                .min { $0.range.lowerBound < $1.range.lowerBound }
+            guard let hit else {
+                out.append(Segment(text: String(rest), isPlaceholder: false))
+                break
+            }
+            if hit.range.lowerBound > rest.startIndex {
+                out.append(Segment(text: String(rest[rest.startIndex..<hit.range.lowerBound]), isPlaceholder: false))
+            }
+            out.append(Segment(text: hit.token, isPlaceholder: true))
+            rest = rest[hit.range.upperBound...]
+        }
+        return out
+    }
 }
 
 // Media upload response from POST /api/upload (signed path in `url`).

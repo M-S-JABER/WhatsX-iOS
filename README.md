@@ -104,6 +104,16 @@ hang-up, in the XcodeGen app build only: the binary WebRTC framework cannot be
 bundled by a Swift Playgrounds package, so all call code is gated on
 `#if canImport(WebRTC)` and the package build keeps the reject-only banner.
 
+**AI drafts (LIS smart replies) shipped in 1.17.0** — the panel above the
+composer shows the lab system's suggested reply (send as-is / edit /
+regenerate / dismiss), driven by the `ai_draft_*` WebSocket events and gated
+on the `aiDrafts.*` permissions. Two invariants: nothing is ever auto-sent,
+and draft text enters the composer only through the explicit Edit action
+(that distinction feeds the server's sent_as_is/edited/ignored training
+signal). Anonymization placeholders like `{PATIENT_NAME}` are highlighted
+for manual replacement and block direct send; escalated drafts (upset
+patient) mark the conversation in the inbox via `metadata.aiEscalate`.
+
 ## ملاحظات — Notes
 - **Liquid Glass**: الحزمة تشترط **iOS 16** فقط كي تُحمَّل في Swift Playgrounds؛ على **iOS 26** تُعرض البطاقات والشرائح وشريط التبويبات بزجاج Liquid Glass الأصلي تلقائيًّا، وعلى الأنظمة الأقدم تعود لأسطح Luxe الكلاسيكية (انظر `Sources/Design/Glass.swift`).
   The package only requires **iOS 16** so it loads in Swift Playgrounds; on **iOS 26** cards, chips and the tab bar render on native Liquid Glass automatically, falling back to classic Luxe surfaces on older systems (see `Sources/Design/Glass.swift`).

@@ -188,11 +188,35 @@ final class Api {
     func messages(conversationId: String, page: Int = 1) async throws -> MessagesResponse {
         try await request("api/conversations/\(conversationId)/messages", query: ["page": String(page)])
     }
-    func sendMessage(conversationId: String, body: String, replyToMessageId: String? = nil) async throws {
+    func sendMessage(conversationId: String, body: String, replyToMessageId: String? = nil,
+                     aiDraft: AiDraftAttribution? = nil) async throws {
         let _: EmptyResponse = try await request(
             "api/message/send", method: "POST",
             body: SendMessageRequest(conversationId: conversationId, body: body,
-                                     replyToMessageId: replyToMessageId))
+                                     replyToMessageId: replyToMessageId, aiDraft: aiDraft))
+    }
+
+    // MARK: - AI drafts
+    /// Current draft for a conversation (nil when none). Initial load only —
+    /// after that the WebSocket ai_draft_* events are the source of truth.
+    /// Requires aiDrafts.view.
+    func aiDraft(conversationId: String) async throws -> AiDraft? {
+        let resp: AiDraftEnvelope = try await request("api/conversations/\(conversationId)/ai-draft")
+        return resp.draft
+    }
+    /// Ask for a fresh answer with an operator instruction. Answers 409 when
+    /// the draft was already resolved (e.g. a colleague acted on it from
+    /// another device) — a normal state, not an error. Requires
+    /// aiDrafts.regenerate. The response carries the NEW draft (scheduled).
+    func regenerateAiDraft(id: String, instruction: String) async throws -> AiDraft? {
+        let resp: AiDraftEnvelope = try await request(
+            "api/ai-drafts/\(id)/regenerate", method: "POST",
+            body: RegenerateAiDraftRequest(instruction: instruction))
+        return resp.draft
+    }
+    /// Hide the draft without sending anything. Requires aiDrafts.use.
+    func dismissAiDraft(id: String) async throws {
+        let _: EmptyResponse = try await request("api/ai-drafts/\(id)/dismiss", method: "POST")
     }
     /// Shared guts of every multipart upload. Funnels the response through the
     /// same 401-logout hook and `ApiError` wrapping as `request` — the
