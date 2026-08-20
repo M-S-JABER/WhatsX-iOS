@@ -524,6 +524,10 @@ struct InboxView: View {
 
 struct ConversationRow: View {
     let conv: Conversation
+    /// AI-draft escalation: the server flags an upset patient in
+    /// conversations.metadata.aiEscalate (cleared when the draft resolves).
+    /// Web parity: a red edge on the row plus a follow-up chip.
+    private var isEscalated: Bool { conv.metadata?.aiEscalate != nil }
     var body: some View {
         HStack(spacing: 13) {
             Avatar(name: conv.title, size: 52)
@@ -531,6 +535,10 @@ struct ConversationRow: View {
                 HStack(spacing: 5) {
                     if conv.isPinned {
                         Image(systemName: "pin.fill").font(.wx(10)).foregroundStyle(Theme.primary)
+                    }
+                    if isEscalated {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.wx(10)).foregroundStyle(Theme.danger)
                     }
                     Text(conv.title).font(.wx(15.5, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                     Spacer()
@@ -540,6 +548,12 @@ struct ConversationRow: View {
                 HStack {
                     Text(conv.preview).font(.wx(13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
                     Spacer()
+                    if isEscalated {
+                        Text(L("متابعة")).font(.wx(10, .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(Theme.danger, in: Capsule())
+                    }
                     if conv.unread > 0 {
                         Text("\(conv.unread)").font(.wx(11, .bold))
                             .foregroundStyle(Theme.onPrimary)
@@ -556,6 +570,14 @@ struct ConversationRow: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 11)
+        .overlay(alignment: .leading) {
+            if isEscalated {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Theme.danger)
+                    .frame(width: 3)
+                    .padding(.vertical, 8)
+            }
+        }
     }
 }
 

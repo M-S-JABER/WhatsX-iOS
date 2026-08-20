@@ -37,21 +37,22 @@ targets:
     sources:
       - path: Sources
       - path: Resources/Assets.xcassets
-      # بيان الخصوصية — إلزامي من Apple، وبدونه يُرفض الرفع.
-      # يُشار إليه بالاسم لا بالمجلد، لأن إدراج Resources/ كاملاً كان
-      # سيُضيف Info.plist مورداً مكرراً (هو مُشار إليه عبر INFOPLIST_FILE).
+      # Privacy manifest — required by Apple; uploads are rejected without
+      # it. Referenced by name rather than by folder: including Resources/
+      # wholesale would add Info.plist as a duplicate resource (it is
+      # already referenced via INFOPLIST_FILE).
       - path: Resources/PrivacyInfo.xcprivacy
     dependencies:
       - package: WebRTC
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
-        # MARKETING_VERSION هو رقم النسخة الظاهر للمستخدم في App Store.
-        # ارفعه يدوياً عند كل إصدار علني. أحدث وسم في المستودع هو 1.12.0.
-        MARKETING_VERSION: "1.16.0"
-        # CURRENT_PROJECT_VERSION هو رقم البناء (build number). يعيد fastlane
-        # كتابته في كل رفع إلى TestFlight برقم تشغيل الـ workflow، لأن Apple
-        # ترفض بناءً برقم مكرّر تحت نفس MARKETING_VERSION.
+        # MARKETING_VERSION is the user-facing App Store version. Bump it
+        # by hand for every public release.
+        MARKETING_VERSION: "1.17.0"
+        # CURRENT_PROJECT_VERSION is the build number. fastlane rewrites it
+        # on every TestFlight upload with the workflow run number, because
+        # Apple rejects a duplicate build number under one MARKETING_VERSION.
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: NO

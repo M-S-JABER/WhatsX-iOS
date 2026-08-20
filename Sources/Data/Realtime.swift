@@ -32,6 +32,9 @@ struct RealtimeEvent {
     var sdpOffer: String? = nil
     var sdpType: String? = nil
     var instanceId: String? = nil
+    /// ai_draft_* events carry the full draft — consumers render from it
+    /// directly instead of refetching after every event.
+    var draft: AiDraft? = nil
 }
 
 @MainActor
@@ -71,10 +74,11 @@ final class Realtime: ObservableObject {
             var sdpOffer: String? = nil
             var sdpType: String? = nil
             var instanceId: String? = nil
+            var draft: AiDraft? = nil
 
             private enum CodingKeys: String, CodingKey {
                 case conversationId, body, senderLabel, callId, phone, displayName, status
-                case sdpOffer, sdpType, instanceId
+                case sdpOffer, sdpType, instanceId, draft
             }
 
             init(from decoder: Decoder) throws {
@@ -89,6 +93,7 @@ final class Realtime: ObservableObject {
                 sdpOffer = (try? c.decodeIfPresent(String.self, forKey: .sdpOffer)) ?? nil
                 sdpType = (try? c.decodeIfPresent(String.self, forKey: .sdpType)) ?? nil
                 instanceId = (try? c.decodeIfPresent(String.self, forKey: .instanceId)) ?? nil
+                draft = (try? c.decodeIfPresent(AiDraft.self, forKey: .draft)) ?? nil
             }
         }
     }
@@ -190,7 +195,8 @@ final class Realtime: ObservableObject {
             status: envelope.data?.status,
             sdpOffer: envelope.data?.sdpOffer,
             sdpType: envelope.data?.sdpType,
-            instanceId: envelope.data?.instanceId
+            instanceId: envelope.data?.instanceId,
+            draft: envelope.data?.draft
         ))
     }
 
@@ -240,9 +246,16 @@ final class Realtime: ObservableObject {
 
 extension RealtimeEvent {
     /// Events that change the conversation list (previews, unread, order).
+    /// ai_draft_* are included because escalation writes/clears
+    /// conversations.metadata.aiEscalate, which the inbox rows mark.
     static let inboxEvents: Set<String> = [
         "message_incoming", "message_outgoing", "message_status",
         "conversation_pin_updated", "conversation_archive_updated",
+        "ai_draft_ready", "ai_draft_resolved",
+    ]
+    /// AI-draft lifecycle events; each carries the full draft in `draft`.
+    static let aiDraftEvents: Set<String> = [
+        "ai_draft_scheduled", "ai_draft_ready", "ai_draft_failed", "ai_draft_resolved",
     ]
     /// Events that change an open chat's transcript.
     static let chatEvents: Set<String> = [

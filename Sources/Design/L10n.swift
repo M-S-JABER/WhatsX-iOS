@@ -376,5 +376,18 @@ enum L10n {
         "مسار الويب هوك": "Webhook path",
         "نُسخ الرابط ✓": "Link copied ✓",
         "حُفظت إعدادات الويب هوك ✓": "Webhook settings saved ✓",
+
+        // AI drafts (LIS smart replies)
+        "جاري تحضير رد مقترح…": "Preparing a suggested reply…",
+        "تعذّر تحضير الرد المقترح": "Couldn't prepare the suggested reply",
+        "رد مقترح": "Suggested reply",
+        "إجابة جديدة": "New answer",
+        "إخفاء": "Hide",
+        "تهديد": "Threat",
+        "مريض مستاء — يحتاج متابعة": "Upset patient — needs follow-up",
+        "استبدل الرموز النائبة يدوياً — اضغط «تعديل»": "Replace the placeholders by hand — tap \"Edit\"",
+        "ما التعديل المطلوب؟": "What should change?",
+        "مثال: خليها أقصر": "e.g. make it shorter",
+        "متابعة": "Follow-up",
     ]
 }
