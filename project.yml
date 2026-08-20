@@ -23,6 +23,8 @@ targets:
     platform: iOS
     scheme:
       configVariants: []
+      testTargets:
+        - WhatsXTests
     sources:
       - path: Sources
       - path: Resources/Assets.xcassets
@@ -48,3 +50,20 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  # اختبارات وحدات مستضافة داخل التطبيق (@testable import WhatsX).
+  # تعمل في CI تلقائياً: خطوة الاختبار في ios-build.yml تكتشف مجلد Tests/.
+  WhatsXTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: WhatsX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.alnokhba.whatsx.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhatsX.app/WhatsX"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"

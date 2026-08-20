@@ -172,7 +172,14 @@ final class Realtime: ObservableObject {
                 guard let self, let t = self.task else { return }
                 t.sendPing { [weak self] error in
                     guard error != nil else { return }
-                    Task { @MainActor in self?.handleDrop() }
+                    Task { @MainActor in
+                        // A ping failure can arrive after a reconnect has
+                        // already replaced the socket — acting on it would
+                        // kill the healthy new connection (listen(on:) has
+                        // the same guard).
+                        guard let self, self.task === t else { return }
+                        self.handleDrop()
+                    }
                 }
             }
         }
@@ -186,6 +193,14 @@ final class Realtime: ObservableObject {
         isConnected = false
         guard wantsConnection else { return }
         reconnectAttempt += 1
+        // An expired cookie fails the upgrade exactly like a network drop, so
+        // blind retries would loop forever while the app looks "online".
+        // Every third consecutive failure, probe the REST session: a 401
+        // routes through Session.handleUnauthorized → disconnect(), which
+        // ends this loop and returns the user to the login screen.
+        if reconnectAttempt.isMultiple(of: 3) {
+            Task { _ = try? await Api.shared.me() }
+        }
         let delay = min(30.0, pow(2.0, Double(min(reconnectAttempt, 5))))
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))

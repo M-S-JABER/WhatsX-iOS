@@ -6,6 +6,11 @@ import UserNotifications
 // for APNs/FCM (which need native entitlements a Swift Playgrounds app can't
 // hold). While the app is running, incoming messages and WhatsApp calls raise
 // system banners with sound; the open conversation never notifies about itself.
+// Main-actor isolated: `activeConversationId` is mutated by ChatView and read
+// from the realtime sink (which publishes on main), and `handle` touches
+// UIApplication — the isolation makes that contract explicit instead of
+// depending on Realtime's delivery thread.
+@MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Notifier()
 
@@ -60,7 +65,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     // Present banners with sound even while the app is in the foreground.
-    func userNotificationCenter(
+    // nonisolated: the notification center calls this on its own queue and
+    // the body touches no actor state.
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void

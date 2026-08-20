@@ -151,6 +151,16 @@ struct ChatView: View {
         .alert(L("تعذّر الإرسال"), isPresented: Binding(get: { vm.attachError != nil }, set: { if !$0 { vm.attachError = nil } })) {
             Button(L("حسنًا"), role: .cancel) {}
         } message: { Text(vm.attachError ?? "") }
+        .alert(L("إذن الميكروفون مطلوب"), isPresented: $recorder.permissionDenied) {
+            Button(L("فتح الإعدادات")) {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button(L("إلغاء"), role: .cancel) {}
+        } message: {
+            Text(L("فعّل إذن الميكروفون من إعدادات النظام لتسجيل الرسائل الصوتية."))
+        }
     }
 
     private func showTypingIndicator() {
