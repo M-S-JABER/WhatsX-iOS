@@ -113,11 +113,25 @@
     </div>
 
     <div class="card">
+      <h2>المكالمات الصوتية</h2>
+      <ul>
+        <li>صوت المكالمة ينتقل مشفّراً من طرف إلى طرف (DTLS-SRTP) بينك وبين
+            العميل، ولا يمرّ بأي خادم للمطوّر، ولا يسجّل التطبيق المكالمات</li>
+        <li>إشارات بدء المكالمة وإنهائها تمرّ عبر خادم مؤسستك ثم منصة
+            واتساب (Meta)، شأنها شأن الرسائل تماماً</li>
+        <li>لإنشاء الاتصال يستعلم التطبيق من خادم STUN عام (تديره Google)
+            عن عنوان IP لجهازك — الاستعلام لا يتضمن هويتك ولا أي صوت</li>
+      </ul>
+    </div>
+
+    <div class="card">
       <h2>ما لا يفعله التطبيق</h2>
       <ul>
         <li>لا يتتبّعك عبر التطبيقات أو المواقع الأخرى</li>
         <li>لا يحتوي أي أداة تحليلات أو قياس</li>
-        <li>لا يحتوي أي مكتبة طرف ثالث إطلاقاً</li>
+        <li>لا يحتوي أي أداة إعلانات أو تتبّع — المكوّن الخارجي الوحيد هو
+            محرّك صوت WebRTC مفتوح المصدر لتشغيل المكالمات، ولا يرسل شيئاً
+            إلى المطوّر</li>
         <li>لا يستخدم أي معرّف إعلاني</li>
         <li>لا يبيع بياناتك ولا يشاركها مع أحد</li>
         <li>الإشعارات محلية بالكامل — لا تمرّ بخوادم إشعارات خارجية</li>
@@ -195,11 +209,28 @@
     </div>
 
     <div class="card">
+      <h2>Voice calls</h2>
+      <ul>
+        <li>Call audio travels encrypted end-to-end (DTLS-SRTP) between you
+            and the customer. It never passes through any developer server,
+            and the app does not record calls.</li>
+        <li>Call setup and hang-up signals go through your organisation's
+            server and then the WhatsApp (Meta) platform, exactly like
+            messages.</li>
+        <li>To establish the connection, the app asks a public STUN server
+            (operated by Google) for your device's IP address — that lookup
+            carries no identity and no audio.</li>
+      </ul>
+    </div>
+
+    <div class="card">
       <h2>What the app does not do</h2>
       <ul>
         <li>No tracking across other apps or websites</li>
         <li>No analytics or measurement tooling of any kind</li>
-        <li>No third-party libraries whatsoever</li>
+        <li>No advertising or tracking SDKs — the only embedded component is
+            the open-source WebRTC audio engine that powers calls, and it
+            sends nothing to the developer</li>
         <li>No advertising identifier</li>
         <li>Your data is never sold or shared</li>
         <li>Notifications are entirely local — they never pass through an
@@ -239,7 +270,7 @@
   </section>
 
   <footer>
-    آخر تحديث · Last updated: 2026-08-13
+    آخر تحديث · Last updated: 2026-08-20
   </footer>
 </div>
 
@@ -253,7 +284,7 @@
     document.documentElement.lang = lang;
     document.documentElement.dir = ar ? 'rtl' : 'ltr';
   }
-  // يفتح بالإنجليزية إن كان متصفح الزائر غير عربي.
+  // Open in English when the visitor's browser is not Arabic.
   if (!(navigator.language || '').toLowerCase().startsWith('ar')) show('en');
 </script>
 </body>
