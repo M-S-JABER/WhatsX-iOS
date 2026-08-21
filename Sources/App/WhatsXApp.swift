@@ -26,4 +26,17 @@ final class WhatsXAppDelegate: NSObject, UIApplicationDelegate {
         VoIPPush.shared.activate()
         return true
     }
+
+    // Standard APNs token for message notifications (registration is
+    // requested in Notifier.start(); this is where iOS answers).
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        MessagePush.shared.tokenReceived(VoipPayload.hexToken(deviceToken))
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        // Non-fatal (e.g. simulator without push support) — messages simply
+        // keep notifying only while the app runs, as before.
+    }
 }

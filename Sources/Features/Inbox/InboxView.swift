@@ -177,6 +177,8 @@ struct InboxView: View {
     @State private var searchText = ""
     /// iPad split mode: the conversation open in the detail pane.
     @State private var selectedConv: Conversation?
+    /// Phone mode: programmatic push target (notification deep-link).
+    @State private var path = NavigationPath()
     @FocusState private var searchFocused: Bool
 
     /// Conversations after the in-place bottom search filter.
@@ -204,6 +206,15 @@ struct InboxView: View {
         .task {
             await vm.loadInstances()
             await vm.load()
+            // A notification tapped before the inbox existed (cold start)
+            // left its conversation pending — honor it now.
+            if let id = InboxBus.shared.consumePendingConversation() {
+                await openConversation(id)
+            }
+        }
+        .onReceive(InboxBus.shared.openConversation) { id in
+            _ = InboxBus.shared.consumePendingConversation()
+            Task { await openConversation(id) }
         }
         .onReceive(Realtime.shared.events) { event in
             guard RealtimeEvent.inboxEvents.contains(event.name) else { return }
@@ -223,8 +234,24 @@ struct InboxView: View {
         }
     }
 
+    /// Notification deep-link: resolve the conversation (from the loaded
+    /// list when possible, the API otherwise) and open it in whichever
+    /// layout is live — push on phones, detail pane on iPad.
+    private func openConversation(_ id: String) async {
+        guard !id.isEmpty else { return }
+        let conv: Conversation?
+        if let loaded = vm.shown.first(where: { $0.id == id }) {
+            conv = loaded
+        } else {
+            conv = try? await Api.shared.conversation(id)
+        }
+        guard let conv else { return }
+        selectedConv = conv
+        path.append(conv)
+    }
+
     private var phoneBody: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 header
                 listContent(split: false)

@@ -95,8 +95,17 @@ project.yml  XcodeGen spec (Mac build)
 - **سبب فشل الإرسال** يظهر تحت الرسالة الفاشلة (errorTitle/details من الخادم).
 
 ## Not yet ported
-**Message push notifications** (alert pushes for new chat messages while the
-app is closed) — local notifications while the app runs stand in for them.
+Nothing — as of 1.19.0 every planned capability is in the app. The two
+background behaviors (calls ringing and message notifications while the app
+is closed) ship dormant and activate as soon as the server implements
+`docs/VOIP_PUSH.md`; local notifications keep covering the app-open case.
+
+**Message notifications while the app is closed shipped app-side in
+1.19.0**: the app registers a standard APNs token with the customer's
+server, tapping a notification opens its conversation, and the icon badge
+clears on open. Content policy is sender-name-only (the message text never
+transits Apple). Remote banners are suppressed while the app is in the
+foreground — the WS-driven local notifications already cover that case.
 
 **Call ringing while the app is closed shipped app-side in 1.18.0**: every
 call now rings through CallKit (the native call UI, lock screen included),

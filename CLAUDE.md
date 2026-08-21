@@ -31,6 +31,9 @@ new ones.
   the PushKit callback returns — never add an early return to
   `VoIPPush.didReceiveIncomingPush`/`CallCenter.handleVoipPush` that
   skips the report. The server contract is `docs/VOIP_PUSH.md`.
+- Message pushes (`MessagePush.swift`) are sender-name-only BY OWNER
+  DECISION — message text must never appear in a remote push payload
+  (it would transit Apple's servers; see the privacy stance below).
 
 ## Release pipeline (no Mac required)
 

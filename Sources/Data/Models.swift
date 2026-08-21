@@ -423,9 +423,11 @@ struct RegenerateAiDraftRequest: Codable {
 
 // MARK: - VoIP push (calls ringing while the app is closed)
 
-/// POST api/devices/voip-token — registers this device for VoIP pushes.
-/// `environment` tells the server which APNs host to use; TestFlight and
-/// App Store builds both run against production.
+/// Body of BOTH device-token registrations — POST api/devices/voip-token
+/// (call pushes) and POST api/devices/push-token (message notifications);
+/// the two tokens differ but the payload shape is identical. `environment`
+/// tells the server which APNs host to use; TestFlight and App Store builds
+/// both run against production.
 struct VoipTokenRequest: Codable {
     var token: String
     var platform: String = "ios"

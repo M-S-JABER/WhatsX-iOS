@@ -1,8 +1,14 @@
-# VoIP push — server integration spec
+# Push notifications — server integration spec
 
 Audience: the WhatsX **server** team (`whatsapp.m-s-jaber.com`).
-Written by the iOS side; the app code referencing this contract shipped in
-iOS 1.18.0 (`VoIPPush.swift`, `CallKitBridge.swift`, `VoipPayload.swift`).
+Written by the iOS side. Two independent push flows share the same APNs
+auth key:
+
+1. **VoIP pushes** — calls ring while the app is closed (iOS 1.18.0:
+   `VoIPPush.swift`, `CallKitBridge.swift`, `VoipPayload.swift`).
+2. **Message alert pushes** — new-message notifications while the app is
+   closed (iOS 1.19.0: `MessagePush.swift`, `Notifier.swift`). See the
+   "Message alert pushes" section at the end.
 
 ## Why
 
@@ -110,3 +116,70 @@ app ends the call quietly.
 2. Implement endpoints 2 and 3 behind a flag; test against the pilot
    operator's device.
 3. Enable for everyone. No iOS release is needed for any of this.
+
+---
+
+# Message alert pushes (iOS 1.19.0+)
+
+Standard APNs notifications so operators see new messages while the app is
+closed. Much simpler than the VoIP flow: no CallKit rule, no cancel
+constraint. Same `.p8` key and JWT; the differences are the topic and the
+push type.
+
+APNs headers for this flow:
+
+- `apns-topic: com.m-s-jaber.whatsx` — the bundle id **without** `.voip`.
+- `apns-push-type: alert`
+- `apns-priority: 10`
+- Optional: `apns-collapse-id: <conversationId>` so a burst from one
+  customer collapses into one banner.
+
+## 4. Token registration endpoint
+
+```http
+POST /api/devices/push-token
+Cookie: (session)
+
+{ "token": "<64 hex chars>", "platform": "ios", "environment": "production" }
+```
+
+Identical semantics to `/api/devices/voip-token` (upsert per user+token,
+prune on APNs `410`), but it is a DIFFERENT token — iOS issues separate
+tokens for VoIP and standard pushes; store them separately.
+
+## 5. Send an alert push on every incoming message
+
+On each `message_incoming` broadcast, also push to every registered iOS
+device of every user the socket event's audience filter covers.
+
+```json
+{
+  "aps": {
+    "alert": { "title": "<sender display name>", "body": "رسالة جديدة" },
+    "badge": 3,
+    "sound": "default",
+    "thread-id": "<conversationId>"
+  },
+  "type": "message_incoming",
+  "conversationId": "<conversationId>"
+}
+```
+
+- **Content policy (owner decision — do not change without sign-off):**
+  sender name only. The `body` is the literal string `رسالة جديدة` —
+  **never the message text**, which must not transit Apple's servers under
+  the self-hosted privacy model. Media messages need no special casing.
+- `conversationId` (top-level custom key) is what the app uses to open the
+  right chat on tap; `thread-id` groups banners per conversation.
+- `badge` is optional: the user's total unread count if cheap to compute;
+  omit it otherwise. The app clears the icon badge whenever it opens.
+- Send always — the app suppresses remote banners while it is in the
+  foreground (its own WS-driven local notification covers that case), so
+  no duplicates appear and the server needs no is-the-app-open logic.
+- Do NOT send message pushes for messages authored by the operators
+  themselves (`message_outgoing`).
+
+## Rollout
+
+Same pattern: deploy endpoint 4 first (iOS 1.19.0+ registers on every
+login), then enable 5 behind a flag, test on the pilot device, open up.
