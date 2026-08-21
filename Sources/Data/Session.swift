@@ -90,5 +90,6 @@ final class Session: ObservableObject {
         // Registration itself happened at launch (VoIPPush.activate); this
         // uploads the token now that the session cookie can authenticate it.
         VoIPPush.shared.syncToken()
+        MessagePush.shared.syncToken()
     }
 }

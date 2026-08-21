@@ -27,6 +27,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        // Standard APNs registration for message pushes while the app is
+        // closed (docs/VOIP_PUSH.md, "Message alert pushes"). The token
+        // lands in the app delegate → MessagePush. Independent of the
+        // authorization answer — registration works either way.
+        UIApplication.shared.registerForRemoteNotifications()
         guard cancellable == nil else { return }
         cancellable = Realtime.shared.events.sink { [weak self] event in
             self?.handle(event)
@@ -44,8 +49,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                 && event.conversationId == activeConversationId
                 && UIApplication.shared.applicationState == .active
             guard !inThatChat else { return }
+            // Local banners may carry the full text — they never leave the
+            // device (unlike remote pushes, which are sender-name-only).
+            // The conversationId makes a tap open the right chat, exactly
+            // like a remote push.
             post(title: event.senderLabel?.isEmpty == false ? event.senderLabel! : L("رسالة واردة جديدة"),
-                 body: event.body?.isEmpty == false ? event.body! : L("وسائط 📎"))
+                 body: event.body?.isEmpty == false ? event.body! : L("وسائط 📎"),
+                 userInfo: event.conversationId.map {
+                     ["type": MessagePushPayload.incomingType, "conversationId": $0]
+                 } ?? [:])
         case "voice_call_incoming":
             Haptics.warning()
             post(title: L("مكالمة واتساب واردة 📞"),
@@ -55,23 +67,45 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    private func post(title: String, body: String) {
+    private func post(title: String, body: String, userInfo: [AnyHashable: Any] = [:]) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = userInfo
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
 
-    // Present banners with sound even while the app is in the foreground.
-    // nonisolated: the notification center calls this on its own queue and
-    // the body touches no actor state.
+    // Present LOCAL banners with sound even while the app is in the
+    // foreground — but suppress REMOTE pushes there: the server always sends
+    // them (it cannot know the app is open), and the WS-driven local banner
+    // above already covers the foreground case; showing both would double
+    // every message. nonisolated: the notification center calls this on its
+    // own queue and the body touches no actor state.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound])
+        if notification.request.trigger is UNPushNotificationTrigger {
+            completionHandler([])
+        } else {
+            completionHandler([.banner, .sound])
+        }
+    }
+
+    // Tapping a message push (typically from the lock screen, app closed)
+    // opens the conversation it references.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let id = MessagePushPayload.conversationId(from: userInfo) {
+            Task { @MainActor in InboxBus.shared.requestOpenConversation(id) }
+        }
+        completionHandler()
     }
 }

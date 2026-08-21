@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// Public entry point of the WhatsX app as a library view.
 ///
@@ -46,6 +47,11 @@ public struct WhatsXRoot: View {
                 // into the switcher. The shield covers .inactive; the real
                 // lock still engages on .background.
                 isObscured = phase != .active && settings.faceIDLock && session.isAuthenticated
+                if phase == .active {
+                    // Message pushes stamp the icon badge (server-side unread
+                    // count); opening the app is what clears it.
+                    UNUserNotificationCenter.current().setBadgeCount(0)
+                }
                 if phase == .background {
                     lock.lockIfEnabled()
                     // The server may roll the session cookie mid-use; the

@@ -336,6 +336,13 @@ final class Api {
             "api/devices/voip-token", method: "POST",
             body: VoipTokenRequest(token: token))
     }
+    /// Register the STANDARD APNs token (separate from the VoIP one) for
+    /// message notifications while the app is closed. Same 404 tolerance.
+    func registerPushToken(_ token: String) async throws {
+        let _: EmptyResponse = try await request(
+            "api/devices/push-token", method: "POST",
+            body: VoipTokenRequest(token: token))
+    }
 
     // MARK: - Statistics
     func statistics(range: String? = nil, instanceId: String? = nil) async throws -> StatsResponse {

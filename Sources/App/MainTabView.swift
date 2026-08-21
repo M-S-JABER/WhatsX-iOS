@@ -5,11 +5,29 @@ import Combine
 enum MainTab: Hashable { case integrations, chats, search, reports, settings }
 
 /// Tiny event bus between the tab bar and the inbox: re-tapping the chats
-/// tab (a second press while already on it) flips active ⇄ archive.
+/// tab (a second press while already on it) flips active ⇄ archive, and a
+/// tapped message notification routes to its conversation through here.
 @MainActor
 final class InboxBus: ObservableObject {
     static let shared = InboxBus()
     let toggleArchive = PassthroughSubject<Void, Never>()
+
+    /// Fired when a tapped notification wants a conversation opened. The
+    /// pending id covers the cold-start race: the tap can arrive before the
+    /// session is bootstrapped and the inbox exists — the inbox consumes it
+    /// once it has loaded.
+    let openConversation = PassthroughSubject<String, Never>()
+    private(set) var pendingConversationId: String? = nil
+
+    func requestOpenConversation(_ id: String) {
+        pendingConversationId = id
+        openConversation.send(id)
+    }
+
+    func consumePendingConversation() -> String? {
+        defer { pendingConversationId = nil }
+        return pendingConversationId
+    }
 }
 
 /// Downloads the signed avatar and renders it as a small circular tab icon
@@ -101,6 +119,11 @@ struct MainTabView: View {
         .task { await avatar.load(for: Session.shared.user) }
         .onReceive(Session.shared.$user) { user in
             Task { await avatar.load(for: user) }
+        }
+        // A tapped message notification always lands on the chats tab; the
+        // inbox itself performs the navigation to the conversation.
+        .onReceive(InboxBus.shared.openConversation) { _ in
+            tab = .chats
         }
     }
 
