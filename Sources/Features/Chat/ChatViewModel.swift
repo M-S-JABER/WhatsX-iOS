@@ -82,6 +82,9 @@ final class ChatViewModel: ObservableObject {
     /// Current AI draft for this conversation (LIS smart reply). Only
     /// pending/ready/failed statuses render; see AiDraft.isDisplayable.
     @Published var draft: AiDraft? = nil
+    /// Active ready replies for the quick-chips bar (design 4c) — tapping a
+    /// chip FILLS the composer, never sends.
+    @Published private(set) var readyReplies: [ReadyMessage] = []
     /// Set when the user pressed Edit on a draft — the ONLY path that moves
     /// draft text into the composer. The next send then reports
     /// `aiDraft: {draftId, action: "edited"}`; a reply typed without pressing
@@ -128,6 +131,8 @@ final class ChatViewModel: ObservableObject {
         rebuildTimeline()
         loading = false
         await loadDraft()
+        readyReplies = ((try? await Api.shared.readyMessages())?.items ?? [])
+            .filter { $0.isActive && !$0.body.isEmpty }
     }
 
     // MARK: - AI draft

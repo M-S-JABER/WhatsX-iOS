@@ -97,6 +97,13 @@ enum Theme {
     static let segmentedTrack = Color(light: 0xE9E4DC, dark: 0x37332F)
     static let segmentedActive = Color(light: 0xFFFFFF, dark: 0x4A443E)
 
+    // Chat (design 4c/4n): read ticks + the suggested-reply chip family.
+    static let readTick = Color(rgb: 0x53BDEB)
+    static let draftChipBg = Color(light: 0xFBF0D6, lightAlpha: 0.85, dark: 0x493B27, darkAlpha: 0.85)
+    static let draftChipBorder = Color(light: 0xEBCF8E, dark: 0x6F522A)
+    static let draftChipText = Color(light: 0x8A6414, dark: 0xE4A944)
+    static let draftCardBg = Color(light: 0xFBF0D6, lightAlpha: 0.9, dark: 0x493B27, darkAlpha: 0.9)
+
     // Glass recipe (pre-iOS 26 fallback fills; see Glass.swift).
     static let glassFill = Color(light: 0xFFFFFF, lightAlpha: 0.58, dark: 0x2A2622, darkAlpha: 0.55)
     static let glassBorder = Color(light: 0xFFFFFF, lightAlpha: 0.7, dark: 0xFFFFFF, darkAlpha: 0.12)

@@ -5,6 +5,9 @@ import UIKit
 struct MessageBubble: View {
     let msg: Message
     var onRetry: (() -> Void)? = nil
+    /// Design 4c: a failed send usually means the 24h window closed — the
+    /// failure banner offers "send a template" as the way out.
+    var onSendTemplate: (() -> Void)? = nil
     var highlighted: Bool = false
     var onImageTap: ((URL) -> Void)? = nil
     var onDocTap: ((URL) -> Void)? = nil
@@ -13,6 +16,13 @@ struct MessageBubble: View {
     private var fg: Color { outbound ? Theme.bubbleOutFg : Theme.bubbleInFg }
 
     var body: some View {
+        VStack(spacing: 0) {
+            bubbleRow
+            if failed { failureBanner }
+        }
+    }
+
+    private var bubbleRow: some View {
         HStack {
             if outbound { Spacer(minLength: 40) }
             VStack(alignment: .leading, spacing: 3) {
@@ -31,14 +41,15 @@ struct MessageBubble: View {
                 } else if msg.media == nil, let location = parseSharedLocation(msg.body) {
                     LocationCard(location: location, fg: fg)
                 } else if let body = msg.body, !body.isEmpty, msg.sharedContacts.isEmpty {
-                    Text(body).font(.wx(14.5)).foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
+                    Text(body).font(.wx(16)).lineSpacing(5)
+                        .foregroundStyle(outbound ? Theme.bubbleOutFg : Theme.bubbleInFg)
                     // Link preview card for the first URL in the text.
                     if let link = firstURL(in: body), parseSharedLocation(body) == nil {
                         LinkPreviewCard(url: link, fg: fg)
                     }
                 }
                 HStack(spacing: 3) {
-                    Text(clockTime(msg.createdAt)).font(.wx(10.5))
+                    Text(clockTime(msg.createdAt)).font(.wx(12))
                     if outbound {
                         // Sent = single tick, delivered = circled, read = filled
                         // blue — the WhatsApp semantics the flat icon lost.
@@ -50,28 +61,50 @@ struct MessageBubble: View {
                 .foregroundStyle((outbound ? Theme.bubbleOutFg : Theme.bubbleInFg).opacity(0.6))
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
-                if failed, let reason = msg.failureReason {
-                    Text(reason).font(.wx(11)).foregroundStyle(Theme.danger).lineLimit(3)
-                }
-                if failed, let onRetry {
-                    Button(action: onRetry) {
-                        HStack(spacing: 4) {
-                            Image(icon: .refresh).font(.wx(11))
-                            Text(L("إعادة الإرسال")).font(.wx(12, .semibold))
-                        }
-                        .foregroundStyle(Theme.danger)
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             .padding(.horizontal, 11).padding(.vertical, 7)
             .background(outbound ? Theme.bubbleOut : Theme.bubbleIn,
-                        in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.primary, lineWidth: highlighted ? 2 : 0))
+                        in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.primary, lineWidth: highlighted ? 2 : 0))
             .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
             .frame(maxWidth: 300, alignment: outbound ? .trailing : .leading)
             if !outbound { Spacer(minLength: 40) }
         }
+    }
+
+    /// Design 4c: the failure banner UNDER the bubble — the reason plus a
+    /// clear way out ("send a template") and a compact retry.
+    private var failureBanner: some View {
+        HStack(spacing: 8) {
+            Image(icon: .alert).font(.wx(12)).foregroundStyle(Theme.danger)
+            Text(msg.failureReason?.isEmpty == false ? msg.failureReason! : L("فشل الإرسال"))
+                .font(.wx(11.5)).foregroundStyle(Theme.danger).lineLimit(2)
+            Spacer(minLength: 6)
+            if let onSendTemplate {
+                Button(action: onSendTemplate) {
+                    Text(L("أرسل قالبًا")).font(.wx(12, .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11).padding(.vertical, 5)
+                        .background(Theme.danger, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            if let onRetry {
+                Button(action: onRetry) {
+                    Image(icon: .refresh).font(.wx(13, .semibold))
+                        .foregroundStyle(Theme.danger)
+                        .frame(width: 30, height: 30)
+                        .background(Theme.danger.opacity(0.12), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("إعادة الإرسال"))
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .background(Color(light: 0xF9E9E7, lightAlpha: 0.9, dark: 0x391D18, darkAlpha: 0.9),
+                    in: RoundedRectangle(cornerRadius: 12))
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, alignment: outbound ? .trailing : .leading)
     }
 
     private var statusSymbol: String {
@@ -85,7 +118,7 @@ struct MessageBubble: View {
 
     private var statusColor: Color {
         if failed { return Theme.danger }
-        if msg.status == "read" { return Theme.info }
+        if msg.status == "read" { return Theme.readTick }
         return fg.opacity(0.6)
     }
 
