@@ -8,10 +8,9 @@ struct LockScreenView: View {
 
     var body: some View {
         ZStack {
-            Theme.background.ignoresSafeArea()
-            Theme.heroGradient.opacity(0.14).ignoresSafeArea()
+            Theme.glowBackground()
             VStack(spacing: 18) {
-                BrandMark(size: 84)
+                BrandMark(size: 84, flat: true)
                 Text(L("التطبيق مقفل")).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
                 Button {
                     Task { await lock.unlock() }

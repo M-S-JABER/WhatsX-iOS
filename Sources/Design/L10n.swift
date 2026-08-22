@@ -404,5 +404,16 @@ enum L10n {
         // WhatsX 2.0 redesign (phase C)
         "المزيد": "More",
         "أرسل قالبًا": "Send a template",
+
+        // WhatsX 2.0 redesign (phase D)
+        "الفائتة": "Missed",
+        "معاودة الاتصال": "Call back",
+        "الاتجاه": "Direction",
+        "خلال المدة المحددة": "Within the selected range",
+        "التسليم": "Delivery",
+        "أنظمة مرتبطة": "connected systems",
+        "التفضيلات": "Preferences",
+        "إدارة العمل": "Work management",
+        "للمدراء": "Managers",
     ]
 }

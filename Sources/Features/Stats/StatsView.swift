@@ -134,21 +134,33 @@ struct StatsView: View {
         }.buttonStyle(.plain)
     }
 
+    /// Design 4e: TWO KPI cards — messages (with the colored in/out
+    /// secondary line) and conversations.
     private func kpiGrid(_ t: StatTotals) -> some View {
-        VStack(spacing: 11) {
-            HStack(spacing: 11) {
-                metric(L("المحادثات"), "\(t.conversations)", Theme.onSurface)
-                metric(L("الرسائل"), "\(t.messages)", Theme.onSurface)
+        HStack(spacing: 11) {
+            kpiCard(L("الرسائل"), "\(t.messages)") {
+                HStack(spacing: 8) {
+                    Text("↓ \(t.incoming)").font(.wx(12, .semibold)).foregroundStyle(Theme.success)
+                    Text("↑ \(t.outgoing)").font(.wx(12, .semibold)).foregroundStyle(Theme.info)
+                }
             }
-            HStack(spacing: 11) {
-                metric(L("الواردة"), "\(t.incoming)", Theme.success)
-                metric(L("الصادرة"), "\(t.outgoing)", Theme.info)
+            kpiCard(L("المحادثات"), "\(t.conversations)") {
+                Text(L("خلال المدة المحددة")).font(.wx(12)).foregroundStyle(Theme.onFaint)
             }
         }
     }
 
-    private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
-        MetricTile(label: label, value: value, color: color)
+    private func kpiCard(_ label: String, _ value: String,
+                         @ViewBuilder secondary: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label).font(.wx(12.5, .semibold)).foregroundStyle(Theme.onMuted)
+            Text(value).font(.wx(30, .bold)).foregroundStyle(Theme.onSurface)
+                .monospacedDigit()
+            secondary()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassCard(Theme.Radius.cardTight)
     }
 
     // MARK: - Time series (hand-rolled bar chart)
@@ -159,19 +171,24 @@ struct StatsView: View {
             Text(L("النشاط عبر الزمن")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             HStack(spacing: 14) {
                 legend(Theme.success, L("واردة"))
-                legend(Theme.info, L("صادرة"))
+                legend(Theme.chartBeige, L("صادرة"))
             }
+            // Busiest bucket gets the amber highlight (design 4e); labels
+            // stay >= 11pt per the handoff's floor.
+            let busiest = points.max(by: { ($0.incoming + $0.outgoing) < ($1.incoming + $1.outgoing) })?.id
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .bottom, spacing: 10) {
                     ForEach(points) { p in
                         VStack(spacing: 4) {
                             HStack(alignment: .bottom, spacing: 3) {
                                 bar(CGFloat(p.incoming) / CGFloat(maxV), Theme.success)
-                                bar(CGFloat(p.outgoing) / CGFloat(maxV), Theme.info)
+                                bar(CGFloat(p.outgoing) / CGFloat(maxV), Theme.chartBeige)
                             }
                             .frame(height: 92, alignment: .bottom)
-                            Text(bucketLabel(p.bucket)).font(.wx(8)).foregroundStyle(Theme.onFaint)
-                                .frame(width: 26).lineLimit(1)
+                            Text(bucketLabel(p.bucket))
+                                .font(.wx(11, p.id == busiest ? .bold : .regular))
+                                .foregroundStyle(p.id == busiest ? Theme.amberText : Theme.onFaint)
+                                .frame(width: 30).lineLimit(1)
                         }
                     }
                 }
@@ -196,35 +213,42 @@ struct StatsView: View {
 
     // MARK: - Delivery status
 
+    /// Design 4e: «التسليم» is ONE proportional bar (read / delivered /
+    /// sent / failed) with a compact key — four tiles collapse into it.
     private func statusCard(_ d: Delivery) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L("حالات الرسائل")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
-            HStack(spacing: 11) {
-                statusTile(L("مُرسلة"), d.sent, .check, Theme.onMuted)
-                statusTile(L("مُسلّمة"), d.delivered, .checkDouble, Theme.info)
+        let segments: [(String, Int, Color)] = [
+            (L("مقروءة"), d.read, Theme.success),
+            (L("مُسلّمة"), d.delivered, Theme.chartBeigeMid),
+            (L("مُرسلة"), d.sent, Theme.chartBeige),
+            (L("فاشلة"), d.failed, Theme.danger),
+        ]
+        let total = max(segments.reduce(0) { $0 + $1.1 }, 1)
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(L("التسليم")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
+                        if seg.1 > 0 {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(seg.2)
+                                .frame(width: max(geo.size.width * CGFloat(seg.1) / CGFloat(total) - 2, 4))
+                        }
+                    }
+                }
             }
-            HStack(spacing: 11) {
-                statusTile(L("مقروءة"), d.read, .checkDouble, Theme.info)
-                statusTile(L("فاشلة"), d.failed, .alert, Theme.danger)
+            .frame(height: 14)
+            HStack(spacing: 12) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
+                    HStack(spacing: 4) {
+                        Circle().fill(seg.2).frame(width: 8, height: 8)
+                        Text("\(seg.0) \(seg.1)").font(.wx(12.5)).foregroundStyle(Theme.onMuted)
+                    }
+                }
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(22)
-    }
-
-    private func statusTile(_ label: String, _ value: Int, _ icon: WIcon, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(icon: icon).font(.wx(13)).foregroundStyle(color)
-                Text(label).font(.wx(12)).foregroundStyle(color)
-            }
-            Text("\(value)").font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(13)
-        .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outline, lineWidth: 1))
     }
 
     // MARK: - Per-account breakdown

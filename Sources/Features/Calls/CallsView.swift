@@ -4,11 +4,14 @@ import SwiftUI
 final class CallsViewModel: ObservableObject {
     @Published var items: [VoiceCall] = []
     @Published var loading = false
-    @Published var filter = "all"           // quick direction chips
+    @Published var filter = "all"           // segmented: all | missed
     @Published var search = ""
     @Published var instanceId: String? = nil
     @Published var agent: String? = nil
     @Published var hasRecording: Bool? = nil
+    /// "inbound"/"outbound" — the 2.0 segmented keeps only all|missed, so
+    /// direction moved into the advanced filter sheet.
+    @Published var direction: String? = nil
     @Published var filters = VoiceCallFilters()
 
     private var realtimeReloadTask: Task<Void, Never>?
@@ -27,12 +30,11 @@ final class CallsViewModel: ObservableObject {
     }
 
     var advancedCount: Int {
-        [instanceId != nil, agent != nil, hasRecording != nil].filter { $0 }.count
+        [instanceId != nil, agent != nil, hasRecording != nil, direction != nil].filter { $0 }.count
     }
 
     func load() async {
         loading = items.isEmpty
-        let direction = filter == "in" ? "inbound" : (filter == "out" ? "outbound" : nil)
         let status = filter == "missed" ? "missed,rejected" : nil
         let q = search.trimmingCharacters(in: .whitespaces)
         do {
@@ -47,23 +49,24 @@ final class CallsViewModel: ObservableObject {
         filters = (try? await Api.shared.voiceCallFilters()) ?? VoiceCallFilters()
     }
 
-    func resetAdvanced() { instanceId = nil; agent = nil; hasRecording = nil }
+    func resetAdvanced() { instanceId = nil; agent = nil; hasRecording = nil; direction = nil }
 }
 
 struct CallsView: View {
     @StateObject private var vm = CallsViewModel()
     @State private var showSearch = false
     @State private var filterOpen = false
-    private let chips = [("all", L("الكل")), ("in", L("واردة")), ("out", L("صادرة")), ("missed", L("فائتة"))]
+    @Namespace private var segmentNamespace
+    private let segments = [("all", L("الكل")), ("missed", L("الفائتة"))]
 
     var body: some View {
         VStack(spacing: 0) {
             header
             if showSearch { searchField }
-            chipsRow
+            segmented
             content
         }
-        .background(Theme.background.ignoresSafeArea())
+        .background(Theme.glowBackground())
         .sheet(isPresented: $filterOpen) { CallFilterSheet(vm: vm) }
         .task {
             await vm.load()
@@ -75,27 +78,68 @@ struct CallsView: View {
         }
     }
 
+    /// 2.0 (design 4d): big title, phone-app style — advanced filters and
+    /// search live behind glass circles.
     private var header: some View {
-        HStack(spacing: 14) {
-            Text(L("المكالمات")).font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
+        HStack(spacing: 10) {
+            Text(L("المكالمات")).font(.wx(30, .bold)).foregroundStyle(Theme.onSurface)
             Spacer()
             Button { filterOpen = true } label: {
                 ZStack(alignment: .topTrailing) {
-                    Image(icon: .filter).font(.wx(20)).foregroundStyle(Theme.onMuted)
+                    Image(icon: .filter).font(.wx(17, .semibold)).foregroundStyle(Theme.primary)
+                        .frame(width: 42, height: 42)
                     if vm.advancedCount > 0 {
-                        Text("\(vm.advancedCount)").font(.wx(9, .bold)).foregroundStyle(Theme.onPrimary)
-                            .frame(width: 14, height: 14).background(Theme.primary, in: Circle())
-                            .offset(x: 6, y: -6)
+                        Text("\(vm.advancedCount)").font(.wx(9, .bold)).foregroundStyle(.white)
+                            .frame(width: 15, height: 15).background(Theme.amberAction, in: Circle())
+                            .offset(x: -3, y: 3)
                     }
                 }
             }
+            .buttonStyle(.plain)
+            .glassCircle()
             .accessibilityLabel(L("تصفية المكالمات"))
             Button { withAnimation { showSearch.toggle() }; if !showSearch { vm.search = ""; vm.reload() } } label: {
-                Image(icon: showSearch ? .close : .search).font(.wx(20)).foregroundStyle(Theme.onMuted)
+                Image(icon: showSearch ? .close : .search).font(.wx(17, .semibold)).foregroundStyle(Theme.primary)
+                    .frame(width: 42, height: 42)
             }
+            .buttonStyle(.plain)
+            .glassCircle()
             .accessibilityLabel(showSearch ? L("إغلاق البحث") : L("بحث"))
         }
-        .padding(.horizontal, 16).padding(.vertical, 8)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
+    }
+
+    /// «الكل | الفائتة» — same floating-thumb segmented as the inbox.
+    private var segmented: some View {
+        HStack(spacing: 2) {
+            ForEach(segments, id: \.0) { key, label in
+                let active = vm.filter == key
+                Button {
+                    guard !active else { return }
+                    Haptics.selection()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { vm.apply(key) }
+                } label: {
+                    Text(label)
+                        .font(.wx(13, active ? .semibold : .medium))
+                        .foregroundStyle(active ? Theme.onSurface : Theme.onMuted)
+                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .background {
+                            if active {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Theme.segmentedActive)
+                                    .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
+                                    .matchedGeometryEffect(id: "activeCallSegment", in: segmentNamespace)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .frame(width: 200)
+        .background(Theme.segmentedTrack, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16).padding(.bottom, 10)
     }
 
     private var searchField: some View {
@@ -105,27 +149,10 @@ struct CallsView: View {
                 .foregroundStyle(Theme.onSurface)
                 .submitLabel(.search)
         }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 24))
-        .padding(.horizontal, 12).padding(.bottom, 4)
+        .padding(.horizontal, 14).frame(height: 44)
+        .glassCapsule()
+        .padding(.horizontal, 16).padding(.bottom, 10)
         .onChange(of: vm.search) { _ in vm.reload() }
-    }
-
-    private var chipsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                ForEach(chips, id: \.0) { key, label in
-                    let active = vm.filter == key
-                    Button { vm.apply(key) } label: {
-                        Text(label).font(.wx(15, .semibold))
-                            .foregroundStyle(active ? Theme.background : Theme.onMuted)
-                            .padding(.horizontal, 14).padding(.vertical, 7)
-                            .background(active ? Theme.onSurface : Theme.surface2, in: Capsule())
-                    }.buttonStyle(.plain)
-                }
-            }.padding(.horizontal, 14)
-        }
-        .padding(.vertical, 4)
     }
 
     @ViewBuilder
@@ -142,12 +169,16 @@ struct CallsView: View {
             }
             Spacer()
         } else {
+            // Design 4d: the log sits on one glass panel (r20).
             List(vm.items) { call in
                 CallRow(call: call)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Theme.background)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparatorTint(Color(light: 0x000000, lightAlpha: 0.06, dark: 0xFFFFFF, darkAlpha: 0.08))
             }
             .listStyle(.plain).scrollContentBackground(.hidden)
+            .glassCard(20)
+            .padding(.horizontal, 12).padding(.bottom, 8)
         }
     }
 }
@@ -161,13 +192,13 @@ struct CallRow: View {
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 13) {
-                Avatar(name: call.title, size: 48)
+                Avatar(name: call.title, size: 46)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
-                        Text(call.title).font(.wx(15, .semibold))
-                            .foregroundStyle(call.isMissed ? Theme.danger : Theme.onSurface).lineLimit(1)
+                        Text(call.title).font(.wx(16, .semibold))
+                            .foregroundStyle(call.isMissed ? Theme.missedCall : Theme.onSurface).lineLimit(1)
                         Spacer()
-                        Text(shortTime(call.startedAt)).font(.wx(11)).foregroundStyle(Theme.onMuted)
+                        Text(shortTime(call.startedAt)).font(.wx(13)).foregroundStyle(Theme.onMuted)
                     }
                     HStack(spacing: 6) {
                         Image(icon: dirIcon).font(.wx(13)).foregroundStyle(dirColor)
@@ -179,20 +210,31 @@ struct CallRow: View {
                 }
                 if call.recordingPath != nil {
                     Button { withAnimation { showPlayer.toggle() } } label: {
-                        Image(icon: showPlayer ? .chevUp : .play).font(.wx(14)).foregroundStyle(Theme.primary)
-                            .frame(width: 34, height: 34).background(Theme.primaryContainer, in: Circle())
+                        Image(icon: showPlayer ? .chevUp : .play).font(.wx(14)).foregroundStyle(Theme.amberText)
+                            .frame(width: 34, height: 34).background(Theme.surface1, in: Circle())
                     }.buttonStyle(.plain)
                 }
-                if call.phone != nil {
-                    Image(icon: .phoneCall).font(.wx(20)).foregroundStyle(Theme.primary)
+                // Design 4d: tap-to-call-back (app builds with WebRTC only).
+                if let phone = call.phone, !phone.isEmpty, CallCenter.shared.canCarryAudio {
+                    Button {
+                        Haptics.action()
+                        CallCenter.shared.startOutbound(
+                            to: phone.filter { $0.isNumber },
+                            displayName: call.title, instanceId: nil)
+                    } label: {
+                        Image(icon: .phoneCall).font(.wx(15, .semibold)).foregroundStyle(Theme.amberText)
+                            .frame(width: 34, height: 34).background(Theme.surface1, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L("معاودة الاتصال"))
                 }
             }
             if showPlayer, let path = call.recordingPath, let url = Api.mediaURL(path) {
                 AudioMessage(url: url, tint: Theme.onSurface)
-                    .padding(.leading, 61)
+                    .padding(.leading, 59)
             }
         }
-        .padding(.horizontal, 16).padding(.vertical, 11)
+        .padding(.horizontal, 14).padding(.vertical, 11)
     }
 
     private func statusText(_ c: VoiceCall) -> String {
@@ -237,6 +279,16 @@ struct CallFilterSheet: View {
                         Text(L("كل الموظّفين")).tag("")
                         ForEach(vm.filters.agents, id: \.self) { a in Text(a).tag(a) }
                     }
+                }
+                Section(L("الاتجاه")) {
+                    Picker(L("الاتجاه"), selection: Binding(
+                        get: { vm.direction ?? "" },
+                        set: { vm.direction = $0.isEmpty ? nil : $0 }
+                    )) {
+                        Text(L("الكل")).tag("")
+                        Text(L("واردة")).tag("inbound")
+                        Text(L("صادرة")).tag("outbound")
+                    }.pickerStyle(.segmented)
                 }
                 Section(L("التسجيل")) {
                     Picker(L("التسجيل"), selection: Binding(

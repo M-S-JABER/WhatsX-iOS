@@ -97,6 +97,11 @@ enum Theme {
     static let segmentedTrack = Color(light: 0xE9E4DC, dark: 0x37332F)
     static let segmentedActive = Color(light: 0xFFFFFF, dark: 0x4A443E)
 
+    // Calls (design 4d): missed-call name accent + the chart beige (4e).
+    static let missedCall = Color(light: 0xC73A26, dark: 0xD46554)
+    static let chartBeige = Color(light: 0xD9CFC0, dark: 0x48423D)
+    static let chartBeigeMid = Color(light: 0x8FBCA8, dark: 0x5E9781)
+
     // Chat (design 4c/4n): read ticks + the suggested-reply chip family.
     static let readTick = Color(rgb: 0x53BDEB)
     static let draftChipBg = Color(light: 0xFBF0D6, lightAlpha: 0.85, dark: 0x493B27, darkAlpha: 0.85)

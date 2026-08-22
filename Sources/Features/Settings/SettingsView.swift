@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var uploading = false
     @AppStorage(Notifier.messagesEnabledKey) private var notifyMessages = true
     @StateObject private var settings = AppSettings.shared
+    /// Integrations row summary (design 4f) — filled lazily, silent on failure.
+    @State private var integrationsSummary = L("الأنظمة والتدفق والويب هوك")
 
     var body: some View {
         NavigationStack {
@@ -22,20 +24,21 @@ struct SettingsView: View {
             .padding(.horizontal, 16).padding(.vertical, 8)
 
             ScrollView {
+                // WhatsX 2.0 (design 4f): THREE groups — profile,
+                // preferences, and manager-tagged work management — with
+                // monochrome icon tiles throughout.
                 VStack(alignment: .leading, spacing: 4) {
                     profileCard.padding(.horizontal, 14).padding(.vertical, 6)
-
-                    section(L("الأدوات"))
                     group {
-                        NavigationLink { CallsView() } label: {
-                            SettingRow(icon: .call, title: L("سجل المكالمات"), subtitle: L("الواردة والصادرة والتسجيلات"), trailingChevron: true, tint: Theme.success)
+                        Button { passwordOpen = true } label: {
+                            SettingRow(icon: .lock, title: L("تغيير كلمة المرور"), trailingChevron: true)
                         }.buttonStyle(.plain)
                     }
 
-                    section(L("التخصيص"))
+                    section(L("التفضيلات"))
                     group {
                         HStack {
-                            SettingRow(icon: .sun, title: L("المظهر"), tint: Theme.warning)
+                            SettingRow(icon: .sun, title: L("المظهر"))
                             Picker("", selection: $settings.appearance) {
                                 Text(L("تلقائي")).tag("system")
                                 Text(L("فاتح")).tag("light")
@@ -47,7 +50,7 @@ struct SettingsView: View {
                             .onChange(of: settings.appearance) { _ in Haptics.tap() }
                         }
                         HStack {
-                            SettingRow(icon: .lang, title: L("اللغة"), tint: Theme.info)
+                            SettingRow(icon: .lang, title: L("اللغة"))
                             Picker("", selection: $settings.language) {
                                 Text(L("تلقائي")).tag("system")
                                 Text(L("العربية")).tag("ar")
@@ -59,69 +62,67 @@ struct SettingsView: View {
                             .onChange(of: settings.language) { _ in Haptics.tap() }
                         }
                         HStack {
+                            SettingRow(icon: .bell, title: L("تنبيهات الرسائل الجديدة"),
+                                       subtitle: L("أثناء تشغيل التطبيق (صوت + لافتة)"))
+                            Toggle("", isOn: $notifyMessages)
+                                .labelsHidden()
+                                .tint(Theme.primary)
+                                .padding(.trailing, 14)
+                        }
+                        HStack {
                             SettingRow(icon: .lock, title: L("قفل بالوجه (Face ID)"),
-                                       subtitle: L("يُقفل التطبيق عند مغادرته"), tint: Theme.accentPurple)
+                                       subtitle: L("يُقفل التطبيق عند مغادرته"))
                             Toggle("", isOn: $settings.faceIDLock)
                                 .labelsHidden()
                                 .tint(Theme.primary)
                                 .padding(.trailing, 14)
                                 .onChange(of: settings.faceIDLock) { _ in Haptics.tap() }
                         }
+                        NavigationLink { VoiceSettingsView() } label: {
+                            SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true)
+                        }.buttonStyle(.plain)
                     }
 
-                    section(L("الإشعارات"))
-                    group {
-                        HStack {
-                            SettingRow(icon: .bell, title: L("تنبيهات الرسائل الجديدة"),
-                                       subtitle: L("أثناء تشغيل التطبيق (صوت + لافتة)"), tint: Theme.warning)
-                            Toggle("", isOn: $notifyMessages)
-                                .labelsHidden()
-                                .tint(Theme.primary)
-                                .padding(.trailing, 14)
-                        }
+                    HStack(spacing: 8) {
+                        section(L("إدارة العمل"))
+                        Text(L("للمدراء")).font(.wx(10, .bold))
+                            .foregroundStyle(Theme.amberText)
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Theme.primarySoft, in: Capsule())
+                            .padding(.top, 8)
                     }
-
-                    section(L("الإدارة"))
                     group {
                         NavigationLink { UsersView() } label: {
-                            SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true, tint: Theme.info)
+                            SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true)
                         }.buttonStyle(.plain)
                         NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true, tint: Theme.accentPurple)
+                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true)
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
-                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true, tint: Theme.success)
+                            SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true)
                         }.buttonStyle(.plain)
                         NavigationLink { TemplatesView() } label: {
-                            SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
+                            SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true)
                         }.buttonStyle(.plain)
-                        // The Integrations tab moved here in the 2.0 IA;
-                        // phase D turns this into the full "work management"
-                        // row with a status summary.
                         NavigationLink { IntegrationsView() } label: {
-                            SettingRow(icon: .hub, title: L("التكاملات"), subtitle: L("الأنظمة والتدفق والويب هوك"), trailingChevron: true, tint: Theme.warning)
+                            SettingRow(icon: .hub, title: L("التكاملات"),
+                                       subtitle: integrationsSummary, trailingChevron: true)
                         }.buttonStyle(.plain)
-                    }
-
-                    section(L("الأمان"))
-                    group {
-                        Button { passwordOpen = true } label: {
-                            SettingRow(icon: .lock, title: L("تغيير كلمة المرور"), trailingChevron: true, tint: Theme.danger)
-                        }.buttonStyle(.plain)
-                    }
-
-                    section(L("عام"))
-                    group {
-                        NavigationLink { VoiceSettingsView() } label: {
-                            SettingRow(icon: .phoneCall, title: L("الصوت والمكالمات"), subtitle: L("إعدادات SIP وWebRTC"), trailingChevron: true, tint: Theme.success)
-                        }.buttonStyle(.plain)
-                        SettingRow(icon: .info, title: L("الإصدار"),
-                                   subtitle: "v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1") + " · " + L("أسوار المدن"))
                     }
 
                     logoutButton.padding(.horizontal, 14).padding(.top, 16)
+                    Text("v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1") + " · " + L("أسوار المدن"))
+                        .font(.wx(11)).foregroundStyle(Theme.onFaint)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 10)
                 }
                 .padding(.bottom, 24)
+            }
+            .task {
+                let count = (try? await Api.shared.integrations())?.items.count
+                if let count, count > 0 {
+                    integrationsSummary = "\(count) " + L("أنظمة مرتبطة")
+                }
             }
         }
         .background(Theme.background.ignoresSafeArea())
@@ -210,15 +211,18 @@ struct SettingRow: View {
     let title: String
     var subtitle: String? = nil
     var trailingChevron: Bool = false
-    /// iOS-Settings-style colored icon tile; nil keeps the neutral surface tile.
+    /// Kept for call-site compatibility; design 4f made every tile
+    /// monochrome (one 32px `#F2EEE9` tile, one line-icon color), so the
+    /// tint no longer paints anything.
     var tint: Color? = nil
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(icon: icon).font(.wx(17, .medium))
-                .foregroundStyle(tint == nil ? Theme.onSurface : .white)
-                .frame(width: 38, height: 38)
-                .background(tint ?? Theme.surface2, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            Image(icon: icon).font(.wx(15, .medium))
+                .foregroundStyle(Color(light: 0x6B6156, dark: 0xADA69F))
+                .frame(width: 32, height: 32)
+                .background(Color(light: 0xF2EEE9, dark: 0x37332F),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface)
                 if let subtitle { Text(subtitle).font(.wx(12)).foregroundStyle(Theme.onMuted) }
