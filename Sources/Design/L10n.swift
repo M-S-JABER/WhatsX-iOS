@@ -389,5 +389,9 @@ enum L10n {
         "ما التعديل المطلوب؟": "What should change?",
         "مثال: خليها أقصر": "e.g. make it shorter",
         "متابعة": "Follow-up",
+
+        // WhatsX 2.0 redesign (phase A)
+        "بحث شامل": "Global search",
+        "الأنظمة والتدفق والويب هوك": "Systems, flow & webhook",
     ]
 }

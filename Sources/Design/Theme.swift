@@ -13,6 +13,15 @@ extension Color {
             traits.userInterfaceStyle == .dark ? UIColor(rgb: dark) : UIColor(rgb: light)
         })
     }
+
+    /// Mode-aware color WITH alpha — the glass recipe needs translucency.
+    init(light: UInt, lightAlpha: CGFloat, dark: UInt, darkAlpha: CGFloat) {
+        self = Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(rgb: dark).withAlphaComponent(darkAlpha)
+                : UIColor(rgb: light).withAlphaComponent(lightAlpha)
+        })
+    }
 }
 
 extension UIColor {
@@ -27,8 +36,10 @@ extension UIColor {
 }
 
 enum Theme {
-    // Core surfaces / text — web --background/--card/--sidebar/--secondary.
-    static let background = Color(light: 0xF8F6F2, dark: 0x1C1A17)   // --background
+    // Core surfaces / text. Light values follow the WhatsX 2.0 design
+    // handoff (docs: design_handoff_whatsx_redesign); the handoff specs
+    // light mode only, so dark values stay the Luxe Amber dark palette.
+    static let background = Color(light: 0xF6F1E9, dark: 0x1C1A17)   // 2.0 base
     static let surface = Color(light: 0xFFFFFF, dark: 0x24211E)      // --card
     static let surface1 = Color(light: 0xF2EEE9, dark: 0x221F1C)     // --sidebar
     static let surface2 = Color(light: 0xEAE6E1, dark: 0x37332F)     // --secondary
@@ -60,6 +71,48 @@ enum Theme {
     /// use this token, never a raw hex.
     static let accentPurple = Color(light: 0x89639C, dark: 0xAC88BF)
 
+    // ── WhatsX 2.0 tokens (design handoff) ────────────────────────────────
+
+    /// Content sheet above the base background (lists, panes).
+    static let surfaceContent = Color(light: 0xF8F6F2, dark: 0x211E1B)
+    /// Fixed dark chrome — the login top block; NOT mode-aware by design.
+    static let darkChrome = Color(rgb: 0x211D18)
+    /// In-call screen chrome (4l), slightly warmer than the login chrome.
+    static let callChrome = Color(rgb: 0x1C1916)
+    /// Amber on dark chrome (logo tile, login CTA text).
+    static let amberOnDark = Color(rgb: 0xE4A944)
+    /// Amber TEXT on light surfaces (passes contrast, unlike the fill amber).
+    static let amberText = Color(light: 0xB16E14, dark: 0xE4A944)
+    /// Unread-row timestamp accent.
+    static let unreadTime = Color(light: 0xC08119, dark: 0xE4A944)
+
+    /// The prominent-action gradient (send button, active tab, counters).
+    static let amberAction = LinearGradient(
+        colors: [Color(rgb: 0xE3A93B), Color(rgb: 0xD08A1F)],
+        startPoint: .top, endPoint: .bottom)
+    /// Shadow tint under amber actions.
+    static let amberShadow = Color(rgb: 0xD08A1F).opacity(0.4)
+
+    // Segmented controls: track + floating active thumb.
+    static let segmentedTrack = Color(light: 0xE9E4DC, dark: 0x37332F)
+    static let segmentedActive = Color(light: 0xFFFFFF, dark: 0x4A443E)
+
+    // Glass recipe (pre-iOS 26 fallback fills; see Glass.swift).
+    static let glassFill = Color(light: 0xFFFFFF, lightAlpha: 0.58, dark: 0x2A2622, darkAlpha: 0.55)
+    static let glassBorder = Color(light: 0xFFFFFF, lightAlpha: 0.7, dark: 0xFFFFFF, darkAlpha: 0.12)
+    static let glassHighlight = Color(light: 0xFFFFFF, lightAlpha: 0.8, dark: 0xFFFFFF, darkAlpha: 0.08)
+
+    /// The app-wide warm radial glow behind content (2.0 base background).
+    /// Screens apply it via `Theme.glowBackground()`.
+    @ViewBuilder
+    static func glowBackground() -> some View {
+        background.overlay(
+            RadialGradient(
+                colors: [Color(rgb: 0xE0A52E).opacity(0.15), .clear],
+                center: .init(x: 0.25, y: 0.08), startRadius: 0, endRadius: 420)
+        ).ignoresSafeArea()
+    }
+
     // Layout tokens — one scale instead of per-screen magic numbers. New code
     // should draw radii/spacing from here; existing screens migrate as touched.
     enum Radius {
@@ -67,6 +120,10 @@ enum Theme {
         static let field: CGFloat = 14
         static let card: CGFloat = 18
         static let panel: CGFloat = 22
+        // 2.0 additions.
+        static let cardTight: CGFloat = 16
+        static let chatHeader: CGFloat = 24
+        static let tabBar: CGFloat = 32
     }
     enum Space {
         static let xs: CGFloat = 4

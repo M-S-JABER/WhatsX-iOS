@@ -78,15 +78,33 @@ extension View {
         #endif
     }
 
-    /// Pre-iOS 26 stand-in for glass cards: the classic Luxe card surface.
+    /// Pre-iOS 26 stand-in for glass cards — the WhatsX 2.0 glass recipe:
+    /// translucent white over system blur, hairline light border, an inner
+    /// top highlight, and a soft drop shadow.
     private func luxeSurface<S: InsettableShape>(in shape: S) -> some View {
-        background(Theme.surface, in: shape)
-            .overlay(shape.strokeBorder(Theme.outline, lineWidth: 1))
+        background {
+            shape.fill(Theme.glassFill)
+                .background(.ultraThinMaterial, in: shape)
+        }
+        .overlay(shape.strokeBorder(Theme.glassBorder, lineWidth: 1))
+        .overlay(
+            // Inner highlight: a light line hugging the top edge.
+            shape.inset(by: 0.5).strokeBorder(
+                LinearGradient(colors: [Theme.glassHighlight, .clear],
+                               startPoint: .top, endPoint: .center),
+                lineWidth: 1.5)
+        )
+        .shadow(color: .black.opacity(0.1), radius: 12, y: 8)
     }
 
-    /// Pre-iOS 26 stand-in for glass chips/circles: the classic Luxe chip fill.
+    /// Pre-iOS 26 stand-in for glass chips/circles — same recipe, no drop
+    /// shadow (chips repeat in lists; per-row shadows are visual noise and
+    /// a scrolling cost).
     private func luxeChip<S: InsettableShape>(in shape: S) -> some View {
-        background(Theme.surface2, in: shape)
-            .overlay(shape.strokeBorder(Theme.outline, lineWidth: 1))
+        background {
+            shape.fill(Theme.glassFill)
+                .background(.ultraThinMaterial, in: shape)
+        }
+        .overlay(shape.strokeBorder(Theme.glassBorder, lineWidth: 1))
     }
 }
