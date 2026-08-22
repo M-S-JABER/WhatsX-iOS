@@ -42,12 +42,15 @@ final class InboxBus: ObservableObject {
     /// The iPad split pane and sheet presentations don't count.
     @Published private(set) var pushedChats = 0
 
+    // Instant, unanimated swaps: the navigation push/pop already masks the
+    // bar change, and animating the safe-area height here re-laid-out every
+    // tab mid-transition (the 1.24.0 "app feels heavy" feedback).
     func chatDidAppear() {
-        withAnimation(.easeInOut(duration: 0.22)) { pushedChats += 1 }
+        pushedChats += 1
     }
 
     func chatDidDisappear() {
-        withAnimation(.easeInOut(duration: 0.22)) { pushedChats = max(0, pushedChats - 1) }
+        pushedChats = max(0, pushedChats - 1)
     }
 }
 
@@ -118,6 +121,10 @@ struct MainTabView: View {
         .glassCard(Theme.Radius.tabBar)
         .padding(.horizontal, 20)
         .padding(.bottom, 6)
+        // The capsule slide animates HERE only — switching `tab` itself is
+        // instant, so screens swap immediately instead of animating whole
+        // view hierarchies (which read as lag on every tab press).
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: tab)
     }
 
     private func tabButton(_ item: TabItem) -> some View {
@@ -139,7 +146,12 @@ struct MainTabView: View {
             }
             .foregroundStyle(isActive ? .white : Theme.onMuted)
             .padding(.horizontal, isActive ? 16 : 12)
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(minHeight: 44)
+            // Width stretch INSIDE the label + an explicit content shape:
+            // the whole slot is tappable. (Stretching the Button from the
+            // outside left dead zones around each icon — the 1.24.0
+            // "hard to press" feedback.)
+            .frame(minWidth: 44, maxWidth: isActive ? nil : .infinity)
             .background {
                 if isActive {
                     Capsule().fill(Theme.amberAction)
@@ -156,9 +168,9 @@ struct MainTabView: View {
                         .offset(x: 4, y: 2)
                 }
             }
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .frame(maxWidth: isActive ? nil : .infinity)
+        .buttonStyle(.pressable)
         .accessibilityLabel(item.title)
     }
 
@@ -177,8 +189,8 @@ struct MainTabView: View {
         } else {
             lastChatsTap = nil
         }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            tab = newValue
-        }
+        // Instant switch — the bar's own scoped animation slides the amber
+        // capsule; wrapping this in withAnimation animated every screen.
+        tab = newValue
     }
 }
