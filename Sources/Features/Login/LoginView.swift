@@ -1,16 +1,19 @@
 import SwiftUI
 import UIKit
 
-/// Sign-in screen: brand mark over the amber hero, a floating glass card with
-/// focus-ring fields, springy primary button, and haptic feedback on
-/// success/failure. Fields animate in on first appearance.
+/// Sign-in screen — WhatsX 2.0 (design 4a): a fixed dark chrome block on top
+/// (flat amber brand tile, value line, muted description) flowing into a
+/// light sheet with white fields, a dark CTA with amber text, and the server
+/// row with the saved address in mono. No hero gradient. All behaviors from
+/// the previous screen survive: server-address gate, focus flow, password
+/// reveal, error surface, haptics.
 struct LoginView: View {
     @EnvironmentObject var session: Session
     @State private var username = ""
     @State private var password = ""
     @State private var showPassword = false
-    /// مفتوح تلقائياً عند أول تشغيل: لا عنوان خادم محفوظاً بعد، والمستخدم
-    /// لا يستطيع الدخول قبل إدخاله — فإخفاؤه خلف زرّ كان سيبدو كعطل.
+    /// Auto-expanded on first run: with no saved server address the login
+    /// button is gated, and hiding the reason would read as a bug.
     @State private var showServer = !AppConfig.hasServer
     @State private var serverURL = AppConfig.baseURL
     @State private var appeared = false
@@ -21,15 +24,19 @@ struct LoginView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                hero
-                card
-                    .padding(.horizontal, 20)
-                    .offset(y: -34)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? -34 : -10)
+                darkBlock
+                lightBlock
             }
         }
-        .background(Theme.background.ignoresSafeArea())
+        .background(alignment: .top) {
+            // The chrome bleeds behind the status bar / rubber-band zone.
+            VStack(spacing: 0) {
+                Theme.darkChrome.frame(height: 600)
+                Theme.surfaceContent
+            }
+            .ignoresSafeArea()
+        }
+        .background(Theme.surfaceContent.ignoresSafeArea())
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.1)) { appeared = true }
@@ -42,36 +49,32 @@ struct LoginView: View {
         }
     }
 
-    private var hero: some View {
-        VStack(spacing: 14) {
-            BrandMark(size: 92)
-                .scaleEffect(appeared ? 1 : 0.7)
+    // MARK: - Dark chrome (top)
+
+    private var darkBlock: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            BrandMark(size: 64, flat: true)
+                .scaleEffect(appeared ? 1 : 0.8)
                 .opacity(appeared ? 1 : 0)
-            Text("WhatsX").font(.wx(32, .bold)).foregroundStyle(.white)
-            Text(L("منصّة إدارة محادثات واتساب"))
-                .font(.wx(15)).foregroundStyle(.white.opacity(0.92))
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("مساحة عمل فريقك على واتساب."))
+                    .font(.wx(30, .bold))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(L("محادثات، مكالمات، وتقارير — على خادمكم الخاص."))
+                    .font(.wx(14))
+                    .foregroundStyle(Color(rgb: 0x9C948C))
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 76).padding(.bottom, 64)
-        .background(
-            Theme.heroGradient
-                .overlay(
-                    RadialGradient(colors: [.white.opacity(0.16), .clear],
-                                   center: .init(x: 0.5, y: 0.0), startRadius: 0, endRadius: 380)
-                )
-        )
-        .clipShape(RoundedCorners(radius: 36, corners: [.bottomLeft, .bottomRight]))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 110).padding(.horizontal, 28).padding(.bottom, 44)
+        .background(Theme.darkChrome)
     }
 
-    private var card: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 3) {
-                Text(L("مرحبًا بعودتك")).font(.wx(21, .bold)).foregroundStyle(Theme.onSurface)
-                Text(L("سجّل دخولك للمتابعة")).font(.wx(13)).foregroundStyle(Theme.onMuted)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 6)
+    // MARK: - Light sheet (fields + CTA)
 
+    private var lightBlock: some View {
+        VStack(spacing: 14) {
             field(icon: .user, active: focused == .username) {
                 TextField(L("اسم المستخدم"), text: $username)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -113,54 +116,69 @@ struct LoginView: View {
             Button(action: logIn) {
                 HStack(spacing: 8) {
                     if session.isLoggingIn {
-                        ProgressView().tint(Theme.onPrimary)
+                        ProgressView().tint(Theme.amberOnDark)
                     } else {
-                        Text(L("تسجيل الدخول")).font(.wx(17, .semibold))
-                        Image(icon: .forward).font(.wx(14, .semibold))
+                        Text(L("دخول")).font(.wx(16, .semibold))
                     }
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
-                .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .foregroundStyle(.white)
-                .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
+                .background(Theme.darkChrome, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .foregroundStyle(Theme.amberOnDark)
             }
             .buttonStyle(.pressable)
             .disabled(session.isLoggingIn || !canSubmit)
             .opacity(canSubmit ? 1 : 0.55)
             .animation(.easeOut(duration: 0.2), value: canSubmit)
 
-            DisclosureGroup(isExpanded: $showServer.animation(.spring(response: 0.35, dampingFraction: 0.85))) {
-                field(icon: .cloud, active: focused == .server) {
-                    TextField("https://server", text: $serverURL)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .focused($focused, equals: .server)
-                        .environment(\.layoutDirection, .leftToRight)
-                }
-                // عند أول تشغيل لا يوجد عنوان خادم محفوظ، فنوضّح للمستخدم
-                // سبب تعطّل زر الدخول بدل أن يبدو معطّلاً بلا سبب.
-                if serverURL.trimmed().isEmpty {
-                    Text(L("أدخل عنوان خادم WhatsX الخاص بك للمتابعة."))
-                        .font(.wx(12))
-                        .foregroundStyle(Theme.onMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 6)
-                }
-            } label: {
-                Label(L("إعدادات الخادم"), systemImage: WIcon.settings.symbol())
-                    .font(.wx(14)).foregroundStyle(Theme.onMuted)
-            }
-            .tint(Theme.onMuted)
+            serverRow
         }
-        .padding(18)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.outline, lineWidth: 1))
-        .shadow(color: .black.opacity(0.09), radius: 22, y: 10)
+        .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 32)
+        .background(Theme.surfaceContent)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
     }
 
-    /// عنوان الخادم شرط للدخول: WhatsX يُستضاف ذاتياً، فلا يوجد عنوان
-    /// افتراضي يمكن للتطبيق أن يفترضه. بدون هذا الشرط كان الزر يرسل الطلب
-    /// إلى عنوان فارغ فيفشل برسالة غامضة.
+    private var serverRow: some View {
+        DisclosureGroup(isExpanded: $showServer.animation(.spring(response: 0.35, dampingFraction: 0.85))) {
+            field(icon: .cloud, active: focused == .server) {
+                TextField("https://server", text: $serverURL)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .focused($focused, equals: .server)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+            .padding(.top, 8)
+            // First run has no saved address — explain the disabled button
+            // instead of letting it look broken.
+            if serverURL.trimmed().isEmpty {
+                Text(L("أدخل عنوان خادم WhatsX الخاص بك للمتابعة."))
+                    .font(.wx(12))
+                    .foregroundStyle(Theme.onMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 6)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Label(L("إعدادات الخادم"), systemImage: WIcon.settings.symbol())
+                    .font(.wx(14)).foregroundStyle(Theme.onMuted)
+                Spacer()
+                if !showServer, !serverURL.trimmed().isEmpty {
+                    // The saved address, mono 12 (design 4a).
+                    Text(serverURL.trimmed()
+                        .replacingOccurrences(of: "https://", with: ""))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Theme.onFaint)
+                        .lineLimit(1).truncationMode(.middle)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
+            }
+        }
+        .tint(Theme.onMuted)
+        .padding(.top, 4)
+    }
+
+    /// The server address gates login: WhatsX is self-hosted, so there is no
+    /// default the app could assume.
     private var canSubmit: Bool {
         !username.isEmpty && !password.isEmpty && !serverURL.trimmed().isEmpty
     }
@@ -172,17 +190,18 @@ struct LoginView: View {
         Task { await session.login(username: username, password: password) }
     }
 
+    /// White field, r12, 1.5px border; the border turns amber on focus.
     @ViewBuilder
     private func field(icon: WIcon, active: Bool, @ViewBuilder content: () -> some View) -> some View {
         HStack(spacing: 10) {
             Image(icon: icon).foregroundStyle(active ? Theme.primary : Theme.onFaint)
             content().foregroundStyle(Theme.onSurface)
         }
-        .padding(.horizontal, 14).padding(.vertical, 13)
-        .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(active ? Theme.primary : Theme.outline, lineWidth: active ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(active ? Theme.primary : Theme.outline, lineWidth: 1.5)
         )
         .animation(.easeOut(duration: 0.18), value: active)
     }

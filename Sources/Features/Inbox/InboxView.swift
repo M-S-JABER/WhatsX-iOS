@@ -4,7 +4,7 @@ import UIKit
 enum InboxSegment: String, CaseIterable {
     case active, unread, archived
     var title: String {
-        switch self { case .active: return L("النشطة"); case .unread: return L("غير المقروءة"); case .archived: return L("المؤرشفة") }
+        switch self { case .active: return L("الكل"); case .unread: return L("غير المقروءة"); case .archived: return L("المؤرشفة") }
     }
 }
 
@@ -172,26 +172,38 @@ final class InboxViewModel: ObservableObject {
 
 struct InboxView: View {
     @StateObject private var vm = InboxViewModel()
+    /// Global search results (customers/calls + conversations beyond the
+    /// loaded pages) — the 2.0 persistent field feeds both this and the
+    /// instant local filter.
+    @StateObject private var globalVM = GlobalSearchViewModel()
     @State private var showNew = false
-    @State private var searchOpen = false
     @State private var searchText = ""
     /// iPad split mode: the conversation open in the detail pane.
     @State private var selectedConv: Conversation?
     /// Phone mode: programmatic push target (notification deep-link).
     @State private var path = NavigationPath()
-    /// Phase-A bridge for the removed Search tab.
-    @State private var showGlobalSearch = false
     @FocusState private var searchFocused: Bool
+    @Namespace private var segmentNamespace
 
-    /// Conversations after the in-place bottom search filter.
+    private var query: String { searchText.trimmingCharacters(in: .whitespaces) }
+
+    /// Conversations after the segment filter and the live search filter.
     private var displayed: [Conversation] {
-        let q = searchText.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return vm.shown }
-        return vm.shown.filter {
-            $0.title.localizedCaseInsensitiveContains(q)
-                || ($0.phone ?? "").localizedCaseInsensitiveContains(q)
-                || $0.preview.localizedCaseInsensitiveContains(q)
+        var base = vm.shown
+        if vm.segment == .unread { base = base.filter { $0.unread > 0 } }
+        guard !query.isEmpty else { return base }
+        return base.filter {
+            $0.title.localizedCaseInsensitiveContains(query)
+                || ($0.phone ?? "").localizedCaseInsensitiveContains(query)
+                || $0.preview.localizedCaseInsensitiveContains(query)
         }
+    }
+
+    /// Search hits from the global pool that the local list doesn't already show.
+    private var globalExtraConversations: [Conversation] {
+        guard !query.isEmpty else { return [] }
+        let shownIds = Set(displayed.map { $0.id })
+        return globalVM.conversations.filter { !shownIds.contains($0.id) }
     }
 
     var body: some View {
@@ -205,10 +217,10 @@ struct InboxView: View {
             }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
-        .sheet(isPresented: $showGlobalSearch) { GlobalSearchView() }
         .task {
             await vm.loadInstances()
             await vm.load()
+            await globalVM.prepare()
             // A notification tapped before the inbox existed (cold start)
             // left its conversation pending — honor it now.
             if let id = InboxBus.shared.consumePendingConversation() {
@@ -257,25 +269,12 @@ struct InboxView: View {
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 header
+                searchBar
+                controlsRow
                 listContent(split: false)
             }
-            .background(Theme.background.ignoresSafeArea())
+            .background(Theme.glowBackground())
             .navigationBarHidden(true)
-            .overlay(alignment: .bottom) {
-                bottomBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-            }
-            // RTL: trailing = the visual top-LEFT corner.
-            .overlay(alignment: .topTrailing) {
-                HStack(spacing: 10) {
-                    globalSearchButton
-                    accountsButton
-                    archiveButton
-                }
-                .padding(.trailing, 16)
-                .padding(.top, 6)
-            }
         }
     }
 
@@ -284,30 +283,18 @@ struct InboxView: View {
             HStack(spacing: 0) {
                 VStack(spacing: 0) {
                     header
+                    searchBar
+                    controlsRow
                     listContent(split: true)
                 }
                 .frame(width: 380)
                 .background(Theme.surface1.ignoresSafeArea())
-                .overlay(alignment: .bottom) {
-                    bottomBar
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 16)
-                }
-                .overlay(alignment: .topTrailing) {
-                    HStack(spacing: 10) {
-                        globalSearchButton
-                        accountsButton
-                        archiveButton
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.top, 6)
-                }
 
                 Rectangle().fill(Theme.outline).frame(width: 1).ignoresSafeArea()
 
                 detailPane
             }
-            .background(Theme.background.ignoresSafeArea())
+            .background(Theme.glowBackground())
             .navigationBarHidden(true)
         }
     }
@@ -329,120 +316,104 @@ struct InboxView: View {
         }
     }
 
+    // MARK: - Header · search · controls (design 4b)
+
     private var header: some View {
-        HStack(spacing: 10) {
-            Text(vm.showArchived ? L("الأرشيف") : L("المحادثات"))
-                .font(.wx(22, .bold)).foregroundStyle(Theme.onSurface)
-            Spacer()
-        }
-        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 22)
-    }
-
-    /// Floating archive toggle (visual top-left): opens the archive; while
-    /// inside it, turns amber and flips back to the active inbox.
-    /// One size for all three floating circles (archive · accounts · compose).
-    static let floatingButtonSide: CGFloat = 52
-
-    private var archiveButton: some View {
-        Button { withAnimation { vm.toggleArchived() } } label: {
-            Image(systemName: vm.showArchived ? "archivebox.fill" : "archivebox")
-                .font(.wx(20, .semibold))
-                .foregroundStyle(vm.showArchived ? Theme.onPrimary : Theme.primary)
-                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
-                .background(vm.showArchived ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(.clear), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .glassCircle()
-        .accessibilityLabel(vm.showArchived ? L("عودة للمحادثات النشطة") : L("الأرشيف"))
-    }
-
-    /// Global search (conversations/customers/calls). Phase-A bridge for the
-    /// removed Search tab; phase B replaces it with the persistent field.
-    private var globalSearchButton: some View {
-        Button { showGlobalSearch = true } label: {
-            Image(systemName: "text.magnifyingglass")
-                .font(.wx(19, .semibold))
-                .foregroundStyle(Theme.primary)
-                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
-        }
-        .buttonStyle(.plain)
-        .glassCircle()
-        .accessibilityLabel(L("بحث شامل"))
-    }
-
-    /// Bottom floating row: the search circle that EXPANDS in place into a
-    /// full-width bottom search bar (same slide/expand animation style as the
-    /// chat's top search), plus the compose circle (hidden while searching).
-    private var bottomBar: some View {
         HStack(spacing: 12) {
-            if !searchOpen { Spacer(minLength: 0) }
-            searchContainer
-            if !searchOpen { composeButton }
+            Text(vm.showArchived ? L("الأرشيف") : L("المحادثات"))
+                .font(.wx(30, .bold)).foregroundStyle(Theme.onSurface)
+            Spacer()
+            Button { showNew = true } label: {
+                Image(systemName: "plus")
+                    .font(.wx(19, .semibold))
+                    .foregroundStyle(Theme.primary)
+                    .frame(width: 42, height: 42)
+            }
+            .buttonStyle(.plain)
+            .glassCircle()
+            .accessibilityLabel(L("محادثة جديدة"))
         }
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
     }
 
-    private var searchContainer: some View {
-        HStack(spacing: 8) {
+    /// The 2.0 persistent search field: filters the list instantly and fans
+    /// out to customers/calls (GlobalSearchViewModel) for the same query.
+    private var searchBar: some View {
+        HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.wx(20, .semibold))
-                .foregroundStyle(Theme.primary)
-                .frame(width: searchOpen ? 26 : Self.floatingButtonSide,
-                       height: Self.floatingButtonSide)
-            if searchOpen {
-                TextField(L("ابحث في المحادثات"), text: $searchText)
-                    .font(.wx(15))
-                    .foregroundStyle(Theme.onSurface)
-                    .focused($searchFocused)
-                    .submitLabel(.search)
-                Button { closeSearch() } label: {
-                    Image(systemName: "xmark")
-                        .font(.wx(14, .semibold))
-                        .foregroundStyle(Theme.onMuted)
-                        .frame(width: 34, height: 34)
-                        .background(Theme.surface2, in: Circle())
+                .font(.wx(16, .medium)).foregroundStyle(Theme.onMuted)
+            TextField(L("ابحث عن محادثة أو عميل أو مكالمة"), text: $searchText)
+                .font(.wx(15)).foregroundStyle(Theme.onSurface)
+                .focused($searchFocused)
+                .submitLabel(.search)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                    searchFocused = false
+                    Haptics.tap()
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.onFaint)
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 6)
                 .accessibilityLabel(L("إغلاق البحث"))
             }
         }
-        .frame(maxWidth: searchOpen ? .infinity : Self.floatingButtonSide)
-        .frame(height: Self.floatingButtonSide)
-        .glassCapsule(interactive: true)
-        .contentShape(Capsule())
-        .onTapGesture { if !searchOpen { openSearch() } }
-        .accessibilityLabel(L("ابحث في المحادثات"))
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private func openSearch() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { searchOpen = true }
-        // Focus right after the expansion starts so the keyboard rises with it.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { searchFocused = true }
-    }
-
-    private func closeSearch() {
-        searchFocused = false
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            searchOpen = false
-            searchText = ""
+        .padding(.horizontal, 14)
+        .frame(height: 44)
+        .glassCapsule()
+        .padding(.horizontal, 16).padding(.bottom, 10)
+        .onChange(of: searchText) { q in
+            globalVM.query = q
+            globalVM.queryChanged()
         }
     }
 
-    private var composeButton: some View {
-        Button { showNew = true } label: {
-            Image(systemName: "square.and.pencil")
-                .font(.wx(21, .medium))
-                .foregroundStyle(Theme.primary)
-                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
+    private var controlsRow: some View {
+        HStack(spacing: 10) {
+            segmented
+            Spacer(minLength: 8)
+            accountsButton
         }
-        .buttonStyle(.plain)
-        .glassCircle()
-        .accessibilityLabel(L("محادثة جديدة"))
+        .padding(.horizontal, 16).padding(.bottom, 10)
     }
 
-    /// Top account picker (next to the archive button): multi-select menu;
-    /// stays open while picking on iOS 16.4+.
+    /// Custom segmented control per the 2.0 spec (track + floating white
+    /// thumb). Crossing the archive boundary reloads; all/unread is local.
+    private var segmented: some View {
+        HStack(spacing: 2) {
+            ForEach(InboxSegment.allCases, id: \.self) { seg in
+                Button { setSegment(seg) } label: {
+                    Text(seg.title)
+                        .font(.wx(13, vm.segment == seg ? .semibold : .medium))
+                        .foregroundStyle(vm.segment == seg ? Theme.onSurface : Theme.onMuted)
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background {
+                            if vm.segment == seg {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Theme.segmentedActive)
+                                    .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
+                                    .matchedGeometryEffect(id: "activeSegment", in: segmentNamespace)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(Theme.segmentedTrack, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func setSegment(_ seg: InboxSegment) {
+        guard seg != vm.segment else { return }
+        Haptics.selection()
+        let crossesArchive = (seg == .archived) != (vm.segment == .archived)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+            vm.segment = seg
+        }
+        if crossesArchive { Task { await vm.load() } }
+    }
+
+    /// «الحسابات ▾» dropdown (multi-select; stays open while picking on 16.4+).
     private var accountsButton: some View {
         Group {
             if #available(iOS 16.4, *) {
@@ -472,78 +443,56 @@ struct InboxView: View {
                 }
             }
         } label: {
-            ZStack {
-                Image(systemName: "circle.dashed")
-                    .font(.wx(25, .regular))
-                Image(systemName: "plus")
-                    .font(.wx(12, .bold))
+            HStack(spacing: 5) {
+                Text(vm.selectedInstanceIds.isEmpty
+                     ? L("الحسابات")
+                     : L("الحسابات") + " · \(vm.selectedInstanceIds.count)")
+                    .font(.wx(13, .semibold))
+                Image(systemName: "chevron.down").font(.wx(10, .semibold))
             }
-            .foregroundStyle(Theme.primary)
-            .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
-            .overlay(alignment: .topTrailing) {
-                if !vm.selectedInstanceIds.isEmpty {
-                    Text("\(vm.selectedInstanceIds.count)")
-                        .font(.wx(9, .bold)).foregroundStyle(Theme.onPrimary)
-                        .frame(width: 16, height: 16)
-                        .background(Theme.primary, in: Circle())
-                        .offset(x: 2, y: -2)
-                }
-            }
+            .foregroundStyle(vm.selectedInstanceIds.isEmpty ? Theme.onMuted : Theme.amberText)
+            .padding(.horizontal, 12).padding(.vertical, 8)
         }
-        .glassCircle()
+        .glassCapsule()
+        .accessibilityLabel(L("تصفية الحسابات"))
     }
+
+    // MARK: - List
 
     private func listContent(split: Bool) -> some View {
         Group {
             if vm.loading && vm.items.isEmpty {
                 Spacer(); ProgressView().tint(Theme.primary); Spacer()
-            } else if displayed.isEmpty {
+            } else if displayed.isEmpty && globalExtraConversations.isEmpty
+                        && globalVM.customers.isEmpty && globalVM.calls.isEmpty {
                 Spacer()
                 VStack(spacing: 12) {
-                    Image(systemName: !searchText.isEmpty ? "questionmark.bubble"
+                    Image(systemName: !query.isEmpty ? "questionmark.bubble"
                             : (vm.segment == .archived ? "archivebox" : "bubble.left.and.bubble.right"))
                         .font(.wx(42)).symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Theme.onFaint)
-                    Text(!searchText.isEmpty ? L("لا نتائج مطابقة") : L("لا توجد محادثات"))
+                    Text(!query.isEmpty ? L("لا نتائج مطابقة") : L("لا توجد محادثات"))
                         .foregroundStyle(Theme.onMuted)
                 }
                 Spacer()
             } else {
                 List {
                     ForEach(displayed) { conv in
-                        ZStack {
-                            if split {
-                                // Selection drives the detail pane; no push.
-                                ConversationRow(conv: conv)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        Haptics.tap()
-                                        selectedConv = conv
-                                    }
-                                    .background(selectedConv?.id == conv.id ? Theme.primarySoft : .clear)
-                            } else {
-                                NavigationLink(value: conv) { EmptyView() }.opacity(0)
-                                ConversationRow(conv: conv)
+                        conversationCell(conv, split: split)
+                            .onAppear { if query.isEmpty { vm.loadMoreIfNeeded(after: conv) } }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) { Haptics.action(); Task { await vm.delete(conv) } } label: {
+                                    Label(L("حذف"), systemImage: "trash")
+                                }
+                                Button { Haptics.action(); Task { await vm.archive(conv) } } label: {
+                                    Label(vm.showArchived ? L("إلغاء الأرشفة") : L("أرشفة"), systemImage: "archivebox")
+                                }.tint(Theme.success)
                             }
-                        }
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Theme.background)
-                        .listRowSeparatorTint(Theme.outline)
-                        .listRowSeparator(.hidden, edges: .top)
-                        .onAppear { if searchText.isEmpty { vm.loadMoreIfNeeded(after: conv) } }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { Haptics.action(); Task { await vm.delete(conv) } } label: {
-                                Label(L("حذف"), systemImage: "trash")
+                            .swipeActions(edge: .leading) {
+                                Button { Haptics.action(); Task { await vm.pin(conv) } } label: {
+                                    Label(conv.isPinned ? L("إلغاء التثبيت") : L("تثبيت"), systemImage: conv.isPinned ? "pin.slash" : "pin")
+                                }.tint(Theme.primary)
                             }
-                            Button { Haptics.action(); Task { await vm.archive(conv) } } label: {
-                                Label(vm.showArchived ? L("إلغاء الأرشفة") : L("أرشفة"), systemImage: "archivebox")
-                            }.tint(Theme.success)
-                        }
-                        .swipeActions(edge: .leading) {
-                            Button { Haptics.action(); Task { await vm.pin(conv) } } label: {
-                                Label(conv.isPinned ? L("إلغاء التثبيت") : L("تثبيت"), systemImage: conv.isPinned ? "pin.slash" : "pin")
-                            }.tint(Theme.primary)
-                        }
                     }
                     if vm.loadingMore {
                         HStack {
@@ -552,10 +501,11 @@ struct InboxView: View {
                             Spacer()
                         }
                         .listRowInsets(EdgeInsets())
-                        .listRowBackground(Theme.background)
+                        .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .padding(.vertical, 12)
                     }
+                    globalResults(split: split)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -566,17 +516,143 @@ struct InboxView: View {
             }
         }
     }
+
+    /// One list row wired for the live layout: tap-select in the split pane,
+    /// hidden NavigationLink push on phones.
+    private func conversationCell(_ conv: Conversation, split: Bool) -> some View {
+        ZStack {
+            if split {
+                ConversationRow(conv: conv)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        Haptics.tap()
+                        selectedConv = conv
+                    }
+                    .background(selectedConv?.id == conv.id ? Theme.primarySoft : .clear)
+            } else {
+                NavigationLink(value: conv) { EmptyView() }.opacity(0)
+                ConversationRow(conv: conv)
+            }
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparatorTint(Color(light: 0x000000, lightAlpha: 0.06, dark: 0xFFFFFF, darkAlpha: 0.08))
+        .listRowSeparator(.hidden, edges: .top)
+        .alignmentGuide(.listRowSeparatorLeading) { d in
+            // Inset the separator past the avatar block (design 4b).
+            d[.leading] + 81
+        }
+    }
+
+    /// Search fan-out: conversations beyond the loaded pages, customers and
+    /// calls — same query, appended under the local matches.
+    @ViewBuilder
+    private func globalResults(split: Bool) -> some View {
+        if !query.isEmpty {
+            if globalVM.searching && !globalVM.hasResults {
+                HStack { Spacer(); ProgressView().tint(Theme.primary); Spacer() }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(globalExtraConversations) { conv in
+                conversationCell(conv, split: split)
+            }
+            if !globalVM.customers.isEmpty {
+                searchSectionTitle(L("العملاء"))
+                ForEach(globalVM.customers) { c in
+                    ZStack {
+                        NavigationLink {
+                            CustomerReportDetailView(conversationId: c.conversationId, title: c.title)
+                        } label: { EmptyView() }.opacity(0)
+                        customerRow(c)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+            if !globalVM.calls.isEmpty {
+                searchSectionTitle(L("المكالمات"))
+                ForEach(globalVM.calls) { call in
+                    callRow(call)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+        }
+    }
+
+    private func searchSectionTitle(_ t: String) -> some View {
+        Text(t).font(.wx(13, .bold)).foregroundStyle(Theme.onMuted)
+            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 2)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    private func customerRow(_ c: StatCustomer) -> some View {
+        HStack(spacing: 12) {
+            Avatar(name: c.title, size: 42)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(c.title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                if let phone = c.phone, !phone.isEmpty {
+                    Text(phone).font(.wx(12)).foregroundStyle(Theme.onMuted)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
+            }
+            Spacer()
+            Image(icon: .pdf).font(.wx(14)).foregroundStyle(Theme.info)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 9)
+    }
+
+    private func callRow(_ call: VoiceCall) -> some View {
+        HStack(spacing: 12) {
+            Image(icon: call.isMissed ? .callMissed : (call.isInbound ? .callIn : .callOut))
+                .font(.wx(16))
+                .foregroundStyle(call.isMissed ? Theme.danger : (call.isInbound ? Theme.success : Theme.info))
+                .frame(width: 42, height: 42)
+                .background(Theme.surface2, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(call.title).font(.wx(15, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                Text(shortTime(call.startedAt)).font(.wx(12)).foregroundStyle(Theme.onMuted)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16).padding(.vertical, 9)
+    }
 }
 
+/// One conversation row per design 4b: avatar 52 wearing the account-color
+/// ring (2.5px background gap + 2px color), name 17/600, amber time for
+/// unread rows, amber-gradient unread counter — and escalated conversations
+/// (upset patient, metadata.aiEscalate) lifted onto a glass card with the
+/// red follow-up badge.
 struct ConversationRow: View {
     let conv: Conversation
-    /// AI-draft escalation: the server flags an upset patient in
-    /// conversations.metadata.aiEscalate (cleared when the draft resolves).
-    /// Web parity: a red edge on the row plus a follow-up chip.
     private var isEscalated: Bool { conv.metadata?.aiEscalate != nil }
+
+    private var ringColor: Color? {
+        guard let inst = conv.instance else { return nil }
+        return AccountColor.color(inst.id.isEmpty ? inst.label : inst.id)
+    }
+
     var body: some View {
+        if isEscalated {
+            content
+                .padding(.horizontal, 14).padding(.vertical, 11)
+                .glassCard(22)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+        } else {
+            content
+                .padding(.horizontal, 16).padding(.vertical, 11)
+        }
+    }
+
+    private var content: some View {
         HStack(spacing: 13) {
-            Avatar(name: conv.title, size: 52)
+            ringedAvatar
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     if conv.isPinned {
@@ -586,13 +662,13 @@ struct ConversationRow: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.wx(10)).foregroundStyle(Theme.danger)
                     }
-                    Text(conv.title).font(.wx(15.5, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                    Text(conv.title).font(.wx(17, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                     Spacer()
-                    Text(shortTime(conv.lastAt)).font(.wx(11))
-                        .foregroundStyle(conv.unread > 0 ? Theme.primary : Theme.onFaint)
+                    Text(shortTime(conv.lastAt)).font(.wx(13, .semibold))
+                        .foregroundStyle(conv.unread > 0 ? Theme.unreadTime : Theme.onFaint)
                 }
                 HStack {
-                    Text(conv.preview).font(.wx(13.5)).foregroundStyle(Theme.onMuted).lineLimit(1)
+                    Text(conv.preview).font(.wx(15)).foregroundStyle(Theme.onMuted).lineLimit(1)
                     Spacer()
                     if isEscalated {
                         Text(L("متابعة")).font(.wx(10, .bold))
@@ -601,29 +677,25 @@ struct ConversationRow: View {
                             .background(Theme.danger, in: Capsule())
                     }
                     if conv.unread > 0 {
-                        Text("\(conv.unread)").font(.wx(11, .bold))
-                            .foregroundStyle(Theme.onPrimary)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Theme.primary, in: Capsule())
+                        Text("\(conv.unread)").font(.wx(12, .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(Theme.amberAction, in: Capsule())
                     }
                 }
-                if let acct = conv.instance?.label {
-                    Text(acct).font(.wx(10, .semibold)).foregroundStyle(.white)
-                        .padding(.horizontal, 8).padding(.vertical, 1)
-                        .background(AccountColor.color(conv.instance?.id ?? acct), in: Capsule())
-                        .padding(.top, 2)
-                }
-            }
-        }
-        .padding(.horizontal, 16).padding(.vertical, 11)
-        .overlay(alignment: .leading) {
-            if isEscalated {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Theme.danger)
-                    .frame(width: 3)
-                    .padding(.vertical, 8)
             }
         }
     }
-}
 
+    /// The account ring: 2.5px background gap, then 2px of the account color.
+    @ViewBuilder
+    private var ringedAvatar: some View {
+        if let ring = ringColor {
+            Avatar(name: conv.title, size: 52)
+                .padding(2.5)
+                .overlay(Circle().strokeBorder(ring, lineWidth: 2))
+        } else {
+            Avatar(name: conv.title, size: 52)
+        }
+    }
+}

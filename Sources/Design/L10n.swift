@@ -393,5 +393,12 @@ enum L10n {
         // WhatsX 2.0 redesign (phase A)
         "بحث شامل": "Global search",
         "الأنظمة والتدفق والويب هوك": "Systems, flow & webhook",
+
+        // WhatsX 2.0 redesign (phase B)
+        "مساحة عمل فريقك على واتساب.": "Your team's WhatsApp workspace.",
+        "محادثات، مكالمات، وتقارير — على خادمكم الخاص.": "Chats, calls and reports — on your own server.",
+        "دخول": "Sign in",
+        "الحسابات": "Accounts",
+        "تصفية الحسابات": "Filter accounts",
     ]
 }
