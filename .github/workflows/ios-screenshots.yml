@@ -1,0 +1,97 @@
+# App Store screenshots — on demand, no Mac needed.
+#
+# Runs the WhatsXScreenshots UI tests in demo mode on an iPhone and an iPad
+# simulator (both sizes App Store Connect requires), overrides the status
+# bar to the classic 9:41 / full bars, and uploads the captured PNGs as a
+# downloadable artifact. Needs no secrets: the demo session is fixture-only.
+name: ios-screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen and xcparse
+        run: brew install xcodegen chargepoint/xcparse/xcparse
+
+      - name: Generate the Xcode project
+        run: |
+          xcodegen generate
+          xcodebuild -list -project WhatsX.xcodeproj
+
+      - name: Pick simulators
+        id: sims
+        run: |
+          IPHONE=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [0-9]+ Pro Max' | sort -V | tail -1)
+          IPAD=$(xcrun simctl list devices available \
+            | grep -oE 'iPad Pro 13-inch \(M[0-9]+\)' | head -1)
+          if [ -z "$IPAD" ]; then
+            IPAD=$(xcrun simctl list devices available \
+              | grep -oE 'iPad Pro [^(]*\([^)]*\)' | head -1)
+          fi
+          echo "iphone=$IPHONE" >> "$GITHUB_OUTPUT"
+          echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
+          echo "Using: $IPHONE / $IPAD"
+
+      - name: Capture on iPhone
+        run: |
+          DEVICE="${{ steps.sims.outputs.iphone }}"
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl status_bar "$DEVICE" override \
+            --time "9:41" --batteryState charged --batteryLevel 100 \
+            --cellularBars 4 --wifiBars 3 || true
+          xcodebuild test \
+            -project WhatsX.xcodeproj \
+            -scheme WhatsXScreenshots \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -resultBundlePath build/shots-iphone.xcresult \
+            CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+
+      - name: Capture on iPad
+        run: |
+          DEVICE="${{ steps.sims.outputs.ipad }}"
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl status_bar "$DEVICE" override \
+            --time "9:41" --batteryState charged --batteryLevel 100 \
+            --cellularBars 4 --wifiBars 3 || true
+          xcodebuild test \
+            -project WhatsX.xcodeproj \
+            -scheme WhatsXScreenshots \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -resultBundlePath build/shots-ipad.xcresult \
+            CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+
+      - name: Export PNGs from the result bundles
+        run: |
+          mkdir -p build/screenshots/iphone build/screenshots/ipad
+          xcparse screenshots build/shots-iphone.xcresult build/screenshots/iphone
+          xcparse screenshots build/shots-ipad.xcresult build/screenshots/ipad
+          echo "--- captured files ---"
+          find build/screenshots -type f | sort
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appstore-screenshots
+          path: build/screenshots
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload result bundles on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-xcresults
+          path: build/*.xcresult
+          retention-days: 7
+          if-no-files-found: ignore

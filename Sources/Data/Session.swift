@@ -14,6 +14,15 @@ final class Session: ObservableObject {
 
     /// On launch, try to restore an existing session from the stored cookie.
     func bootstrap() async {
+        if DemoMode.active {
+            // Fixture-only session for screenshots/demos: Arabic UI, no
+            // cookies, and none of the live services (socket, CallKit,
+            // notifications, push tokens) get started.
+            AppSettings.shared.language = "ar"
+            user = try? await Api.shared.me()
+            isBootstrapping = false
+            return
+        }
         // Bring the session cookie back from the Keychain (and migrate
         // whatever older versions left in the file-backed store) before
         // the first request goes out.

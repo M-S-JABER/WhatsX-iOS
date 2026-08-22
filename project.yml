@@ -69,6 +69,24 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
+  # UI-test bundle that captures App Store screenshots against demo-mode
+  # fixtures. Lives in its own scheme (WhatsXScreenshots, below) so the
+  # regular ios-build test step never runs it — only the ios-screenshots
+  # workflow does, on demand.
+  WhatsXUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: WhatsX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: WhatsX
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+
   # اختبارات وحدات مستضافة داخل التطبيق (@testable import WhatsX).
   # تعمل في CI تلقائياً: خطوة الاختبار في ios-build.yml تكتشف مجلد Tests/.
   WhatsXTests:
@@ -85,3 +103,15 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhatsX.app/WhatsX"
         BUNDLE_LOADER: "$(TEST_HOST)"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+
+# Dedicated scheme for the screenshot run — keeps UI tests out of the main
+# WhatsX scheme so every-push CI builds stay fast.
+schemes:
+  WhatsXScreenshots:
+    build:
+      targets:
+        WhatsX: all
+        WhatsXUITests: [test]
+    test:
+      targets:
+        - WhatsXUITests
