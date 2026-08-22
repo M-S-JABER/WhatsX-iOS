@@ -63,12 +63,30 @@ struct MessageBubble: View {
 
             }
             .padding(.horizontal, 11).padding(.vertical, 7)
-            .background(outbound ? Theme.bubbleOut : Theme.bubbleIn,
-                        in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.primary, lineWidth: highlighted ? 2 : 0))
+            .background(outbound ? Theme.bubbleOut : Theme.bubbleIn, in: bubbleShape)
+            .overlay(bubbleShape.stroke(Theme.primary, lineWidth: highlighted ? 2 : 0))
             .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
             .frame(maxWidth: 300, alignment: outbound ? .trailing : .leading)
             if !outbound { Spacer(minLength: 40) }
+        }
+    }
+
+    /// Design 4c bubble: r18 with a 6pt "tail" corner at the bottom on the
+    /// sender's side. UnevenRoundedRectangle needs iOS 16.4 — older systems
+    /// (and the Swift Playgrounds package build, whose platform floor is
+    /// iOS 16) keep the uniform r18, so the app's minimum stays 16.0 and no
+    /// device is dropped. Leading/trailing flip automatically under RTL.
+    private var bubbleShape: AnyShape {
+        if #available(iOS 16.4, *) {
+            return AnyShape(UnevenRoundedRectangle(
+                cornerRadii: .init(
+                    topLeading: 18,
+                    bottomLeading: outbound ? 18 : 6,
+                    bottomTrailing: outbound ? 6 : 18,
+                    topTrailing: 18),
+                style: .continuous))
+        } else {
+            return AnyShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
