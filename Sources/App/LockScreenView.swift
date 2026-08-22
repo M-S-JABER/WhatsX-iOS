@@ -35,13 +35,15 @@ struct LockScreenView: View {
 /// the lock screen so the identity reads the same everywhere.
 struct BrandMark: View {
     var size: CGFloat = 74
+    /// WhatsX 2.0 login (design 4a): a FLAT amber tile, no gradient.
+    var flat: Bool = false
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                .fill(Theme.heroGradient)
+            RoundedRectangle(cornerRadius: size * 0.25, style: .continuous)
+                .fill(flat ? AnyShapeStyle(Theme.amberOnDark) : AnyShapeStyle(Theme.heroGradient))
                 .frame(width: size, height: size)
-                .shadow(color: .black.opacity(0.18), radius: size * 0.12, y: size * 0.06)
+                .shadow(color: .black.opacity(flat ? 0.25 : 0.18), radius: size * 0.12, y: size * 0.06)
             Image(systemName: "bubble.left.fill")
                 .font(.system(size: size * 0.5))
                 .foregroundStyle(.white)
