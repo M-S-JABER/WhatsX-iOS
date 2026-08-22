@@ -39,6 +39,23 @@ final class MessagePushTests: XCTestCase {
         XCTAssertNil(MessagePushPayload.conversationId(from: [:]))
     }
 
+    /// A payload that dropped the custom key still routes via aps.thread-id
+    /// (the spec sets both to the conversation id).
+    func testThreadIdFallback() {
+        let userInfo: [AnyHashable: Any] = [
+            "aps": ["alert": ["title": "أحمد"], "thread-id": "c9"],
+        ]
+        XCTAssertEqual(MessagePushPayload.conversationId(from: userInfo), "c9")
+    }
+
+    func testExplicitConversationIdWinsOverThreadId() {
+        let userInfo: [AnyHashable: Any] = [
+            "aps": ["thread-id": "wrong"],
+            "conversationId": "right",
+        ]
+        XCTAssertEqual(MessagePushPayload.conversationId(from: userInfo), "right")
+    }
+
     func testHexTokenEncoding() {
         XCTAssertEqual(VoipPayload.hexToken(Data([0x00, 0xAB, 0xFF])), "00abff")
         XCTAssertEqual(VoipPayload.hexToken(Data()), "")
