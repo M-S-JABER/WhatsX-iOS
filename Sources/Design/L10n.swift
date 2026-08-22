@@ -415,5 +415,14 @@ enum L10n {
         "التفضيلات": "Preferences",
         "إدارة العمل": "Work management",
         "للمدراء": "Managers",
+
+        // WhatsX 2.0 polish round (sheets 4g/4i/4j/4k)
+        "الفريق": "Team",
+        "المستخدمون والأدوار والقوالب": "Users, roles, and templates",
+        "الأدوار": "Roles",
+        "اتصال": "Call",
+        "نسخ الرقم": "Copy number",
+        "نُسخ ✓": "Copied ✓",
+        "الوسائط المشتركة": "Shared media",
     ]
 }

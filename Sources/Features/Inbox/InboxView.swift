@@ -510,7 +510,7 @@ struct InboxView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .navigationDestination(for: Conversation.self) { conv in
-                    ChatView(conversation: conv)
+                    ChatView(conversation: conv, hidesTabBar: true)
                 }
                 .refreshable { await vm.load() }
             }

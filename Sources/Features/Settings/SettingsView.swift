@@ -92,17 +92,14 @@ struct SettingsView: View {
                             .padding(.top, 8)
                     }
                     group {
-                        NavigationLink { UsersView() } label: {
-                            SettingRow(icon: .users, title: L("إدارة المستخدمين"), trailingChevron: true)
-                        }.buttonStyle(.plain)
-                        NavigationLink { RolesView() } label: {
-                            SettingRow(icon: .shield, title: L("الأدوار والصلاحيات"), trailingChevron: true)
+                        // Design 4k folded users + roles + templates into
+                        // one «الفريق» screen behind a segmented control.
+                        NavigationLink { TeamView() } label: {
+                            SettingRow(icon: .users, title: L("الفريق"),
+                                       subtitle: L("المستخدمون والأدوار والقوالب"), trailingChevron: true)
                         }.buttonStyle(.plain)
                         NavigationLink { WhatsAppAccountsView() } label: {
                             SettingRow(icon: .whatsapp, title: L("حسابات واتساب"), trailingChevron: true)
-                        }.buttonStyle(.plain)
-                        NavigationLink { TemplatesView() } label: {
-                            SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true)
                         }.buttonStyle(.plain)
                         NavigationLink { IntegrationsView() } label: {
                             SettingRow(icon: .hub, title: L("التكاملات"),

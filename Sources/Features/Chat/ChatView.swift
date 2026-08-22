@@ -32,8 +32,14 @@ struct ChatView: View {
     @State private var customerTyping = false
     @State private var typingHideTask: Task<Void, Never>?
 
-    init(conversation: Conversation) {
+    /// True when this chat is PUSHED over a tab root: the floating tab bar
+    /// hides for the whole visit so the composer owns the bottom edge.
+    /// Sheet presentations and the iPad split pane leave it false.
+    private let hidesTabBar: Bool
+
+    init(conversation: Conversation, hidesTabBar: Bool = false) {
         _vm = StateObject(wrappedValue: ChatViewModel(conversation: conversation))
+        self.hidesTabBar = hidesTabBar
     }
 
     /// Ids of messages matching the in-chat search, in timeline order.
@@ -74,12 +80,16 @@ struct ChatView: View {
         // back gesture along explicitly.
         .swipeBackEnabled()
         .task { await vm.load() }
-        .onAppear { Notifier.shared.activeConversationId = vm.conversation.id }
+        .onAppear {
+            Notifier.shared.activeConversationId = vm.conversation.id
+            if hidesTabBar { InboxBus.shared.chatDidAppear() }
+        }
         .onDisappear {
             vm.cancelRealtimeReload()
             if Notifier.shared.activeConversationId == vm.conversation.id {
                 Notifier.shared.activeConversationId = nil
             }
+            if hidesTabBar { InboxBus.shared.chatDidDisappear() }
         }
         .onReceive(Realtime.shared.events) { event in
             guard event.conversationId == nil || event.conversationId == vm.conversation.id else { return }

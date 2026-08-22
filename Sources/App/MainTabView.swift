@@ -33,12 +33,29 @@ final class InboxBus: ObservableObject {
         defer { pendingConversationId = nil }
         return pendingConversationId
     }
+
+    /// How many chat screens are currently PUSHED over a tab root (phone
+    /// navigation). While any is open the floating tab bar hides: the chat
+    /// composer owns the bottom edge (TestFlight feedback on 1.23.0 — the
+    /// bar covered the composer, because pushed destinations don't inherit
+    /// a safeAreaInset applied outside their NavigationStack on iOS 16/17).
+    /// The iPad split pane and sheet presentations don't count.
+    @Published private(set) var pushedChats = 0
+
+    func chatDidAppear() {
+        withAnimation(.easeInOut(duration: 0.22)) { pushedChats += 1 }
+    }
+
+    func chatDidDisappear() {
+        withAnimation(.easeInOut(duration: 0.22)) { pushedChats = max(0, pushedChats - 1) }
+    }
 }
 
 struct MainTabView: View {
     @State private var tab: MainTab = .chats
     @State private var lastChatsTap: Date? = nil
     @StateObject private var unread = UnreadCenter.shared
+    @StateObject private var bus = InboxBus.shared
     @Namespace private var activeTabNamespace
 
     var body: some View {
@@ -59,8 +76,14 @@ struct MainTabView: View {
         .tint(Theme.primary)
         .environment(\.horizontalSizeClass, .compact)
         // The floating bar claims its own bottom band, so every screen's
-        // content (and their own bottom overlays) stays above it.
-        .safeAreaInset(edge: .bottom) { floatingBar }
+        // content (and their own bottom overlays) stays above it. It hides
+        // entirely while a chat is pushed — the composer takes the edge.
+        .safeAreaInset(edge: .bottom) {
+            if bus.pushedChats == 0 {
+                floatingBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         // A tapped message notification always lands on the chats tab; the
         // inbox itself performs the navigation to the conversation.
         .onReceive(InboxBus.shared.openConversation) { _ in
