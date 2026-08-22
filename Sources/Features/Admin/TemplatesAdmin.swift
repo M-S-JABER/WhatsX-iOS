@@ -43,8 +43,7 @@ struct TemplatesView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle(L("القوالب والردود"))
-        .navigationBarTitleDisplayMode(.inline)
+        // Hosted inside TeamView (design 4k), which owns the title.
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {

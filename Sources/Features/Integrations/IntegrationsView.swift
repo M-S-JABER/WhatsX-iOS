@@ -1,10 +1,13 @@
 import SwiftUI
 
+// Design 4g: FOUR segments — the old overview tab dissolved into a
+// persistent KPI strip plus the health grid and external-template monitor
+// now living at the bottom of the systems tab.
 enum IntegTab: String, CaseIterable {
-    case overview, external, flow, webhook, logs
+    case external, flow, webhook, logs
     var title: String {
         switch self {
-        case .overview: return L("نظرة عامة"); case .external: return L("الأنظمة")
+        case .external: return L("الأنظمة")
         case .flow: return L("التدفّق"); case .webhook: return "Webhook"
         case .logs: return L("السجلّ")
         }
@@ -94,8 +97,7 @@ final class IntegrationsViewModel: ObservableObject {
     /// loaded tabs render instantly (the refresh button still forces it).
     func needsLoad(_ tab: IntegTab) -> Bool {
         switch tab {
-        case .overview: return overview == nil
-        case .external: return integrations.isEmpty
+        case .external: return integrations.isEmpty || overview == nil
         case .flow: return flow.isEmpty
         case .webhook: return webhook == nil
         case .logs: return logs.isEmpty
@@ -105,7 +107,7 @@ final class IntegrationsViewModel: ObservableObject {
 
 struct IntegrationsView: View {
     @StateObject private var vm = IntegrationsViewModel()
-    @State private var tab: IntegTab = .overview
+    @State private var tab: IntegTab = .external
     @State private var editing: PublicIntegration?
     @State private var showForm = false
     @State private var openConversation: Conversation?
@@ -131,12 +133,21 @@ struct IntegrationsView: View {
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
 
-            tabbar
+            kpiStrip
+
+            GlassSegmented(
+                items: IntegTab.allCases.map { (key: $0.rawValue, title: $0.title) },
+                selection: Binding(
+                    get: { tab.rawValue },
+                    set: { raw in
+                        tab = IntegTab(rawValue: raw) ?? .external
+                        if vm.needsLoad(tab) { Task { await reload() } }
+                    }))
+                .padding(.horizontal, 14).padding(.bottom, 10)
 
             ScrollView {
                 VStack(spacing: 14) {
                     switch tab {
-                    case .overview: overviewTab
                     case .external: externalTab
                     case .flow: flowTab
                     case .webhook: webhookTab
@@ -163,31 +174,34 @@ struct IntegrationsView: View {
         } message: { Text(notice ?? "") }
     }
 
-    private var tabbar: some View {
-        HStack(spacing: 4) {
-            ForEach(IntegTab.allCases, id: \.self) { t in
-                let active = tab == t
-                Button {
-                    tab = t
-                    if vm.needsLoad(t) { Task { await reload() } }
-                } label: {
-                    VStack(spacing: 6) {
-                        Text(t.title).font(.wx(14, .semibold))
-                            .foregroundStyle(active ? Theme.onSurface : Theme.onMuted)
-                        Rectangle().fill(active ? Theme.primary : .clear).frame(height: 2)
-                    }
-                    .frame(maxWidth: .infinity)
-                }.buttonStyle(.plain)
+    /// Persistent KPI chips above the segmented (design 4g): webhook
+    /// success rate and current failure count, straight from the summary.
+    @ViewBuilder private var kpiStrip: some View {
+        if let s = vm.overview?.summary {
+            HStack(spacing: 11) {
+                kpiChip(L("نجاح Webhook"), fmtRate(s.webhookSuccessRate), Theme.success)
+                kpiChip(L("إخفاقات"), "\(s.failedIntegrations)",
+                        s.failedIntegrations > 0 ? Theme.danger : Theme.onSurface)
             }
+            .padding(.horizontal, 14).padding(.bottom, 10)
         }
-        .padding(.horizontal, 12)
-        .overlay(Rectangle().fill(Theme.outline).frame(height: 1), alignment: .bottom)
+    }
+
+    private func kpiChip(_ label: String, _ value: String, _ color: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(label).font(.wx(12.5)).foregroundStyle(Theme.onMuted)
+            Spacer(minLength: 4)
+            Text(value).font(.wx(17, .bold)).monospacedDigit().foregroundStyle(color)
+        }
+        .padding(.horizontal, 13).padding(.vertical, 9)
+        .glassCard(14)
     }
 
     private func reload() async {
         switch tab {
-        case .overview: await vm.loadOverview()
-        case .external: await vm.loadIntegrations()
+        case .external:
+            await vm.loadIntegrations()
+            await vm.loadOverview()
         case .flow: await vm.loadFlow()
         case .webhook: await vm.loadWebhook()
         case .logs: await vm.loadLogs()
@@ -268,16 +282,9 @@ struct IntegrationsView: View {
         }
     }
 
-    // MARK: Overview
-    @ViewBuilder private var overviewTab: some View {
-        if let s = vm.overview?.summary {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
-                metric(L("التكاملات"), "\(s.totalIntegrations)", Theme.onSurface)
-                metric(L("حسابات متصلة"), "\(s.whatsappAccountsConnected)", Theme.onSurface)
-                metric(L("نجاح Webhook"), fmtRate(s.webhookSuccessRate), Theme.success)
-                metric(L("إخفاقات"), "\(s.failedIntegrations)", Theme.warning)
-            }
-        }
+    // MARK: Health + external-template monitor (design 4g: these live at
+    // the bottom of the systems tab now that the overview tab is gone)
+    @ViewBuilder private var healthAndMonitor: some View {
         if let h = vm.overview?.health {
             Text(L("صحّة الأرقام")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,16 +295,9 @@ struct IntegrationsView: View {
                 healthTile(L("فاشلة"), h.failed, Theme.danger)
             }
         }
-        if vm.overview == nil {
-            if let err = vm.loadError {
-                LoadFailedView(message: err) { Task { await vm.loadOverview() } }
-            } else {
-                ProgressView().tint(Theme.primary).padding(.top, 40)
-            }
-        }
 
         // Template sends pushed by external systems (web parity: the
-        // integration monitor list on the Overview tab).
+        // integration monitor list).
         Text(L("قوالب النظام الخارجي")).font(.wx(16, .bold)).foregroundStyle(Theme.onMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
         if vm.monitor.isEmpty {
@@ -427,9 +427,10 @@ struct IntegrationsView: View {
     // MARK: External
     @ViewBuilder private var externalTab: some View {
         if vm.integrations.isEmpty, let err = vm.loadError {
-            LoadFailedView(message: err) { Task { await vm.loadIntegrations() } }
+            LoadFailedView(message: err) { Task { await reload() } }
         } else if vm.integrations.isEmpty {
             Text(L("لا أنظمة خارجية")).foregroundStyle(Theme.onMuted).padding(.top, 40)
+            healthAndMonitor
         } else {
             ForEach(vm.integrations) { item in
                 VStack(alignment: .leading, spacing: 10) {
@@ -482,6 +483,7 @@ struct IntegrationsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassCard(22)
             }
+            healthAndMonitor
         }
     }
 

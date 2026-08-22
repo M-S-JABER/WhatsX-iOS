@@ -46,8 +46,7 @@ struct UsersView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle(L("المستخدمون"))
-        .navigationBarTitleDisplayMode(.inline)
+        // Hosted inside TeamView (design 4k), which owns the title.
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { createOpen = true } label: { Image(systemName: "plus") }

@@ -8,6 +8,7 @@ struct ConversationInfoView: View {
     let messages: [Message]
     @Environment(\.dismiss) private var dismiss
     @State private var tab: InfoTab = .about
+    @State private var copiedPhone = false
 
     enum InfoTab: String, CaseIterable {
         case about, media, files, links
@@ -21,45 +22,100 @@ struct ConversationInfoView: View {
         }
     }
 
+    // WhatsX 2.0 (design 4i): a grabber sheet — contact header with call and
+    // copy actions on top, the floating-thumb segmented below, no nav bar.
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker(L("القسم"), selection: $tab) {
-                    ForEach(InfoTab.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16).padding(.vertical, 10)
+        VStack(spacing: 0) {
+            sheetHeader
 
-                ScrollView {
-                    switch tab {
-                    case .about: aboutSection
-                    case .media: mediaSection
-                    case .files: filesSection
-                    case .links: linksSection
-                    }
+            GlassSegmented(
+                items: InfoTab.allCases.map { (key: $0.rawValue, title: $0.title) },
+                selection: Binding(
+                    get: { tab.rawValue },
+                    set: { tab = InfoTab(rawValue: $0) ?? .about }))
+                .padding(.horizontal, 16).padding(.bottom, 10)
+
+            ScrollView {
+                switch tab {
+                case .about: aboutSection
+                case .media: mediaSection
+                case .files: filesSection
+                case .links: linksSection
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background.ignoresSafeArea())
-            .navigationTitle(conversation.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(L("إغلاق")) { dismiss() } } }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background.ignoresSafeArea())
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Header (avatar · name · phone · actions)
+
+    private var phoneDigits: String {
+        (conversation.phone ?? "").filter { $0.isNumber }
+    }
+
+    private var sheetHeader: some View {
+        VStack(spacing: 8) {
+            Avatar(name: conversation.title, size: 72)
+                .padding(.top, 18)
+            Text(conversation.title).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
+            if let phone = conversation.phone, !phone.isEmpty {
+                Text(phone).font(.wx(14)).monospaced().foregroundStyle(Theme.onMuted)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+
+            HStack(spacing: 10) {
+                if CallCenter.shared.canCarryAudio, !phoneDigits.isEmpty {
+                    Button {
+                        Haptics.action()
+                        dismiss()
+                        CallCenter.shared.startOutbound(
+                            to: phoneDigits,
+                            displayName: conversation.displayName,
+                            instanceId: conversation.instanceId)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(icon: .call).font(.wx(14))
+                            Text(L("اتصال")).font(.wx(14, .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20).padding(.vertical, 10)
+                        .background(Theme.amberAction, in: Capsule())
+                        .shadow(color: Theme.amberShadow, radius: 8, y: 3)
+                    }
+                    .buttonStyle(.pressable)
+                }
+                if let phone = conversation.phone, !phone.isEmpty {
+                    Button {
+                        Haptics.tap()
+                        UIPasteboard.general.string = phone
+                        withAnimation { copiedPhone = true }
+                        Task {
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                            withAnimation { copiedPhone = false }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(icon: copiedPhone ? .check : .copy).font(.wx(14))
+                            Text(copiedPhone ? L("نُسخ ✓") : L("نسخ الرقم")).font(.wx(14, .semibold))
+                        }
+                        .foregroundStyle(copiedPhone ? Theme.success : Theme.onSurface)
+                        .padding(.horizontal, 20).padding(.vertical, 10)
+                        .glassCapsule()
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+            .padding(.top, 4).padding(.bottom, 14)
+        }
     }
 
     // MARK: - About
 
     private var aboutSection: some View {
         VStack(spacing: 10) {
-            Avatar(name: conversation.title, size: 76)
-                .padding(.top, 14)
-            Text(conversation.title).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
-            if let phone = conversation.phone, !phone.isEmpty {
-                Text(phone).font(.wx(15)).foregroundStyle(Theme.onMuted)
-                    .environment(\.layoutDirection, .leftToRight)
-            }
-
             VStack(spacing: 0) {
                 if let acct = conversation.instance?.label {
                     infoRow(L("حساب واتساب"), acct)
@@ -87,9 +143,11 @@ struct ConversationInfoView: View {
                     }
                     .padding(.horizontal, 14).padding(.vertical, 11)
                 }
+                infoRow(L("الوسائط المشتركة"), "\(imageMessages.count + fileMessages.count)")
             }
             .glassCard(18)
             .padding(.horizontal, 16)
+            .padding(.top, 4)
 
             if let labels = conversation.metadata?.labels, !labels.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {

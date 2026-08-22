@@ -9,20 +9,27 @@ struct NewConversationSheet: View {
     @State private var instancesError: String?
     @State private var creating = false
     @State private var error: String?
+    @FocusState private var phoneFocused: Bool
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(L("محادثة جديدة")).font(.wx(20, .bold)).foregroundStyle(Theme.onSurface)
 
+                // WhatsX 2.0 field recipe (design 4j): r12 surface with a
+                // 1.5px border that warms to amber while focused.
                 HStack(spacing: 10) {
                     Image(icon: .call).foregroundStyle(Theme.onFaint)
                     TextField("+9647xxxxxxxxx", text: $phone)
                         .keyboardType(.phonePad).foregroundStyle(Theme.onSurface)
+                        .focused($phoneFocused)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 13)
-                .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outline, lineWidth: 1))
+                .background(Theme.surface1, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(phoneFocused ? Theme.primary : Theme.outline, lineWidth: 1.5))
+                .animation(.easeOut(duration: 0.15), value: phoneFocused)
 
                 if !instances.isEmpty {
                     Text(L("الرقم المُرسِل")).font(.wx(16, .semibold)).foregroundStyle(Theme.onMuted)
@@ -45,21 +52,28 @@ struct NewConversationSheet: View {
 
                 if let error { Text(error).font(.wx(13)).foregroundStyle(Theme.danger) }
 
-                Button { Task { await create() } } label: {
+                Button {
+                    Haptics.action()
+                    Task { await create() }
+                } label: {
                     HStack {
-                        if creating { ProgressView().tint(Theme.onPrimary) }
+                        if creating { ProgressView().tint(.white) }
                         else { Text(L("بدء المحادثة")).font(.wx(17, .semibold)) }
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
-                    .background(Theme.primary, in: RoundedRectangle(cornerRadius: 14))
-                    .foregroundStyle(Theme.onPrimary)
+                    .background(Theme.amberAction, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(.white)
+                    .shadow(color: Theme.amberShadow, radius: 10, y: 4)
                 }
-                .disabled(phone.isEmpty || creating)
+                .buttonStyle(.pressable)
+                .disabled(phone.isEmpty || creating || (!instances.isEmpty && selectedId == nil))
+                .opacity(phone.isEmpty ? 0.6 : 1)
             }
             .padding(20)
         }
         .background(Theme.surface.ignoresSafeArea())
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         .task { await loadInstances() }
     }
 
@@ -78,9 +92,11 @@ struct NewConversationSheet: View {
                 if selected { Image(icon: .check).foregroundStyle(Theme.primary) }
             }
             .padding(.horizontal, 13).padding(.vertical, 11)
-            .background(selected ? Theme.primaryContainer : Theme.surface, in: RoundedRectangle(cornerRadius: 13))
-            .overlay(RoundedRectangle(cornerRadius: 13).stroke(selected ? Theme.primary : Theme.outline, lineWidth: 1))
+            .background(selected ? Theme.primarySoft : Theme.surface1, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .stroke(selected ? Theme.primary : Theme.outline, lineWidth: selected ? 1.5 : 1))
         }.buttonStyle(.plain)
+        .animation(.easeOut(duration: 0.15), value: selected)
     }
 
     private func loadInstances() async {
@@ -97,9 +113,14 @@ struct NewConversationSheet: View {
     private func create() async {
         creating = true; error = nil
         do {
-            _ = try await Api.shared.createConversation(
+            let resp = try await Api.shared.createConversation(
                 CreateConversationRequest(phone: phone.trimmingCharacters(in: .whitespaces), displayName: nil, instanceId: selectedId))
             dismiss()
+            // Land the operator straight in the new thread (design 4j) —
+            // same deep-link path a tapped notification takes.
+            if let conv = resp.conversation {
+                InboxBus.shared.requestOpenConversation(conv.id)
+            }
         } catch {
             self.error = error.apiMessage
         }

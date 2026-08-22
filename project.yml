@@ -49,7 +49,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.m-s-jaber.whatsx
         # MARKETING_VERSION is the user-facing App Store version. Bump it
         # by hand for every public release.
-        MARKETING_VERSION: "1.23.0"
+        MARKETING_VERSION: "1.24.0"
         # aps-environment for VoIP (PushKit) call pushes. The App ID needs
         # the Push Notifications capability and a regenerated match profile
         # (ios-certificates → refresh-profiles) or signing fails.
