@@ -131,6 +131,13 @@ final class Api {
         body: Encodable? = nil,
         as type: T.Type = T.self
     ) async throws -> T {
+        // Screenshot/demo sessions answer from canned fixtures. Checked
+        // before makeURL on purpose: a demo launch has no server configured
+        // and must never put a request on the wire.
+        if DemoMode.active {
+            if let empty = EmptyResponse() as? T { return empty }
+            return try decoder.decode(T.self, from: DemoFixtures.payload(for: path))
+        }
         var req = URLRequest(url: try makeURL(path, query: query))
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
