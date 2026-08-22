@@ -17,7 +17,10 @@ jobs:
       - name: Update Projects row + add Work Log entry
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          PROJECT_PAGE_ID: ${{ secrets.NOTION_PROJECT_PAGE_ID }}
+          # The page id is not a secret (it already appears in CLAUDE.md);
+          # defaulting it here leaves NOTION_TOKEN as the only secret to
+          # configure. A NOTION_PROJECT_PAGE_ID secret still overrides.
+          PROJECT_PAGE_ID: ${{ secrets.NOTION_PROJECT_PAGE_ID || '3c4e6e1b-8fb5-814f-81cf-e85fbe785c40' }}
           WORKLOG_DB: 7caae097-3ac5-49f0-9d1e-ac9fa6ed09f8
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           REPO_NAME: ${{ github.event.repository.name }}
