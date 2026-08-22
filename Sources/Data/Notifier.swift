@@ -96,14 +96,16 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     // Tapping a message push (typically from the lock screen, app closed)
-    // opens the conversation it references.
+    // opens the conversation it references. Only the default tap action
+    // navigates — dismissing a banner must not hijack the screen.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        if let id = MessagePushPayload.conversationId(from: userInfo) {
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+           let id = MessagePushPayload.conversationId(from: userInfo) {
             Task { @MainActor in InboxBus.shared.requestOpenConversation(id) }
         }
         completionHandler()

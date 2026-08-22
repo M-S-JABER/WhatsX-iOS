@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 // NOTE: This @main entry is for building the app directly with Xcode/XcodeGen
 // on a Mac. It is EXCLUDED from the Swift Package (see Package.swift) because a
@@ -24,6 +25,12 @@ final class WhatsXAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         VoIPPush.shared.activate()
+        // Apple's rule: the notification-center delegate must be assigned
+        // BEFORE the app finishes launching, or the didReceive callback for
+        // the notification tap that COLD-STARTED the app is silently
+        // dropped — the exact "tap opens the inbox instead of the chat"
+        // bug. Notifier.start() re-assigns later, which is harmless.
+        UNUserNotificationCenter.current().delegate = Notifier.shared
         return true
     }
 

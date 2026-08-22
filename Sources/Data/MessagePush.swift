@@ -16,8 +16,14 @@ enum MessagePushPayload {
         // Tolerate both a flat payload and one nested under "whatsx".
         let root = (userInfo["whatsx"] as? [AnyHashable: Any]) ?? userInfo
         if let type = root["type"] as? String, type != incomingType { return nil }
-        guard let id = root["conversationId"] as? String, !id.isEmpty else { return nil }
-        return id
+        if let id = root["conversationId"] as? String, !id.isEmpty { return id }
+        // Fallback: the spec also sets aps.thread-id to the conversation id —
+        // covers a server payload that dropped the custom key.
+        if let aps = root["aps"] as? [AnyHashable: Any],
+           let thread = aps["thread-id"] as? String, !thread.isEmpty {
+            return thread
+        }
+        return nil
     }
 }
 
