@@ -400,5 +400,9 @@ enum L10n {
         "دخول": "Sign in",
         "الحسابات": "Accounts",
         "تصفية الحسابات": "Filter accounts",
+
+        // WhatsX 2.0 redesign (phase C)
+        "المزيد": "More",
+        "أرسل قالبًا": "Send a template",
     ]
 }

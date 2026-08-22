@@ -11,7 +11,6 @@ struct ChatView: View {
     @StateObject private var recorder = VoiceRecorder()
     @Environment(\.dismiss) private var dismiss
 
-    @State private var showAttachMenu = false
     @State private var showPhotoPicker = false
     @State private var showDocImporter = false
     @State private var showReady = false
@@ -57,7 +56,7 @@ struct ChatView: View {
                 if showChatSearch { chatSearchBar(proxy) }
                 messages
                 if let target = vm.replyTarget { replyBar(target) }
-                AiDraftPanel(vm: vm)
+                QuickReplyBar(vm: vm)
                 composer
             }
             .onChange(of: vm.messages.count) { _ in
@@ -128,12 +127,6 @@ struct ChatView: View {
         .alert(L("الاتصال"), isPresented: Binding(get: { callNotice != nil }, set: { if !$0 { callNotice = nil } })) {
             Button(L("حسنًا"), role: .cancel) {}
         } message: { Text(callNotice ?? "") }
-        .confirmationDialog(L("إرفاق"), isPresented: $showAttachMenu, titleVisibility: .visible) {
-            Button(L("صورة")) { showPhotoPicker = true }
-            Button(L("مستند")) { showDocImporter = true }
-            Button(L("قالب")) { showTemplates = true }
-            Button(L("إلغاء"), role: .cancel) {}
-        }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { item in
             guard let item else { return }
@@ -194,21 +187,28 @@ struct ChatView: View {
         withAnimation(.easeOut(duration: 0.2)) { customerTyping = false }
     }
 
+    /// WhatsX 2.0 (design 4c): a FLOATING glass header — back, avatar 38,
+    /// name + live status, ONE prominent amber call action, and everything
+    /// secondary (in-chat search, conversation info) behind «⋯».
     private var topBar: some View {
-        HStack(spacing: 6) {
-            Button { dismiss() } label: { Image(icon: .back).font(.wx(20)).foregroundStyle(Theme.onMuted) }
-                .accessibilityLabel(L("رجوع"))
-            Avatar(name: vm.conversation.title, size: 40)
+        HStack(spacing: 8) {
+            Button { dismiss() } label: {
+                Image(icon: .back).font(.wx(19)).foregroundStyle(Theme.onMuted)
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L("رجوع"))
+            Avatar(name: vm.conversation.title, size: 38)
             VStack(alignment: .leading, spacing: 1) {
-                Text(vm.conversation.title).font(.wx(16, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
+                Text(vm.conversation.title).font(.wx(16.5, .semibold)).foregroundStyle(Theme.onSurface).lineLimit(1)
                 if customerTyping {
                     HStack(spacing: 4) {
                         TypingDots()
-                        Text(L("يكتب الآن…")).font(.wx(11, .semibold)).foregroundStyle(Theme.success)
+                        Text(L("يكتب الآن…")).font(.wx(12, .semibold)).foregroundStyle(Theme.success)
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 } else if let acct = vm.conversation.instance?.label {
-                    Text(acct).font(.wx(11)).foregroundStyle(Theme.onMuted)
+                    Text(acct).font(.wx(12)).foregroundStyle(Theme.onMuted)
                 }
             }
             // Long-press the name to copy the customer's number (web parity).
@@ -221,27 +221,32 @@ struct ChatView: View {
                 }
             }
             Spacer()
-            Button { withAnimation { showChatSearch.toggle() } } label: {
-                Image(icon: .search).font(.wx(18))
-                    .foregroundStyle(showChatSearch ? Theme.primary : Theme.onMuted)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L("بحث في المحادثة"))
             Button { showCallMenu = true } label: {
-                Image(icon: .phoneCall).font(.wx(20)).foregroundStyle(Theme.primary).padding(.leading, 8)
+                Image(icon: .phoneCall).font(.wx(16, .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.amberAction, in: Circle())
+                    .shadow(color: Theme.amberShadow, radius: 6, y: 2)
             }
             .buttonStyle(.plain)
             .disabled(vm.conversation.phone?.isEmpty != false)
             .accessibilityLabel(L("الاتصال"))
-            Button { showInfo = true } label: {
-                Image(icon: .info).font(.wx(19)).foregroundStyle(Theme.onMuted).padding(.leading, 8)
+            Menu {
+                Button { withAnimation { showChatSearch.toggle() } } label: {
+                    Label(L("بحث في المحادثة"), systemImage: "magnifyingglass")
+                }
+                Button { showInfo = true } label: {
+                    Label(L("معلومات المحادثة"), systemImage: "info.circle")
+                }
+            } label: {
+                Image(icon: .more).font(.wx(18, .semibold)).foregroundStyle(Theme.onMuted)
+                    .frame(width: 34, height: 34)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L("معلومات المحادثة"))
+            .accessibilityLabel(L("المزيد"))
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(Theme.surface)
-        .overlay(Rectangle().fill(Theme.outline).frame(height: 1), alignment: .bottom)
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .glassCard(Theme.Radius.chatHeader)
+        .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 6)
     }
 
     private var messages: some View {
@@ -257,6 +262,7 @@ struct ChatView: View {
                         SwipeToReply(onReply: { vm.replyTarget = msg }) {
                             MessageBubble(msg: msg,
                                           onRetry: msg.status == "failed" ? { Task { await vm.retry(msg) } } : nil,
+                                          onSendTemplate: msg.status == "failed" ? { showTemplates = true } : nil,
                                           highlighted: highlightedMessageId == msg.id,
                                           onImageTap: { lightboxItem = MediaItem(url: $0) },
                                           onDocTap: { docItem = MediaItem(url: $0) })
@@ -366,22 +372,39 @@ struct ChatView: View {
         }
     }
 
+    /// WhatsX 2.0 composer (design 4c): a glass capsule holding ONE «+»
+    /// button (attach / template / ready replies) and the field, plus a
+    /// separate amber-gradient circle that morphs mic ⇄ send with the
+    /// field's emptiness.
     private var normalComposer: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            HStack(spacing: 2) {
-                Image(icon: .emoji).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
-                TextField(L("اكتب رسالة…"), text: $vm.input, axis: .vertical)
-                    .lineLimit(1...4).foregroundStyle(Theme.onSurface)
-                Button { showReady = true } label: {
-                    Image(icon: .bolt).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
-                }
-                .accessibilityLabel(L("الردود الجاهزة"))
-                Button { showAttachMenu = true } label: {
-                    Image(icon: .attach).foregroundStyle(Theme.onMuted).frame(width: 32, height: 34)
+            HStack(spacing: 4) {
+                Menu {
+                    Button { showPhotoPicker = true } label: {
+                        Label(L("صورة"), systemImage: "photo")
+                    }
+                    Button { showDocImporter = true } label: {
+                        Label(L("مستند"), systemImage: "doc")
+                    }
+                    Button { showTemplates = true } label: {
+                        Label(L("قالب"), systemImage: "doc.text")
+                    }
+                    Button { showReady = true } label: {
+                        Label(L("الردود الجاهزة"), systemImage: "bolt")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.wx(17, .semibold)).foregroundStyle(Theme.onMuted)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surface2.opacity(0.7), in: Circle())
                 }
                 .accessibilityLabel(L("إرفاق"))
+                TextField(L("اكتب رسالة…"), text: $vm.input, axis: .vertical)
+                    .font(.wx(16))
+                    .lineLimit(1...4).foregroundStyle(Theme.onSurface)
+                    .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 6).frame(minHeight: 48)
+            .padding(.horizontal, 6).frame(minHeight: 46)
             .glassCard(24)
 
             Button {
@@ -393,18 +416,20 @@ struct ChatView: View {
                 }
             } label: {
                 Image(icon: vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .mic : .send)
-                    .font(.wx(20)).foregroundStyle(Theme.onPrimary)
-                    .frame(width: 48, height: 48)
-                    .background(Theme.primary, in: Circle())
+                    .font(.wx(19)).foregroundStyle(.white)
+                    .frame(width: 46, height: 46)
+                    .background(Theme.amberAction, in: Circle())
+                    .shadow(color: Theme.amberShadow, radius: 7, y: 3)
             }
             .disabled(vm.sending)
             .accessibilityLabel(vm.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                 ? L("تسجيل رسالة صوتية") : L("إرسال"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(Theme.background)
     }
 
+    /// Recording state (design 4n): trash · red-dot capsule with the timer ·
+    /// amber send.
     private var recordingBar: some View {
         HStack(spacing: 12) {
             Button {
@@ -416,24 +441,29 @@ struct ChatView: View {
             .accessibilityLabel(L("إلغاء التسجيل"))
             HStack(spacing: 8) {
                 Circle().fill(Theme.danger).frame(width: 10, height: 10)
+                    .opacity(Int(recorder.elapsed) % 2 == 0 ? 1 : 0.35)
+                    .animation(.easeInOut(duration: 0.4), value: Int(recorder.elapsed))
                 Text(L("جارٍ التسجيل") + "  \(timeStr(recorder.elapsed))")
                     .font(.wx(14, .medium)).foregroundStyle(Theme.onSurface)
                 Spacer()
+                Image(systemName: "waveform")
+                    .font(.wx(16)).foregroundStyle(Theme.amberText)
             }
-            .padding(.horizontal, 14).frame(height: 48)
+            .padding(.horizontal, 14).frame(height: 46)
             .glassCard(24)
 
             Button {
                 Haptics.action()
                 if let data = recorder.stop() { Task { await vm.sendVoiceNote(data) } }
             } label: {
-                Image(icon: .send).font(.wx(20)).foregroundStyle(Theme.onPrimary)
-                    .frame(width: 48, height: 48).background(Theme.primary, in: Circle())
+                Image(icon: .send).font(.wx(19)).foregroundStyle(.white)
+                    .frame(width: 46, height: 46)
+                    .background(Theme.amberAction, in: Circle())
+                    .shadow(color: Theme.amberShadow, radius: 7, y: 3)
             }
             .accessibilityLabel(L("إرسال الرسالة الصوتية"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(Theme.background)
     }
 
     private func timeStr(_ t: TimeInterval) -> String {
@@ -441,9 +471,6 @@ struct ChatView: View {
     }
 
     private var chatBackground: some View {
-        Theme.background.overlay(
-            RadialGradient(colors: [Theme.primary.opacity(0.05), .clear],
-                           center: .init(x: 0.2, y: 0.1), startRadius: 0, endRadius: 320)
-        ).ignoresSafeArea()
+        Theme.glowBackground()
     }
 }
