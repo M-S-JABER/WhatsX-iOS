@@ -16,22 +16,32 @@ struct CallOverlay: View {
     var body: some View {
         ZStack {
             if active {
-                Theme.background.ignoresSafeArea()
+                // WhatsX 2.0 (design 4l, applied to the ONGOING-call screen
+                // by owner decision — CallKit owns the incoming ring): warm
+                // dark chrome with an amber glow, halo avatar, white name.
+                Theme.callChrome.ignoresSafeArea()
+                RadialGradient(colors: [Theme.amberOnDark.opacity(0.18), .clear],
+                               center: .init(x: 0.5, y: 0.22), startRadius: 0, endRadius: 340)
+                    .ignoresSafeArea()
                 VStack(spacing: 26) {
                     Spacer()
 
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 96))
-                        .foregroundStyle(Theme.primary.opacity(0.85))
+                    ZStack {
+                        Circle().stroke(Color.white.opacity(0.06), lineWidth: 1)
+                            .frame(width: 168, height: 168)
+                        Circle().stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .frame(width: 138, height: 138)
+                        Avatar(name: center.peerName ?? "؟", size: 110)
+                    }
 
                     VStack(spacing: 8) {
                         Text(center.peerName ?? L("مكالمة"))
-                            .font(.wx(24, .bold))
-                            .foregroundStyle(Theme.onSurface)
+                            .font(.wx(28, .bold))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
                         stateLine
                             .font(.wx(15))
-                            .foregroundStyle(Theme.onMuted)
+                            .foregroundStyle(Color.white.opacity(0.65))
                     }
 
                     Spacer()
@@ -50,7 +60,8 @@ struct CallOverlay: View {
                             Image(systemName: "phone.down.fill")
                                 .font(.wx(24)).foregroundStyle(.white)
                                 .frame(width: 72, height: 72)
-                                .background(Theme.danger, in: Circle())
+                                .background(Color(rgb: 0xE14B36), in: Circle())
+                                .shadow(color: Color(rgb: 0xE14B36).opacity(0.4), radius: 12, y: 4)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(L("إنهاء المكالمة"))
@@ -105,9 +116,9 @@ struct CallOverlay: View {
         } label: {
             Image(systemName: system)
                 .font(.wx(20))
-                .foregroundStyle(emphasized ? Theme.onPrimary : Theme.onSurface)
+                .foregroundStyle(emphasized ? Color(rgb: 0x211D18) : .white)
                 .frame(width: 58, height: 58)
-                .background(emphasized ? Theme.primary : Theme.surface2, in: Circle())
+                .background(emphasized ? AnyShapeStyle(Theme.amberOnDark) : AnyShapeStyle(Color.white.opacity(0.12)), in: Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
