@@ -83,8 +83,13 @@ extension View {
     /// top highlight, and a soft drop shadow.
     private func luxeSurface<S: InsettableShape>(in shape: S) -> some View {
         background {
+            // The drop shadow hangs off the SHAPE here, not off the composed
+            // view: shadowing the whole card rebuilt its full alpha mask
+            // (blur + borders + content) every frame, which dragged large
+            // panels like the calls log. Same look, far cheaper.
             shape.fill(Theme.glassFill)
                 .background(.ultraThinMaterial, in: shape)
+                .shadow(color: .black.opacity(0.1), radius: 12, y: 8)
         }
         .overlay(shape.strokeBorder(Theme.glassBorder, lineWidth: 1))
         .overlay(
@@ -94,7 +99,6 @@ extension View {
                                startPoint: .top, endPoint: .center),
                 lineWidth: 1.5)
         )
-        .shadow(color: .black.opacity(0.1), radius: 12, y: 8)
     }
 
     /// Pre-iOS 26 stand-in for glass chips/circles — same recipe, no drop
