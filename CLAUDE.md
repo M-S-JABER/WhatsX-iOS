@@ -53,6 +53,23 @@ new ones.
 - App Store Connect app records cannot be created via API (Apple
   limitation) — that step is manual, and already done.
 
+## External memory (Notion — Mustafa Brain)
+
+The owner keeps cross-project memory in Notion. Claude sessions that have
+the Notion MCP connected follow the owner's memory kit rules; this
+project's row in the Projects database is page
+`3c4e6e1b-8fb5-814f-81cf-e85fbe785c40`.
+
+- Record significant architectural/technical decisions in the Decisions
+  database (Decision / Why / Alternatives Rejected / Category, linked to
+  the project) and reusable fixes in Knowledge.
+- Update the project row's `Next Step` after finishing a major task.
+- Never write Work Log entries by hand — `.github/workflows/notion-sync.yml`
+  logs every push to main automatically (requires the `NOTION_TOKEN` and
+  `NOTION_PROJECT_PAGE_ID` repo secrets; it skips gracefully without them).
+- Memory summaries are written in Arabic (≤3 lines) — they are owner-side
+  content in Notion, so the repo's English-only rule does not apply there.
+
 ## Security invariants
 
 - The session cookie lives in `SessionCookies.store` (in-memory) and is
