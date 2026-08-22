@@ -95,6 +95,12 @@ struct SettingsView: View {
                         NavigationLink { TemplatesView() } label: {
                             SettingRow(icon: .template, title: L("القوالب والردود"), trailingChevron: true, tint: Theme.primary)
                         }.buttonStyle(.plain)
+                        // The Integrations tab moved here in the 2.0 IA;
+                        // phase D turns this into the full "work management"
+                        // row with a status summary.
+                        NavigationLink { IntegrationsView() } label: {
+                            SettingRow(icon: .hub, title: L("التكاملات"), subtitle: L("الأنظمة والتدفق والويب هوك"), trailingChevron: true, tint: Theme.warning)
+                        }.buttonStyle(.plain)
                     }
 
                     section(L("الأمان"))

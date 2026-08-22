@@ -2,7 +2,12 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum MainTab: Hashable { case integrations, chats, search, reports, settings }
+// WhatsX 2.0 information architecture: FOUR tabs — Chats · Calls · Reports ·
+// Settings. The Search tab dissolved into the inbox (a persistent field in
+// phase B; a temporary header button until then) and Integrations became a
+// Settings row. The system tab bar is hidden; a floating glass capsule bar
+// (design 4x) renders instead, with the active tab as an amber capsule.
+enum MainTab: Hashable { case chats, calls, reports, settings }
 
 /// Tiny event bus between the tab bar and the inbox: re-tapping the chats
 /// tab (a second press while already on it) flips active ⇄ archive, and a
@@ -30,96 +35,32 @@ final class InboxBus: ObservableObject {
     }
 }
 
-/// Downloads the signed avatar and renders it as a small circular tab icon
-/// (original colors, aspect-filled). Falls back to the gear symbol until an
-/// avatar exists; reloads whenever the user or their avatar changes.
-@MainActor
-final class TabAvatar: ObservableObject {
-    static let shared = TabAvatar()
-
-    @Published var image: UIImage? = nil
-    private var loadedKey: String?
-
-    func load(for user: AuthUser?) async {
-        guard let user, let avatar = user.avatar, !avatar.isEmpty,
-              let url = Api.avatarURL(userId: user.id, avatar: avatar) else {
-            image = nil
-            loadedKey = nil
-            return
-        }
-        let key = user.id + "|" + avatar
-        guard key != loadedKey else { return }
-        // URLSession.shared only sees the legacy shared cookie store — go
-        // through ImageCache, which authenticates via the session store.
-        guard let source = await ImageCache.shared.load(url: url, maxPixel: 81) else { return }
-        loadedKey = key
-        image = Self.circularIcon(source, side: 27)
-    }
-
-    private static func circularIcon(_ source: UIImage, side: CGFloat) -> UIImage {
-        let size = CGSize(width: side, height: side)
-        let rendered = UIGraphicsImageRenderer(size: size).image { _ in
-            UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).addClip()
-            let scale = max(side / max(source.size.width, 1), side / max(source.size.height, 1))
-            let w = source.size.width * scale
-            let h = source.size.height * scale
-            source.draw(in: CGRect(x: (side - w) / 2, y: (side - h) / 2, width: w, height: h))
-        }
-        return rendered.withRenderingMode(.alwaysOriginal)
-    }
-}
-
-// Bottom bar: Integrations · Chats (center, badge) · Settings (user avatar
-// as the icon). Search lives as a floating circle inside the inbox that
-// expands in place into a bottom search bar (custom animation). The compact
-// size class keeps the bar at the BOTTOM on iPad.
 struct MainTabView: View {
     @State private var tab: MainTab = .chats
     @State private var lastChatsTap: Date? = nil
     @StateObject private var unread = UnreadCenter.shared
-    @StateObject private var avatar = TabAvatar.shared
-
-    /// DOUBLE-press on the chats tab toggles the inbox's archive mode:
-    /// two taps within the window count; a single (re)tap does nothing.
-    private var tabSelection: Binding<MainTab> {
-        Binding(
-            get: { tab },
-            set: { newValue in
-                if newValue != tab { Haptics.selection() }
-                if newValue == .chats {
-                    let now = Date()
-                    if tab == .chats, let last = lastChatsTap, now.timeIntervalSince(last) < 0.45 {
-                        InboxBus.shared.toggleArchive.send()
-                        lastChatsTap = nil
-                    } else {
-                        lastChatsTap = now
-                    }
-                } else {
-                    lastChatsTap = nil
-                }
-                tab = newValue
-            }
-        )
-    }
+    @Namespace private var activeTabNamespace
 
     var body: some View {
-        Group {
-            #if compiler(>=6.2)
-            if #available(iOS 26.0, *) {
-                modernTabs
-            } else {
-                legacyTabs
-            }
-            #else
-            legacyTabs
-            #endif
+        TabView(selection: $tab) {
+            InboxView()
+                .toolbar(.hidden, for: .tabBar)
+                .tag(MainTab.chats)
+            CallsView()
+                .toolbar(.hidden, for: .tabBar)
+                .tag(MainTab.calls)
+            NavigationStack { StatsView() }
+                .toolbar(.hidden, for: .tabBar)
+                .tag(MainTab.reports)
+            SettingsView()
+                .toolbar(.hidden, for: .tabBar)
+                .tag(MainTab.settings)
         }
         .tint(Theme.primary)
         .environment(\.horizontalSizeClass, .compact)
-        .task { await avatar.load(for: Session.shared.user) }
-        .onReceive(Session.shared.$user) { user in
-            Task { await avatar.load(for: user) }
-        }
+        // The floating bar claims its own bottom band, so every screen's
+        // content (and their own bottom overlays) stays above it.
+        .safeAreaInset(edge: .bottom) { floatingBar }
         // A tapped message notification always lands on the chats tab; the
         // inbox itself performs the navigation to the conversation.
         .onReceive(InboxBus.shared.openConversation) { _ in
@@ -127,63 +68,94 @@ struct MainTabView: View {
         }
     }
 
-    @ViewBuilder
-    private var settingsTabIcon: some View {
-        if let icon = avatar.image {
-            Image(uiImage: icon)
-        } else {
-            Image(systemName: "gearshape")
-        }
+    // MARK: - Floating glass tab bar (design: glass capsule, amber active)
+
+    private struct TabItem {
+        let tab: MainTab
+        let icon: String
+        let title: String
     }
 
-    #if compiler(>=6.2)
-    @available(iOS 26.0, *)
-    private var modernTabs: some View {
-        TabView(selection: tabSelection) {
-            Tab(L("التكاملات"), systemImage: "point.3.connected.trianglepath.dotted", value: MainTab.integrations) {
-                IntegrationsView()
-            }
-            Tab(L("المحادثات"), systemImage: "bubble.left.and.bubble.right", value: MainTab.chats) {
-                InboxView()
-            }
-            .badge(unread.total)
-            Tab(L("بحث"), systemImage: "magnifyingglass", value: MainTab.search) {
-                GlobalSearchView()
-            }
-            Tab(L("التقارير"), systemImage: "chart.bar.xaxis", value: MainTab.reports) {
-                NavigationStack { StatsView() }
-            }
-            Tab(value: MainTab.settings) {
-                SettingsView()
-            } label: {
-                settingsTabIcon
-                Text(L("الإعدادات"))
+    private var items: [TabItem] {
+        [
+            TabItem(tab: .chats, icon: "bubble.left.and.bubble.right", title: L("المحادثات")),
+            TabItem(tab: .calls, icon: "phone", title: L("المكالمات")),
+            TabItem(tab: .reports, icon: "chart.bar.xaxis", title: L("التقارير")),
+            TabItem(tab: .settings, icon: "gearshape", title: L("الإعدادات")),
+        ]
+    }
+
+    private var floatingBar: some View {
+        HStack(spacing: 2) {
+            ForEach(items, id: \.tab) { item in
+                tabButton(item)
             }
         }
+        .padding(6)
+        .glassCard(Theme.Radius.tabBar)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 6)
     }
-    #endif
 
-    private var legacyTabs: some View {
-        TabView(selection: tabSelection) {
-            IntegrationsView()
-                .tabItem { Label(L("التكاملات"), systemImage: "point.3.connected.trianglepath.dotted") }
-                .tag(MainTab.integrations)
-            InboxView()
-                .tabItem { Label(L("المحادثات"), systemImage: "bubble.left.and.bubble.right") }
-                .tag(MainTab.chats)
-                .badge(unread.total)
-            GlobalSearchView()
-                .tabItem { Label(L("بحث"), systemImage: "magnifyingglass") }
-                .tag(MainTab.search)
-            NavigationStack { StatsView() }
-                .tabItem { Label(L("التقارير"), systemImage: "chart.bar.xaxis") }
-                .tag(MainTab.reports)
-            SettingsView()
-                .tabItem {
-                    settingsTabIcon
-                    Text(L("الإعدادات"))
+    private func tabButton(_ item: TabItem) -> some View {
+        let isActive = tab == item.tab
+        return Button {
+            select(item.tab)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: item.icon)
+                    .font(.wx(17, .medium))
+                    // Fills only where the symbol has a fill variant.
+                    .symbolVariant(isActive ? .fill : .none)
+                if isActive {
+                    Text(item.title)
+                        .font(.wx(12.5, .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .tag(MainTab.settings)
+            }
+            .foregroundStyle(isActive ? .white : Theme.onMuted)
+            .padding(.horizontal, isActive ? 16 : 12)
+            .frame(minWidth: 44, minHeight: 44)
+            .background {
+                if isActive {
+                    Capsule().fill(Theme.amberAction)
+                        .matchedGeometryEffect(id: "activeTab", in: activeTabNamespace)
+                        .shadow(color: Theme.amberShadow, radius: 8, y: 3)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if item.tab == .chats, unread.total > 0 {
+                    Text("\(min(unread.total, 99))")
+                        .font(.wx(10, .bold)).foregroundStyle(.white)
+                        .padding(.horizontal, 5).padding(.vertical, 1.5)
+                        .background(Theme.danger, in: Capsule())
+                        .offset(x: 4, y: 2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: isActive ? nil : .infinity)
+        .accessibilityLabel(item.title)
+    }
+
+    /// DOUBLE-press on the chats tab toggles the inbox's archive mode:
+    /// two taps within the window count; a single (re)tap does nothing.
+    private func select(_ newValue: MainTab) {
+        if newValue != tab { Haptics.selection() }
+        if newValue == .chats {
+            let now = Date()
+            if tab == .chats, let last = lastChatsTap, now.timeIntervalSince(last) < 0.45 {
+                InboxBus.shared.toggleArchive.send()
+                lastChatsTap = nil
+            } else {
+                lastChatsTap = now
+            }
+        } else {
+            lastChatsTap = nil
+        }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            tab = newValue
         }
     }
 }

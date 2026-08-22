@@ -179,6 +179,8 @@ struct InboxView: View {
     @State private var selectedConv: Conversation?
     /// Phone mode: programmatic push target (notification deep-link).
     @State private var path = NavigationPath()
+    /// Phase-A bridge for the removed Search tab.
+    @State private var showGlobalSearch = false
     @FocusState private var searchFocused: Bool
 
     /// Conversations after the in-place bottom search filter.
@@ -203,6 +205,7 @@ struct InboxView: View {
             }
         }
         .sheet(isPresented: $showNew) { NewConversationSheet() }
+        .sheet(isPresented: $showGlobalSearch) { GlobalSearchView() }
         .task {
             await vm.loadInstances()
             await vm.load()
@@ -266,6 +269,7 @@ struct InboxView: View {
             // RTL: trailing = the visual top-LEFT corner.
             .overlay(alignment: .topTrailing) {
                 HStack(spacing: 10) {
+                    globalSearchButton
                     accountsButton
                     archiveButton
                 }
@@ -291,6 +295,7 @@ struct InboxView: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     HStack(spacing: 10) {
+                        globalSearchButton
                         accountsButton
                         archiveButton
                     }
@@ -349,6 +354,20 @@ struct InboxView: View {
         .buttonStyle(.plain)
         .glassCircle()
         .accessibilityLabel(vm.showArchived ? L("عودة للمحادثات النشطة") : L("الأرشيف"))
+    }
+
+    /// Global search (conversations/customers/calls). Phase-A bridge for the
+    /// removed Search tab; phase B replaces it with the persistent field.
+    private var globalSearchButton: some View {
+        Button { showGlobalSearch = true } label: {
+            Image(systemName: "text.magnifyingglass")
+                .font(.wx(19, .semibold))
+                .foregroundStyle(Theme.primary)
+                .frame(width: Self.floatingButtonSide, height: Self.floatingButtonSide)
+        }
+        .buttonStyle(.plain)
+        .glassCircle()
+        .accessibilityLabel(L("بحث شامل"))
     }
 
     /// Bottom floating row: the search circle that EXPANDS in place into a
